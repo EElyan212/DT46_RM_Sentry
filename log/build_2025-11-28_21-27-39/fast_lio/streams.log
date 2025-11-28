@@ -1,0 +1,355 @@
+[0.043s] Invoking command in '/home/niuniu/DT46_RM_Sentry/build/fast_lio': AMENT_PREFIX_PATH=/home/niuniu/DT46_RM_Sentry/install/livox_ros_driver2:${AMENT_PREFIX_PATH} CMAKE_PREFIX_PATH=/home/niuniu/DT46_RM_Sentry/install/livox_ros_driver2:/home/niuniu/ydlidar_ws/install/ydlidar_ros2_driver:/opt/ros/humble LD_LIBRARY_PATH=/home/niuniu/DT46_RM_Sentry/install/livox_ros_driver2/lib:${LD_LIBRARY_PATH} PYTHONPATH=/home/niuniu/DT46_RM_Sentry/install/livox_ros_driver2/local/lib/python3.10/dist-packages:${PYTHONPATH} /usr/bin/cmake /home/niuniu/DT46_RM_Sentry/src/FAST_LIO -DROS_EDITION=ROS2 -DHUMBLE_ROS=humble -DCMAKE_INSTALL_PREFIX=/home/niuniu/DT46_RM_Sentry/install/fast_lio
+[0.222s] -- The C compiler identification is GNU 11.4.0
+[0.283s] -- The CXX compiler identification is GNU 11.4.0
+[0.297s] -- Detecting C compiler ABI info
+[0.384s] -- Detecting C compiler ABI info - done
+[0.388s] -- Check for working C compiler: /usr/bin/cc - skipped
+[0.389s] -- Detecting C compile features
+[0.392s] -- Detecting C compile features - done
+[0.397s] -- Detecting CXX compiler ABI info
+[0.485s] -- Detecting CXX compiler ABI info - done
+[0.489s] -- Check for working CXX compiler: /usr/bin/c++ - skipped
+[0.489s] -- Detecting CXX compile features
+[0.490s] -- Detecting CXX compile features - done
+[0.491s] [0mCurrent CPU archtecture: x86_64[0m
+[0.507s] [0mProcesser number:  8[0m
+[0.507s] [0mcore for MP: 3[0m
+[0.893s] -- Found PythonLibs: /usr/lib/x86_64-linux-gnu/libpython3.10.so (found version "3.10.12") 
+[0.922s] -- Found ament_cmake: 1.3.11 (/opt/ros/humble/share/ament_cmake/cmake)
+[1.055s] -- Found Python3: /usr/bin/python3 (found version "3.10.12") found components: Interpreter 
+[1.198s] -- Found rclcpp: 16.0.12 (/opt/ros/humble/share/rclcpp/cmake)
+[1.269s] -- Found rosidl_generator_c: 3.1.6 (/opt/ros/humble/share/rosidl_generator_c/cmake)
+[1.279s] -- Found rosidl_adapter: 3.1.6 (/opt/ros/humble/share/rosidl_adapter/cmake)
+[1.293s] -- Found rosidl_generator_cpp: 3.1.6 (/opt/ros/humble/share/rosidl_generator_cpp/cmake)
+[1.318s] -- Using all available rosidl_typesupport_c: rosidl_typesupport_fastrtps_c;rosidl_typesupport_introspection_c
+[1.342s] -- Using all available rosidl_typesupport_cpp: rosidl_typesupport_fastrtps_cpp;rosidl_typesupport_introspection_cpp
+[1.417s] -- Found rmw_implementation_cmake: 6.1.2 (/opt/ros/humble/share/rmw_implementation_cmake/cmake)
+[1.423s] -- Found rmw_fastrtps_cpp: 6.2.7 (/opt/ros/humble/share/rmw_fastrtps_cpp/cmake)
+[1.559s] -- Found OpenSSL: /usr/lib/x86_64-linux-gnu/libcrypto.so (found version "3.0.2")  
+[1.585s] -- Found FastRTPS: /opt/ros/humble/include  
+[1.618s] -- Using RMW implementation 'rmw_fastrtps_cpp' as default
+[1.635s] -- Looking for pthread.h
+[1.711s] -- Looking for pthread.h - found
+[1.711s] -- Performing Test CMAKE_HAVE_LIBC_PTHREAD
+[1.784s] -- Performing Test CMAKE_HAVE_LIBC_PTHREAD - Success
+[1.785s] -- Found Threads: TRUE  
+[1.864s] -- Found rclcpp_components: 16.0.12 (/opt/ros/humble/share/rclcpp_components/cmake)
+[1.905s] -- Found geometry_msgs: 4.9.0 (/opt/ros/humble/share/geometry_msgs/cmake)
+[1.927s] -- Found nav_msgs: 4.9.0 (/opt/ros/humble/share/nav_msgs/cmake)
+[1.957s] -- Found sensor_msgs: 4.9.0 (/opt/ros/humble/share/sensor_msgs/cmake)
+[1.986s] -- Found std_srvs: 4.9.0 (/opt/ros/humble/share/std_srvs/cmake)
+[2.007s] -- Found visualization_msgs: 4.9.0 (/opt/ros/humble/share/visualization_msgs/cmake)
+[2.035s] -- Found pcl_conversions: 2.4.5 (/opt/ros/humble/share/pcl_conversions/cmake)
+[2.087s] -- Checking for module 'eigen3'
+[2.105s] --   Found eigen3, version 3.4.0
+[2.148s] -- Found Eigen: /usr/include/eigen3 (Required is at least version "3.1") 
+[2.148s] -- Eigen found (include: /usr/include/eigen3, version: 3.4.0)
+[2.205s] -- Checking for module 'flann'
+[2.219s] --   Found flann, version 1.9.1
+[2.269s] -- Found FLANN: /usr/lib/x86_64-linux-gnu/libflann_cpp.so  
+[2.269s] -- FLANN found (include: /usr/include, lib: /usr/lib/x86_64-linux-gnu/libflann_cpp.so)
+[3.458s] -- Checking for module 'libusb-1.0'
+[3.475s] --   Found libusb-1.0, version 1.0.25
+[3.518s] -- Found libusb: /usr/lib/x86_64-linux-gnu/libusb-1.0.so  
+[3.519s] -- OpenNI found (version: 1.5.4.0, include: /usr/include/ni, lib: /usr/lib/libOpenNI.so;libusb::libusb)
+[3.585s] -- OpenNI2 found (version: 2.2.0.33, include: /usr/include/openni2, lib: /usr/lib/x86_64-linux-gnu/libOpenNI2.so;libusb::libusb)
+[3.700s] -- Eigen found (include: /usr/include/eigen3, version: 3.4.0)
+[3.706s] -- OpenNI found (version: 1.5.4.0, include: /usr/include/ni, lib: /usr/lib/libOpenNI.so;libusb::libusb)
+[3.712s] -- OpenNI2 found (version: 2.2.0.33, include: /usr/include/openni2, lib: /usr/lib/x86_64-linux-gnu/libOpenNI2.so;libusb::libusb)
+[3.823s] -- Found Qhull version 8.0.2
+[3.934s] -- OpenNI found (version: 1.5.4.0, include: /usr/include/ni, lib: /usr/lib/libOpenNI.so;libusb::libusb)
+[4.039s] -- Found PCL_COMMON: /usr/lib/x86_64-linux-gnu/libpcl_common.so  
+[4.041s] -- Found PCL_KDTREE: /usr/lib/x86_64-linux-gnu/libpcl_kdtree.so  
+[4.042s] -- Found PCL_OCTREE: /usr/lib/x86_64-linux-gnu/libpcl_octree.so  
+[4.043s] -- Found PCL_SEARCH: /usr/lib/x86_64-linux-gnu/libpcl_search.so  
+[4.044s] -- Found PCL_SAMPLE_CONSENSUS: /usr/lib/x86_64-linux-gnu/libpcl_sample_consensus.so  
+[4.044s] -- Found PCL_FILTERS: /usr/lib/x86_64-linux-gnu/libpcl_filters.so  
+[4.044s] -- Found PCL_2D: /usr/include/pcl-1.12  
+[4.046s] -- Found PCL_GEOMETRY: /usr/include/pcl-1.12  
+[4.046s] -- Found PCL_IO: /usr/lib/x86_64-linux-gnu/libpcl_io.so  
+[4.048s] -- Found PCL_FEATURES: /usr/lib/x86_64-linux-gnu/libpcl_features.so  
+[4.049s] -- Found PCL_ML: /usr/lib/x86_64-linux-gnu/libpcl_ml.so  
+[4.050s] -- Found PCL_SEGMENTATION: /usr/lib/x86_64-linux-gnu/libpcl_segmentation.so  
+[4.051s] -- Found PCL_VISUALIZATION: /usr/lib/x86_64-linux-gnu/libpcl_visualization.so  
+[4.052s] -- Found PCL_SURFACE: /usr/lib/x86_64-linux-gnu/libpcl_surface.so  
+[4.052s] -- Found PCL_REGISTRATION: /usr/lib/x86_64-linux-gnu/libpcl_registration.so  
+[4.053s] -- Found PCL_KEYPOINTS: /usr/lib/x86_64-linux-gnu/libpcl_keypoints.so  
+[4.053s] -- Found PCL_TRACKING: /usr/lib/x86_64-linux-gnu/libpcl_tracking.so  
+[4.054s] -- Found PCL_RECOGNITION: /usr/lib/x86_64-linux-gnu/libpcl_recognition.so  
+[4.055s] -- Found PCL_STEREO: /usr/lib/x86_64-linux-gnu/libpcl_stereo.so  
+[4.055s] -- Found PCL_APPS: /usr/lib/x86_64-linux-gnu/libpcl_apps.so  
+[4.056s] -- Found PCL_IN_HAND_SCANNER: /usr/include/pcl-1.12  
+[4.056s] -- Found PCL_MODELER: /usr/include/pcl-1.12  
+[4.057s] -- Found PCL_POINT_CLOUD_EDITOR: /usr/include/pcl-1.12  
+[4.058s] -- Found PCL_OUTOFCORE: /usr/lib/x86_64-linux-gnu/libpcl_outofcore.so  
+[4.060s] -- Found PCL_PEOPLE: /usr/lib/x86_64-linux-gnu/libpcl_people.so  
+[4.061s] -- Found livox_ros_driver2: 1.0.0 (/home/niuniu/DT46_RM_Sentry/install/livox_ros_driver2/share/livox_ros_driver2/cmake)
+[4.077s] -- Found rosidl_default_generators: 1.2.0 (/opt/ros/humble/share/rosidl_default_generators/cmake)
+[4.097s] -- Found tf2: 0.25.13 (/opt/ros/humble/share/tf2/cmake)
+[4.106s] -- Found tf2_ros: 0.25.13 (/opt/ros/humble/share/tf2_ros/cmake)
+[4.198s] -- Found tf2_geometry_msgs: 0.25.13 (/opt/ros/humble/share/tf2_geometry_msgs/cmake)
+[4.217s] -- Found eigen3_cmake_module: 0.1.1 (/opt/ros/humble/share/eigen3_cmake_module/cmake)
+[4.219s] -- Found Eigen3: TRUE (found version "3.4.0") 
+[4.219s] -- Ensuring Eigen3 include directory is part of orocos-kdl CMake target
+[4.221s] [33mCMake Warning (dev) at CMakeLists.txt:84 (find_package):
+[4.221s]   Policy CMP0074 is not set: find_package uses <PackageName>_ROOT variables.
+[4.221s]   Run "cmake --help-policy CMP0074" for policy details.  Use the cmake_policy
+[4.221s]   command to set the policy and suppress this warning.
+[4.221s] 
+[4.221s]   CMake variable PCL_ROOT is set to:
+[4.221s] 
+[4.221s]     /usr
+[4.221s] 
+[4.221s]   For compatibility, CMake is ignoring the variable.
+[4.221s] This warning is for project developers.  Use -Wno-dev to suppress it.
+[4.221s] [0m
+[4.228s] [0mEigen:/usr/include/eigen3[0m
+[4.228s] -- PCL: /usr/include/pcl-1.12
+[4.440s] -- Found ament_cmake_ros: 0.10.0 (/opt/ros/humble/share/ament_cmake_ros/cmake)
+[4.690s] -- Using all available rosidl_typesupport_c: rosidl_typesupport_fastrtps_c;rosidl_typesupport_introspection_c
+[4.784s] -- Using all available rosidl_typesupport_cpp: rosidl_typesupport_fastrtps_cpp;rosidl_typesupport_introspection_cpp
+[4.802s] -- Found PythonInterp: /usr/bin/python3 (found suitable version "3.10.12", minimum required is "3.6") 
+[4.805s] -- Found python_cmake_module: 0.10.0 (/opt/ros/humble/share/python_cmake_module/cmake)
+[4.823s] -- Found PythonLibs: /usr/lib/x86_64-linux-gnu/libpython3.10.so (found suitable version "3.10.12", minimum required is "3.5") 
+[4.823s] -- Using PYTHON_EXECUTABLE: /usr/bin/python3
+[4.823s] -- Using PYTHON_INCLUDE_DIRS: /usr/include/python3.10
+[4.823s] -- Using PYTHON_LIBRARIES: /usr/lib/x86_64-linux-gnu/libpython3.10.so
+[4.840s] -- Found PythonExtra: .so  
+[4.902s] -- Configuring done
+[4.989s] -- Generating done
+[4.993s] [33mCMake Warning:
+[4.993s]   Manually-specified variables were not used by the project:
+[4.993s] 
+[4.993s]     HUMBLE_ROS
+[4.993s]     ROS_EDITION
+[4.993s] 
+[4.993s] [0m
+[5.009s] -- Build files have been written to: /home/niuniu/DT46_RM_Sentry/build/fast_lio
+[5.033s] Invoked command in '/home/niuniu/DT46_RM_Sentry/build/fast_lio' returned '0': AMENT_PREFIX_PATH=/home/niuniu/DT46_RM_Sentry/install/livox_ros_driver2:${AMENT_PREFIX_PATH} CMAKE_PREFIX_PATH=/home/niuniu/DT46_RM_Sentry/install/livox_ros_driver2:/home/niuniu/ydlidar_ws/install/ydlidar_ros2_driver:/opt/ros/humble LD_LIBRARY_PATH=/home/niuniu/DT46_RM_Sentry/install/livox_ros_driver2/lib:${LD_LIBRARY_PATH} PYTHONPATH=/home/niuniu/DT46_RM_Sentry/install/livox_ros_driver2/local/lib/python3.10/dist-packages:${PYTHONPATH} /usr/bin/cmake /home/niuniu/DT46_RM_Sentry/src/FAST_LIO -DROS_EDITION=ROS2 -DHUMBLE_ROS=humble -DCMAKE_INSTALL_PREFIX=/home/niuniu/DT46_RM_Sentry/install/fast_lio
+[5.034s] Invoking command in '/home/niuniu/DT46_RM_Sentry/build/fast_lio': AMENT_PREFIX_PATH=/home/niuniu/DT46_RM_Sentry/install/livox_ros_driver2:${AMENT_PREFIX_PATH} CMAKE_PREFIX_PATH=/home/niuniu/DT46_RM_Sentry/install/livox_ros_driver2:/home/niuniu/ydlidar_ws/install/ydlidar_ros2_driver:/opt/ros/humble LD_LIBRARY_PATH=/home/niuniu/DT46_RM_Sentry/install/livox_ros_driver2/lib:${LD_LIBRARY_PATH} PYTHONPATH=/home/niuniu/DT46_RM_Sentry/install/livox_ros_driver2/local/lib/python3.10/dist-packages:${PYTHONPATH} /usr/bin/cmake --build /home/niuniu/DT46_RM_Sentry/build/fast_lio -- -j8 -l8
+[5.079s] [  2%] [34m[1mGenerating C code for ROS interfaces[0m
+[5.089s] [  5%] [34m[1mGenerating C++ code for ROS interfaces[0m
+[5.100s] [  5%] Built target ament_cmake_python_copy_fast_lio
+[5.332s] [  5%] Built target fast_lio__cpp
+[5.334s] [  8%] [32mBuilding C object CMakeFiles/fast_lio__rosidl_generator_c.dir/rosidl_generator_c/fast_lio/msg/detail/pose6_d__functions.c.o[0m
+[5.343s] [ 11%] [34m[1mGenerating C++ introspection for ROS interfaces[0m
+[5.343s] [ 14%] [34m[1mGenerating C++ type support dispatch for ROS interfaces[0m
+[5.346s] [ 17%] [34m[1mGenerating C++ type support for eProsima Fast-RTPS[0m
+[5.448s] [ 20%] [32m[1mLinking C shared library libfast_lio__rosidl_generator_c.so[0m
+[5.492s] [ 20%] Built target fast_lio__rosidl_generator_c
+[5.506s] [ 25%] [34m[1mGenerating C introspection for ROS interfaces[0m
+[5.506s] [ 25%] [34m[1mGenerating C type support dispatch for ROS interfaces[0m
+[5.506s] [ 28%] [34m[1mGenerating C type support for eProsima Fast-RTPS[0m
+[5.534s] [ 31%] [32mBuilding CXX object CMakeFiles/fast_lio__rosidl_typesupport_cpp.dir/rosidl_typesupport_cpp/fast_lio/msg/pose6_d__type_support.cpp.o[0m
+[5.564s] [ 34%] [32mBuilding CXX object CMakeFiles/fast_lio__rosidl_typesupport_introspection_cpp.dir/rosidl_typesupport_introspection_cpp/fast_lio/msg/detail/pose6_d__type_support.cpp.o[0m
+[5.567s] [ 37%] [32mBuilding CXX object CMakeFiles/fast_lio__rosidl_typesupport_fastrtps_cpp.dir/rosidl_typesupport_fastrtps_cpp/fast_lio/msg/detail/dds_fastrtps/pose6_d__type_support.cpp.o[0m
+[5.705s] [ 40%] [32mBuilding CXX object CMakeFiles/fast_lio__rosidl_typesupport_c.dir/rosidl_typesupport_c/fast_lio/msg/pose6_d__type_support.cpp.o[0m
+[5.739s] running egg_info
+[5.739s] creating fast_lio.egg-info
+[5.739s] writing fast_lio.egg-info/PKG-INFO
+[5.739s] writing dependency_links to fast_lio.egg-info/dependency_links.txt
+[5.739s] writing top-level names to fast_lio.egg-info/top_level.txt
+[5.739s] writing manifest file 'fast_lio.egg-info/SOURCES.txt'
+[5.739s] [ 42%] [32mBuilding C object CMakeFiles/fast_lio__rosidl_typesupport_introspection_c.dir/rosidl_typesupport_introspection_c/fast_lio/msg/detail/pose6_d__type_support.c.o[0m
+[5.741s] [ 45%] [32m[1mLinking CXX shared library libfast_lio__rosidl_typesupport_c.so[0m
+[5.741s] reading manifest file 'fast_lio.egg-info/SOURCES.txt'
+[5.742s] writing manifest file 'fast_lio.egg-info/SOURCES.txt'
+[5.746s] [ 51%] [32mBuilding CXX object CMakeFiles/fast_lio__rosidl_typesupport_fastrtps_c.dir/rosidl_typesupport_fastrtps_c/fast_lio/msg/detail/pose6_d__type_support_c.cpp.o[0m
+[5.747s] [ 51%] [32m[1mLinking CXX shared library libfast_lio__rosidl_typesupport_cpp.so[0m
+[5.772s] [ 51%] Built target ament_cmake_python_build_fast_lio_egg
+[5.786s] [ 51%] Built target fast_lio__rosidl_typesupport_c
+[5.793s] [ 51%] Built target fast_lio__rosidl_typesupport_cpp
+[5.798s] [ 54%] [32m[1mLinking C shared library libfast_lio__rosidl_typesupport_introspection_c.so[0m
+[5.821s] [ 60%] [32mBuilding CXX object CMakeFiles/fastlio_mapping.dir/include/ikd-Tree/ikd_Tree.cpp.o[0m
+[5.821s] [ 60%] [32mBuilding CXX object CMakeFiles/fastlio_mapping.dir/src/laserMapping.cpp.o[0m
+[5.823s] [ 62%] [32mBuilding CXX object CMakeFiles/fastlio_mapping.dir/src/preprocess.cpp.o[0m
+[5.840s] [ 62%] Built target fast_lio__rosidl_typesupport_introspection_c
+[5.901s] [ 65%] [32m[1mLinking CXX shared library libfast_lio__rosidl_typesupport_introspection_cpp.so[0m
+[5.901s] [ 68%] [32m[1mLinking CXX shared library libfast_lio__rosidl_typesupport_fastrtps_cpp.so[0m
+[5.943s] [ 68%] Built target fast_lio__rosidl_typesupport_introspection_cpp
+[5.970s] [ 68%] Built target fast_lio__rosidl_typesupport_fastrtps_cpp
+[5.991s] [ 71%] [32m[1mLinking CXX shared library libfast_lio__rosidl_typesupport_fastrtps_c.so[0m
+[6.057s] [ 71%] Built target fast_lio__rosidl_typesupport_fastrtps_c
+[6.081s] [ 71%] Built target fast_lio
+[6.103s] [ 74%] [34m[1mGenerating Python code for ROS interfaces[0m
+[6.469s] [ 74%] Built target fast_lio__py
+[6.492s] [ 77%] [32mBuilding C object CMakeFiles/fast_lio__rosidl_generator_py.dir/rosidl_generator_py/fast_lio/msg/_pose6_d_s.c.o[0m
+[6.616s] [ 80%] [32m[1mLinking C shared library rosidl_generator_py/fast_lio/libfast_lio__rosidl_generator_py.so[0m
+[6.659s] [ 80%] Built target fast_lio__rosidl_generator_py
+[6.684s] [ 82%] [32mBuilding C object CMakeFiles/fast_lio__rosidl_typesupport_fastrtps_c__pyext.dir/rosidl_generator_py/fast_lio/_fast_lio_s.ep.rosidl_typesupport_fastrtps_c.c.o[0m
+[6.685s] [ 85%] [32mBuilding C object CMakeFiles/fast_lio__rosidl_typesupport_c__pyext.dir/rosidl_generator_py/fast_lio/_fast_lio_s.ep.rosidl_typesupport_c.c.o[0m
+[6.685s] [ 88%] [32mBuilding C object CMakeFiles/fast_lio__rosidl_typesupport_introspection_c__pyext.dir/rosidl_generator_py/fast_lio/_fast_lio_s.ep.rosidl_typesupport_introspection_c.c.o[0m
+[6.776s] [ 91%] [32m[1mLinking C shared library rosidl_generator_py/fast_lio/fast_lio_s__rosidl_typesupport_introspection_c.cpython-310-x86_64-linux-gnu.so[0m
+[6.776s] [ 94%] [32m[1mLinking C shared library rosidl_generator_py/fast_lio/fast_lio_s__rosidl_typesupport_c.cpython-310-x86_64-linux-gnu.so[0m
+[6.776s] [ 97%] [32m[1mLinking C shared library rosidl_generator_py/fast_lio/fast_lio_s__rosidl_typesupport_fastrtps_c.cpython-310-x86_64-linux-gnu.so[0m
+[6.816s] [ 97%] Built target fast_lio__rosidl_typesupport_c__pyext
+[6.817s] [ 97%] Built target fast_lio__rosidl_typesupport_fastrtps_c__pyext
+[6.822s] [ 97%] Built target fast_lio__rosidl_typesupport_introspection_c__pyext
+[11.271s] In file included from [01m[K/usr/include/boost/smart_ptr/detail/sp_thread_sleep.hpp:22[m[K,
+[11.271s]                  from [01m[K/usr/include/boost/smart_ptr/detail/yield_k.hpp:23[m[K,
+[11.271s]                  from [01m[K/usr/include/boost/smart_ptr/detail/spinlock_gcc_atomic.hpp:14[m[K,
+[11.271s]                  from [01m[K/usr/include/boost/smart_ptr/detail/spinlock.hpp:42[m[K,
+[11.271s]                  from [01m[K/usr/include/boost/smart_ptr/detail/spinlock_pool.hpp:25[m[K,
+[11.271s]                  from [01m[K/usr/include/boost/smart_ptr/shared_ptr.hpp:29[m[K,
+[11.271s]                  from [01m[K/usr/include/boost/shared_ptr.hpp:17[m[K,
+[11.271s]                  from [01m[K/usr/include/boost/date_time/microsec_time_clock.hpp:18[m[K,
+[11.271s]                  from [01m[K/usr/include/boost/interprocess/detail/posix_time_types_wrk.hpp:31[m[K,
+[11.271s]                  from [01m[K/usr/include/boost/interprocess/detail/os_thread_functions.hpp:36[m[K,
+[11.271s]                  from [01m[K/usr/include/boost/interprocess/sync/file_lock.hpp:26[m[K,
+[11.271s]                  from [01m[K/usr/include/pcl-1.12/pcl/io/pcd_io.h:46[m[K,
+[11.271s]                  from [01m[K/opt/ros/humble/include/pcl_conversions/pcl_conversions/pcl_conversions.h:73[m[K,
+[11.271s]                  from [01m[K/home/niuniu/DT46_RM_Sentry/src/FAST_LIO/src/IMU_Processing.hpp:18[m[K,
+[11.271s]                  from [01m[K/home/niuniu/DT46_RM_Sentry/src/FAST_LIO/src/laserMapping.cpp:47[m[K:
+[11.271s] [01m[K/usr/include/boost/bind.hpp:36:1:[m[K [01;36m[Knote: [m[K‘[01m[K#pragma message: The practice of declaring the Bind placeholders (_1, _2, ...) in the global namespace is deprecated. Please use <boost/bind/bind.hpp> + using namespace boost::placeholders, or define BOOST_BIND_GLOBAL_PLACEHOLDERS to retain the current behavior.[m[K’
+[11.271s]    36 | [01;36m[KBOOST_PRAGMA_MESSAGE[m[K(
+[11.271s]       | [01;36m[K^~~~~~~~~~~~~~~~~~~~[m[K
+[59.967s] [100%] [32m[1mLinking CXX executable fastlio_mapping[0m
+[61.172s] [100%] Built target fastlio_mapping
+[61.391s] Invoked command in '/home/niuniu/DT46_RM_Sentry/build/fast_lio' returned '0': AMENT_PREFIX_PATH=/home/niuniu/DT46_RM_Sentry/install/livox_ros_driver2:${AMENT_PREFIX_PATH} CMAKE_PREFIX_PATH=/home/niuniu/DT46_RM_Sentry/install/livox_ros_driver2:/home/niuniu/ydlidar_ws/install/ydlidar_ros2_driver:/opt/ros/humble LD_LIBRARY_PATH=/home/niuniu/DT46_RM_Sentry/install/livox_ros_driver2/lib:${LD_LIBRARY_PATH} PYTHONPATH=/home/niuniu/DT46_RM_Sentry/install/livox_ros_driver2/local/lib/python3.10/dist-packages:${PYTHONPATH} /usr/bin/cmake --build /home/niuniu/DT46_RM_Sentry/build/fast_lio -- -j8 -l8
+[61.506s] Invoking command in '/home/niuniu/DT46_RM_Sentry/build/fast_lio': AMENT_PREFIX_PATH=/home/niuniu/DT46_RM_Sentry/install/livox_ros_driver2:${AMENT_PREFIX_PATH} CMAKE_PREFIX_PATH=/home/niuniu/DT46_RM_Sentry/install/livox_ros_driver2:/home/niuniu/ydlidar_ws/install/ydlidar_ros2_driver:/opt/ros/humble LD_LIBRARY_PATH=/home/niuniu/DT46_RM_Sentry/install/livox_ros_driver2/lib:${LD_LIBRARY_PATH} PYTHONPATH=/home/niuniu/DT46_RM_Sentry/install/livox_ros_driver2/local/lib/python3.10/dist-packages:${PYTHONPATH} /usr/bin/cmake --install /home/niuniu/DT46_RM_Sentry/build/fast_lio
+[61.546s] -- Install configuration: "Release"
+[61.546s] -- Installing: /home/niuniu/DT46_RM_Sentry/install/fast_lio/share/ament_index/resource_index/rosidl_interfaces/fast_lio
+[61.546s] -- Installing: /home/niuniu/DT46_RM_Sentry/install/fast_lio/include/fast_lio/fast_lio
+[61.546s] -- Installing: /home/niuniu/DT46_RM_Sentry/install/fast_lio/include/fast_lio/fast_lio/msg
+[61.546s] -- Installing: /home/niuniu/DT46_RM_Sentry/install/fast_lio/include/fast_lio/fast_lio/msg/pose6_d.h
+[61.547s] -- Installing: /home/niuniu/DT46_RM_Sentry/install/fast_lio/include/fast_lio/fast_lio/msg/detail
+[61.547s] -- Installing: /home/niuniu/DT46_RM_Sentry/install/fast_lio/include/fast_lio/fast_lio/msg/detail/pose6_d__type_support.h
+[61.547s] -- Installing: /home/niuniu/DT46_RM_Sentry/install/fast_lio/include/fast_lio/fast_lio/msg/detail/pose6_d__struct.h
+[61.547s] -- Installing: /home/niuniu/DT46_RM_Sentry/install/fast_lio/include/fast_lio/fast_lio/msg/detail/pose6_d__functions.h
+[61.547s] -- Installing: /home/niuniu/DT46_RM_Sentry/install/fast_lio/include/fast_lio/fast_lio/msg/detail/pose6_d__functions.c
+[61.547s] -- Installing: /home/niuniu/DT46_RM_Sentry/install/fast_lio/include/fast_lio/fast_lio/msg/rosidl_generator_c__visibility_control.h
+[61.547s] -- Installing: /home/niuniu/DT46_RM_Sentry/install/fast_lio/share/fast_lio/environment/library_path.sh
+[61.547s] -- Installing: /home/niuniu/DT46_RM_Sentry/install/fast_lio/share/fast_lio/environment/library_path.dsv
+[61.547s] -- Installing: /home/niuniu/DT46_RM_Sentry/install/fast_lio/lib/libfast_lio__rosidl_generator_c.so
+[61.547s] -- Set runtime path of "/home/niuniu/DT46_RM_Sentry/install/fast_lio/lib/libfast_lio__rosidl_generator_c.so" to ""
+[61.547s] -- Up-to-date: /home/niuniu/DT46_RM_Sentry/install/fast_lio/include/fast_lio/fast_lio
+[61.547s] -- Up-to-date: /home/niuniu/DT46_RM_Sentry/install/fast_lio/include/fast_lio/fast_lio/msg
+[61.547s] -- Installing: /home/niuniu/DT46_RM_Sentry/install/fast_lio/include/fast_lio/fast_lio/msg/rosidl_typesupport_fastrtps_c__visibility_control.h
+[61.548s] -- Up-to-date: /home/niuniu/DT46_RM_Sentry/install/fast_lio/include/fast_lio/fast_lio/msg/detail
+[61.548s] -- Installing: /home/niuniu/DT46_RM_Sentry/install/fast_lio/include/fast_lio/fast_lio/msg/detail/pose6_d__rosidl_typesupport_fastrtps_c.h
+[61.549s] -- Installing: /home/niuniu/DT46_RM_Sentry/install/fast_lio/lib/libfast_lio__rosidl_typesupport_fastrtps_c.so
+[61.550s] -- Set runtime path of "/home/niuniu/DT46_RM_Sentry/install/fast_lio/lib/libfast_lio__rosidl_typesupport_fastrtps_c.so" to ""
+[61.550s] -- Up-to-date: /home/niuniu/DT46_RM_Sentry/install/fast_lio/include/fast_lio/fast_lio
+[61.550s] -- Up-to-date: /home/niuniu/DT46_RM_Sentry/install/fast_lio/include/fast_lio/fast_lio/msg
+[61.551s] -- Installing: /home/niuniu/DT46_RM_Sentry/install/fast_lio/include/fast_lio/fast_lio/msg/rosidl_generator_cpp__visibility_control.hpp
+[61.551s] -- Up-to-date: /home/niuniu/DT46_RM_Sentry/install/fast_lio/include/fast_lio/fast_lio/msg/detail
+[61.552s] -- Installing: /home/niuniu/DT46_RM_Sentry/install/fast_lio/include/fast_lio/fast_lio/msg/detail/pose6_d__type_support.hpp
+[61.553s] -- Installing: /home/niuniu/DT46_RM_Sentry/install/fast_lio/include/fast_lio/fast_lio/msg/detail/pose6_d__traits.hpp
+[61.553s] -- Installing: /home/niuniu/DT46_RM_Sentry/install/fast_lio/include/fast_lio/fast_lio/msg/detail/pose6_d__struct.hpp
+[61.553s] -- Installing: /home/niuniu/DT46_RM_Sentry/install/fast_lio/include/fast_lio/fast_lio/msg/detail/pose6_d__builder.hpp
+[61.554s] -- Installing: /home/niuniu/DT46_RM_Sentry/install/fast_lio/include/fast_lio/fast_lio/msg/pose6_d.hpp
+[61.554s] -- Up-to-date: /home/niuniu/DT46_RM_Sentry/install/fast_lio/include/fast_lio/fast_lio
+[61.555s] -- Up-to-date: /home/niuniu/DT46_RM_Sentry/install/fast_lio/include/fast_lio/fast_lio/msg
+[61.555s] -- Installing: /home/niuniu/DT46_RM_Sentry/install/fast_lio/include/fast_lio/fast_lio/msg/rosidl_typesupport_fastrtps_cpp__visibility_control.h
+[61.555s] -- Up-to-date: /home/niuniu/DT46_RM_Sentry/install/fast_lio/include/fast_lio/fast_lio/msg/detail
+[61.556s] -- Installing: /home/niuniu/DT46_RM_Sentry/install/fast_lio/include/fast_lio/fast_lio/msg/detail/pose6_d__rosidl_typesupport_fastrtps_cpp.hpp
+[61.557s] -- Installing: /home/niuniu/DT46_RM_Sentry/install/fast_lio/include/fast_lio/fast_lio/msg/detail/dds_fastrtps
+[61.557s] -- Installing: /home/niuniu/DT46_RM_Sentry/install/fast_lio/lib/libfast_lio__rosidl_typesupport_fastrtps_cpp.so
+[61.558s] -- Set runtime path of "/home/niuniu/DT46_RM_Sentry/install/fast_lio/lib/libfast_lio__rosidl_typesupport_fastrtps_cpp.so" to ""
+[61.559s] -- Up-to-date: /home/niuniu/DT46_RM_Sentry/install/fast_lio/include/fast_lio/fast_lio
+[61.559s] -- Up-to-date: /home/niuniu/DT46_RM_Sentry/install/fast_lio/include/fast_lio/fast_lio/msg
+[61.559s] -- Up-to-date: /home/niuniu/DT46_RM_Sentry/install/fast_lio/include/fast_lio/fast_lio/msg/detail
+[61.560s] -- Installing: /home/niuniu/DT46_RM_Sentry/install/fast_lio/include/fast_lio/fast_lio/msg/detail/pose6_d__rosidl_typesupport_introspection_c.h
+[61.560s] -- Installing: /home/niuniu/DT46_RM_Sentry/install/fast_lio/include/fast_lio/fast_lio/msg/detail/pose6_d__type_support.c
+[61.560s] -- Installing: /home/niuniu/DT46_RM_Sentry/install/fast_lio/include/fast_lio/fast_lio/msg/rosidl_typesupport_introspection_c__visibility_control.h
+[61.561s] -- Installing: /home/niuniu/DT46_RM_Sentry/install/fast_lio/lib/libfast_lio__rosidl_typesupport_introspection_c.so
+[61.562s] -- Set runtime path of "/home/niuniu/DT46_RM_Sentry/install/fast_lio/lib/libfast_lio__rosidl_typesupport_introspection_c.so" to ""
+[61.562s] -- Installing: /home/niuniu/DT46_RM_Sentry/install/fast_lio/lib/libfast_lio__rosidl_typesupport_c.so
+[61.563s] -- Set runtime path of "/home/niuniu/DT46_RM_Sentry/install/fast_lio/lib/libfast_lio__rosidl_typesupport_c.so" to ""
+[61.563s] -- Up-to-date: /home/niuniu/DT46_RM_Sentry/install/fast_lio/include/fast_lio/fast_lio
+[61.563s] -- Up-to-date: /home/niuniu/DT46_RM_Sentry/install/fast_lio/include/fast_lio/fast_lio/msg
+[61.564s] -- Up-to-date: /home/niuniu/DT46_RM_Sentry/install/fast_lio/include/fast_lio/fast_lio/msg/detail
+[61.564s] -- Installing: /home/niuniu/DT46_RM_Sentry/install/fast_lio/include/fast_lio/fast_lio/msg/detail/pose6_d__rosidl_typesupport_introspection_cpp.hpp
+[61.565s] -- Installing: /home/niuniu/DT46_RM_Sentry/install/fast_lio/include/fast_lio/fast_lio/msg/detail/pose6_d__type_support.cpp
+[61.565s] -- Installing: /home/niuniu/DT46_RM_Sentry/install/fast_lio/lib/libfast_lio__rosidl_typesupport_introspection_cpp.so
+[61.566s] -- Set runtime path of "/home/niuniu/DT46_RM_Sentry/install/fast_lio/lib/libfast_lio__rosidl_typesupport_introspection_cpp.so" to ""
+[61.567s] -- Installing: /home/niuniu/DT46_RM_Sentry/install/fast_lio/lib/libfast_lio__rosidl_typesupport_cpp.so
+[61.567s] -- Set runtime path of "/home/niuniu/DT46_RM_Sentry/install/fast_lio/lib/libfast_lio__rosidl_typesupport_cpp.so" to ""
+[61.567s] -- Installing: /home/niuniu/DT46_RM_Sentry/install/fast_lio/share/fast_lio/environment/pythonpath.sh
+[61.568s] -- Installing: /home/niuniu/DT46_RM_Sentry/install/fast_lio/share/fast_lio/environment/pythonpath.dsv
+[61.569s] -- Installing: /home/niuniu/DT46_RM_Sentry/install/fast_lio/local/lib/python3.10/dist-packages/fast_lio-0.0.0-py3.10.egg-info
+[61.570s] -- Installing: /home/niuniu/DT46_RM_Sentry/install/fast_lio/local/lib/python3.10/dist-packages/fast_lio-0.0.0-py3.10.egg-info/SOURCES.txt
+[61.570s] -- Installing: /home/niuniu/DT46_RM_Sentry/install/fast_lio/local/lib/python3.10/dist-packages/fast_lio-0.0.0-py3.10.egg-info/PKG-INFO
+[61.570s] -- Installing: /home/niuniu/DT46_RM_Sentry/install/fast_lio/local/lib/python3.10/dist-packages/fast_lio-0.0.0-py3.10.egg-info/dependency_links.txt
+[61.571s] -- Installing: /home/niuniu/DT46_RM_Sentry/install/fast_lio/local/lib/python3.10/dist-packages/fast_lio-0.0.0-py3.10.egg-info/top_level.txt
+[61.572s] -- Installing: /home/niuniu/DT46_RM_Sentry/install/fast_lio/local/lib/python3.10/dist-packages/fast_lio
+[61.572s] -- Installing: /home/niuniu/DT46_RM_Sentry/install/fast_lio/local/lib/python3.10/dist-packages/fast_lio/_fast_lio_s.ep.rosidl_typesupport_fastrtps_c.c
+[61.572s] -- Installing: /home/niuniu/DT46_RM_Sentry/install/fast_lio/local/lib/python3.10/dist-packages/fast_lio/_fast_lio_s.ep.rosidl_typesupport_introspection_c.c
+[61.573s] -- Installing: /home/niuniu/DT46_RM_Sentry/install/fast_lio/local/lib/python3.10/dist-packages/fast_lio/libfast_lio__rosidl_generator_py.so
+[61.574s] -- Installing: /home/niuniu/DT46_RM_Sentry/install/fast_lio/local/lib/python3.10/dist-packages/fast_lio/fast_lio_s__rosidl_typesupport_c.cpython-310-x86_64-linux-gnu.so
+[61.575s] -- Installing: /home/niuniu/DT46_RM_Sentry/install/fast_lio/local/lib/python3.10/dist-packages/fast_lio/msg
+[61.575s] -- Installing: /home/niuniu/DT46_RM_Sentry/install/fast_lio/local/lib/python3.10/dist-packages/fast_lio/msg/_pose6_d.py
+[61.576s] -- Installing: /home/niuniu/DT46_RM_Sentry/install/fast_lio/local/lib/python3.10/dist-packages/fast_lio/msg/__init__.py
+[61.577s] -- Installing: /home/niuniu/DT46_RM_Sentry/install/fast_lio/local/lib/python3.10/dist-packages/fast_lio/msg/_pose6_d_s.c
+[61.578s] -- Installing: /home/niuniu/DT46_RM_Sentry/install/fast_lio/local/lib/python3.10/dist-packages/fast_lio/__init__.py
+[61.578s] -- Installing: /home/niuniu/DT46_RM_Sentry/install/fast_lio/local/lib/python3.10/dist-packages/fast_lio/_fast_lio_s.ep.rosidl_typesupport_c.c
+[61.578s] -- Installing: /home/niuniu/DT46_RM_Sentry/install/fast_lio/local/lib/python3.10/dist-packages/fast_lio/fast_lio_s__rosidl_typesupport_fastrtps_c.cpython-310-x86_64-linux-gnu.so
+[61.580s] -- Installing: /home/niuniu/DT46_RM_Sentry/install/fast_lio/local/lib/python3.10/dist-packages/fast_lio/fast_lio_s__rosidl_typesupport_introspection_c.cpython-310-x86_64-linux-gnu.so
+[61.662s] Listing '/home/niuniu/DT46_RM_Sentry/install/fast_lio/local/lib/python3.10/dist-packages/fast_lio'...
+[61.662s] Compiling '/home/niuniu/DT46_RM_Sentry/install/fast_lio/local/lib/python3.10/dist-packages/fast_lio/__init__.py'...
+[61.662s] Listing '/home/niuniu/DT46_RM_Sentry/install/fast_lio/local/lib/python3.10/dist-packages/fast_lio/msg'...
+[61.662s] Compiling '/home/niuniu/DT46_RM_Sentry/install/fast_lio/local/lib/python3.10/dist-packages/fast_lio/msg/__init__.py'...
+[61.662s] Compiling '/home/niuniu/DT46_RM_Sentry/install/fast_lio/local/lib/python3.10/dist-packages/fast_lio/msg/_pose6_d.py'...
+[61.665s] -- Installing: /home/niuniu/DT46_RM_Sentry/install/fast_lio/local/lib/python3.10/dist-packages/fast_lio/fast_lio_s__rosidl_typesupport_fastrtps_c.cpython-310-x86_64-linux-gnu.so
+[61.666s] -- Set runtime path of "/home/niuniu/DT46_RM_Sentry/install/fast_lio/local/lib/python3.10/dist-packages/fast_lio/fast_lio_s__rosidl_typesupport_fastrtps_c.cpython-310-x86_64-linux-gnu.so" to ""
+[61.666s] -- Installing: /home/niuniu/DT46_RM_Sentry/install/fast_lio/local/lib/python3.10/dist-packages/fast_lio/fast_lio_s__rosidl_typesupport_introspection_c.cpython-310-x86_64-linux-gnu.so
+[61.667s] -- Set runtime path of "/home/niuniu/DT46_RM_Sentry/install/fast_lio/local/lib/python3.10/dist-packages/fast_lio/fast_lio_s__rosidl_typesupport_introspection_c.cpython-310-x86_64-linux-gnu.so" to ""
+[61.667s] -- Installing: /home/niuniu/DT46_RM_Sentry/install/fast_lio/local/lib/python3.10/dist-packages/fast_lio/fast_lio_s__rosidl_typesupport_c.cpython-310-x86_64-linux-gnu.so
+[61.667s] -- Set runtime path of "/home/niuniu/DT46_RM_Sentry/install/fast_lio/local/lib/python3.10/dist-packages/fast_lio/fast_lio_s__rosidl_typesupport_c.cpython-310-x86_64-linux-gnu.so" to ""
+[61.667s] -- Installing: /home/niuniu/DT46_RM_Sentry/install/fast_lio/lib/libfast_lio__rosidl_generator_py.so
+[61.667s] -- Set runtime path of "/home/niuniu/DT46_RM_Sentry/install/fast_lio/lib/libfast_lio__rosidl_generator_py.so" to ""
+[61.668s] -- Installing: /home/niuniu/DT46_RM_Sentry/install/fast_lio/share/fast_lio/msg/Pose6D.idl
+[61.669s] -- Installing: /home/niuniu/DT46_RM_Sentry/install/fast_lio/share/fast_lio/msg/Pose6D.msg
+[61.669s] -- Installing: /home/niuniu/DT46_RM_Sentry/install/fast_lio/lib/fast_lio/fastlio_mapping
+[61.672s] -- Set runtime path of "/home/niuniu/DT46_RM_Sentry/install/fast_lio/lib/fast_lio/fastlio_mapping" to ""
+[61.672s] -- Installing: /home/niuniu/DT46_RM_Sentry/install/fast_lio/share/fast_lio/config
+[61.674s] -- Installing: /home/niuniu/DT46_RM_Sentry/install/fast_lio/share/fast_lio/config/ouster64.yaml
+[61.674s] -- Installing: /home/niuniu/DT46_RM_Sentry/install/fast_lio/share/fast_lio/config/mid360.yaml
+[61.676s] -- Installing: /home/niuniu/DT46_RM_Sentry/install/fast_lio/share/fast_lio/config/avia.yaml
+[61.677s] -- Installing: /home/niuniu/DT46_RM_Sentry/install/fast_lio/share/fast_lio/config/velodyne.yaml
+[61.677s] -- Installing: /home/niuniu/DT46_RM_Sentry/install/fast_lio/share/fast_lio/config/horizon.yaml
+[61.678s] -- Installing: /home/niuniu/DT46_RM_Sentry/install/fast_lio/share/fast_lio/launch
+[61.679s] -- Installing: /home/niuniu/DT46_RM_Sentry/install/fast_lio/share/fast_lio/launch/mapping.launch.py
+[61.680s] -- Installing: /home/niuniu/DT46_RM_Sentry/install/fast_lio/share/fast_lio/launch/gdb_debug_example.launch
+[61.680s] -- Installing: /home/niuniu/DT46_RM_Sentry/install/fast_lio/share/fast_lio/rviz
+[61.681s] -- Installing: /home/niuniu/DT46_RM_Sentry/install/fast_lio/share/fast_lio/rviz/fastlio.rviz
+[61.682s] -- Installing: /home/niuniu/DT46_RM_Sentry/install/fast_lio/share/ament_index/resource_index/package_run_dependencies/fast_lio
+[61.683s] -- Installing: /home/niuniu/DT46_RM_Sentry/install/fast_lio/share/ament_index/resource_index/parent_prefix_path/fast_lio
+[61.686s] -- Installing: /home/niuniu/DT46_RM_Sentry/install/fast_lio/share/fast_lio/environment/ament_prefix_path.sh
+[61.686s] -- Installing: /home/niuniu/DT46_RM_Sentry/install/fast_lio/share/fast_lio/environment/ament_prefix_path.dsv
+[61.687s] -- Installing: /home/niuniu/DT46_RM_Sentry/install/fast_lio/share/fast_lio/environment/path.sh
+[61.687s] -- Installing: /home/niuniu/DT46_RM_Sentry/install/fast_lio/share/fast_lio/environment/path.dsv
+[61.688s] -- Installing: /home/niuniu/DT46_RM_Sentry/install/fast_lio/share/fast_lio/local_setup.bash
+[61.688s] -- Installing: /home/niuniu/DT46_RM_Sentry/install/fast_lio/share/fast_lio/local_setup.sh
+[61.689s] -- Installing: /home/niuniu/DT46_RM_Sentry/install/fast_lio/share/fast_lio/local_setup.zsh
+[61.690s] -- Installing: /home/niuniu/DT46_RM_Sentry/install/fast_lio/share/fast_lio/local_setup.dsv
+[61.690s] -- Installing: /home/niuniu/DT46_RM_Sentry/install/fast_lio/share/fast_lio/package.dsv
+[61.692s] -- Installing: /home/niuniu/DT46_RM_Sentry/install/fast_lio/share/ament_index/resource_index/packages/fast_lio
+[61.694s] -- Installing: /home/niuniu/DT46_RM_Sentry/install/fast_lio/share/fast_lio/cmake/export_fast_lio__rosidl_generator_cExport.cmake
+[61.694s] -- Installing: /home/niuniu/DT46_RM_Sentry/install/fast_lio/share/fast_lio/cmake/export_fast_lio__rosidl_generator_cExport-release.cmake
+[61.695s] -- Installing: /home/niuniu/DT46_RM_Sentry/install/fast_lio/share/fast_lio/cmake/export_fast_lio__rosidl_typesupport_fastrtps_cExport.cmake
+[61.696s] -- Installing: /home/niuniu/DT46_RM_Sentry/install/fast_lio/share/fast_lio/cmake/export_fast_lio__rosidl_typesupport_fastrtps_cExport-release.cmake
+[61.696s] -- Installing: /home/niuniu/DT46_RM_Sentry/install/fast_lio/share/fast_lio/cmake/export_fast_lio__rosidl_generator_cppExport.cmake
+[61.697s] -- Installing: /home/niuniu/DT46_RM_Sentry/install/fast_lio/share/fast_lio/cmake/export_fast_lio__rosidl_typesupport_fastrtps_cppExport.cmake
+[61.698s] -- Installing: /home/niuniu/DT46_RM_Sentry/install/fast_lio/share/fast_lio/cmake/export_fast_lio__rosidl_typesupport_fastrtps_cppExport-release.cmake
+[61.698s] -- Installing: /home/niuniu/DT46_RM_Sentry/install/fast_lio/share/fast_lio/cmake/fast_lio__rosidl_typesupport_introspection_cExport.cmake
+[61.699s] -- Installing: /home/niuniu/DT46_RM_Sentry/install/fast_lio/share/fast_lio/cmake/fast_lio__rosidl_typesupport_introspection_cExport-release.cmake
+[61.700s] -- Installing: /home/niuniu/DT46_RM_Sentry/install/fast_lio/share/fast_lio/cmake/fast_lio__rosidl_typesupport_cExport.cmake
+[61.700s] -- Installing: /home/niuniu/DT46_RM_Sentry/install/fast_lio/share/fast_lio/cmake/fast_lio__rosidl_typesupport_cExport-release.cmake
+[61.701s] -- Installing: /home/niuniu/DT46_RM_Sentry/install/fast_lio/share/fast_lio/cmake/fast_lio__rosidl_typesupport_introspection_cppExport.cmake
+[61.701s] -- Installing: /home/niuniu/DT46_RM_Sentry/install/fast_lio/share/fast_lio/cmake/fast_lio__rosidl_typesupport_introspection_cppExport-release.cmake
+[61.702s] -- Installing: /home/niuniu/DT46_RM_Sentry/install/fast_lio/share/fast_lio/cmake/fast_lio__rosidl_typesupport_cppExport.cmake
+[61.702s] -- Installing: /home/niuniu/DT46_RM_Sentry/install/fast_lio/share/fast_lio/cmake/fast_lio__rosidl_typesupport_cppExport-release.cmake
+[61.703s] -- Installing: /home/niuniu/DT46_RM_Sentry/install/fast_lio/share/fast_lio/cmake/export_fast_lio__rosidl_generator_pyExport.cmake
+[61.704s] -- Installing: /home/niuniu/DT46_RM_Sentry/install/fast_lio/share/fast_lio/cmake/export_fast_lio__rosidl_generator_pyExport-release.cmake
+[61.704s] -- Installing: /home/niuniu/DT46_RM_Sentry/install/fast_lio/share/fast_lio/cmake/rosidl_cmake-extras.cmake
+[61.705s] -- Installing: /home/niuniu/DT46_RM_Sentry/install/fast_lio/share/fast_lio/cmake/ament_cmake_export_include_directories-extras.cmake
+[61.706s] -- Installing: /home/niuniu/DT46_RM_Sentry/install/fast_lio/share/fast_lio/cmake/ament_cmake_export_libraries-extras.cmake
+[61.708s] -- Installing: /home/niuniu/DT46_RM_Sentry/install/fast_lio/share/fast_lio/cmake/ament_cmake_export_targets-extras.cmake
+[61.708s] -- Installing: /home/niuniu/DT46_RM_Sentry/install/fast_lio/share/fast_lio/cmake/rosidl_cmake_export_typesupport_targets-extras.cmake
+[61.709s] -- Installing: /home/niuniu/DT46_RM_Sentry/install/fast_lio/share/fast_lio/cmake/ament_cmake_export_dependencies-extras.cmake
+[61.710s] -- Installing: /home/niuniu/DT46_RM_Sentry/install/fast_lio/share/fast_lio/cmake/rosidl_cmake_export_typesupport_libraries-extras.cmake
+[61.711s] -- Installing: /home/niuniu/DT46_RM_Sentry/install/fast_lio/share/fast_lio/cmake/fast_lioConfig.cmake
+[61.712s] -- Installing: /home/niuniu/DT46_RM_Sentry/install/fast_lio/share/fast_lio/cmake/fast_lioConfig-version.cmake
+[61.712s] -- Installing: /home/niuniu/DT46_RM_Sentry/install/fast_lio/share/fast_lio/package.xml
+[61.723s] Invoked command in '/home/niuniu/DT46_RM_Sentry/build/fast_lio' returned '0': AMENT_PREFIX_PATH=/home/niuniu/DT46_RM_Sentry/install/livox_ros_driver2:${AMENT_PREFIX_PATH} CMAKE_PREFIX_PATH=/home/niuniu/DT46_RM_Sentry/install/livox_ros_driver2:/home/niuniu/ydlidar_ws/install/ydlidar_ros2_driver:/opt/ros/humble LD_LIBRARY_PATH=/home/niuniu/DT46_RM_Sentry/install/livox_ros_driver2/lib:${LD_LIBRARY_PATH} PYTHONPATH=/home/niuniu/DT46_RM_Sentry/install/livox_ros_driver2/local/lib/python3.10/dist-packages:${PYTHONPATH} /usr/bin/cmake --install /home/niuniu/DT46_RM_Sentry/build/fast_lio

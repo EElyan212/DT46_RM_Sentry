@@ -1,0 +1,3 @@
+Invoking command in '/home/niuniu/DT46_RM_Sentry/build/livox_sdk2': /usr/bin/cmake /home/niuniu/DT46_RM_Sentry/src/Livox-SDK2 -DROS_EDITION=ROS2 -DHUMBLE_ROS=humble -DCMAKE_INSTALL_PREFIX=/home/niuniu/DT46_RM_Sentry/install/livox_sdk2
+Invoked command in '/home/niuniu/DT46_RM_Sentry/build/livox_sdk2' returned '0': /usr/bin/cmake /home/niuniu/DT46_RM_Sentry/src/Livox-SDK2 -DROS_EDITION=ROS2 -DHUMBLE_ROS=humble -DCMAKE_INSTALL_PREFIX=/home/niuniu/DT46_RM_Sentry/install/livox_sdk2
+Invoking command in '/home/niuniu/DT46_RM_Sentry/build/livox_sdk2': /usr/bin/cmake --build /home/niuniu/DT46_RM_Sentry/build/livox_sdk2 -- -j8 -l8

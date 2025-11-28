@@ -1,0 +1,22 @@
+[31mCMake Error at CMakeLists.txt:172 (add_dependencies):
+  Cannot add target-level dependencies to non-existent target
+  "livox_ros_driver2".
+
+  The add_dependencies works for top-level logical targets created by the
+  add_executable, add_library, or add_custom_target commands.  If you want to
+  add file-level dependencies see the DEPENDS option of the add_custom_target
+  and add_custom_command commands.
+
+[0m
+[31mCMake Error at CMakeLists.txt:214 (target_link_libraries):
+  The plain signature for target_link_libraries has already been used with
+  the target "livox_ros_driver2".  All uses of target_link_libraries with a
+  target must be either all-keyword or all-plain.
+
+  The uses of the plain signature are here:
+
+   * /opt/ros/humble/share/ament_cmake_target_dependencies/cmake/ament_target_dependencies.cmake:145 (target_link_libraries)
+   * /opt/ros/humble/share/ament_cmake_target_dependencies/cmake/ament_target_dependencies.cmake:151 (target_link_libraries)
+
+
+[0m

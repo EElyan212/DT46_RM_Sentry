@@ -1,0 +1,298 @@
+[0.031s] Invoking command in '/home/niuniu/DT46_RM_Sentry/build/livox_sdk2': /usr/bin/cmake /home/niuniu/DT46_RM_Sentry/src/Livox-SDK2 -DROS_EDITION=ROS2 -DHUMBLE_ROS=humble -DCMAKE_INSTALL_PREFIX=/home/niuniu/DT46_RM_Sentry/install/livox_sdk2
+[0.324s] -- The C compiler identification is GNU 11.4.0
+[0.385s] -- The CXX compiler identification is GNU 11.4.0
+[0.396s] -- Detecting C compiler ABI info
+[0.483s] -- Detecting C compiler ABI info - done
+[0.490s] -- Check for working C compiler: /usr/bin/cc - skipped
+[0.490s] -- Detecting C compile features
+[0.490s] -- Detecting C compile features - done
+[0.493s] -- Detecting CXX compiler ABI info
+[0.606s] -- Detecting CXX compiler ABI info - done
+[0.612s] -- Check for working CXX compiler: /usr/bin/c++ - skipped
+[0.612s] -- Detecting CXX compile features
+[0.612s] -- Detecting CXX compile features - done
+[0.613s] -- main project dir: /home/niuniu/DT46_RM_Sentry/src/Livox-SDK2
+[0.614s] -- main project dir: /home/niuniu/DT46_RM_Sentry/src/Livox-SDK2/samples
+[0.619s] -- Configuring done
+[0.662s] -- Generating done
+[0.665s] [33mCMake Warning:
+[0.665s]   Manually-specified variables were not used by the project:
+[0.665s] 
+[0.665s]     HUMBLE_ROS
+[0.665s]     ROS_EDITION
+[0.665s] 
+[0.665s] [0m
+[0.678s] -- Build files have been written to: /home/niuniu/DT46_RM_Sentry/build/livox_sdk2
+[0.686s] Invoked command in '/home/niuniu/DT46_RM_Sentry/build/livox_sdk2' returned '0': /usr/bin/cmake /home/niuniu/DT46_RM_Sentry/src/Livox-SDK2 -DROS_EDITION=ROS2 -DHUMBLE_ROS=humble -DCMAKE_INSTALL_PREFIX=/home/niuniu/DT46_RM_Sentry/install/livox_sdk2
+[0.687s] Invoking command in '/home/niuniu/DT46_RM_Sentry/build/livox_sdk2': /usr/bin/cmake --build /home/niuniu/DT46_RM_Sentry/build/livox_sdk2 -- -j8 -l8
+[0.741s] [  2%] [32mBuilding CXX object sdk_core/CMakeFiles/livox_lidar_sdk_shared.dir/__/3rdparty/FastCRC/FastCRCsw.cpp.o[0m
+[0.741s] [  2%] [32mBuilding CXX object sdk_core/CMakeFiles/livox_lidar_sdk_shared.dir/params_check.cpp.o[0m
+[0.741s] [  4%] [32mBuilding CXX object sdk_core/CMakeFiles/livox_lidar_sdk_shared.dir/parse_cfg_file.cpp.o[0m
+[0.741s] [  3%] [32mBuilding CXX object sdk_core/CMakeFiles/livox_lidar_sdk_shared.dir/device_manager.cpp.o[0m
+[0.741s] [  8%] [32mBuilding CXX object sdk_core/CMakeFiles/livox_lidar_sdk_static.dir/__/3rdparty/FastCRC/FastCRCsw.cpp.o[0m
+[0.741s] [  8%] [32mBuilding CXX object sdk_core/CMakeFiles/livox_lidar_sdk_static.dir/device_manager.cpp.o[0m
+[0.741s] [  8%] [32mBuilding CXX object sdk_core/CMakeFiles/livox_lidar_sdk_shared.dir/livox_lidar_sdk.cpp.o[0m
+[0.743s] [  9%] [32mBuilding CXX object sdk_core/CMakeFiles/livox_lidar_sdk_static.dir/livox_lidar_sdk.cpp.o[0m
+[0.844s] [ 10%] [32mBuilding CXX object sdk_core/CMakeFiles/livox_lidar_sdk_static.dir/params_check.cpp.o[0m
+[0.845s] [ 12%] [32mBuilding CXX object sdk_core/CMakeFiles/livox_lidar_sdk_shared.dir/upgrade_manager.cpp.o[0m
+[1.213s] [ 13%] [32mBuilding CXX object sdk_core/CMakeFiles/livox_lidar_sdk_shared.dir/base/io_loop.cpp.o[0m
+[3.897s] [ 14%] [32mBuilding CXX object sdk_core/CMakeFiles/livox_lidar_sdk_shared.dir/base/thread_base.cpp.o[0m
+[4.029s] [ 15%] [32mBuilding CXX object sdk_core/CMakeFiles/livox_lidar_sdk_static.dir/parse_cfg_file.cpp.o[0m
+[4.096s] [ 16%] [32mBuilding CXX object sdk_core/CMakeFiles/livox_lidar_sdk_static.dir/upgrade_manager.cpp.o[0m
+[4.314s] [ 18%] [32mBuilding CXX object sdk_core/CMakeFiles/livox_lidar_sdk_shared.dir/base/io_thread.cpp.o[0m
+[4.370s] [ 19%] [32mBuilding CXX object sdk_core/CMakeFiles/livox_lidar_sdk_shared.dir/base/logging.cpp.o[0m
+[4.511s] [ 20%] [32mBuilding CXX object sdk_core/CMakeFiles/livox_lidar_sdk_static.dir/base/io_loop.cpp.o[0m
+[4.707s] [ 21%] [32mBuilding CXX object sdk_core/CMakeFiles/livox_lidar_sdk_static.dir/base/thread_base.cpp.o[0m
+[4.724s] [ 22%] [32mBuilding CXX object sdk_core/CMakeFiles/livox_lidar_sdk_static.dir/base/io_thread.cpp.o[0m
+[4.835s] [ 24%] [32mBuilding CXX object sdk_core/CMakeFiles/livox_lidar_sdk_static.dir/base/logging.cpp.o[0m
+[5.101s] [ 25%] [32mBuilding CXX object sdk_core/CMakeFiles/livox_lidar_sdk_shared.dir/base/network/unix/network_util.cpp.o[0m
+[5.111s] [ 26%] [32mBuilding CXX object sdk_core/CMakeFiles/livox_lidar_sdk_shared.dir/base/multiple_io/multiple_io_base.cpp.o[0m
+[5.160s] [ 27%] [32mBuilding CXX object sdk_core/CMakeFiles/livox_lidar_sdk_shared.dir/base/multiple_io/multiple_io_epoll.cpp.o[0m
+[5.167s] [ 28%] [32mBuilding CXX object sdk_core/CMakeFiles/livox_lidar_sdk_static.dir/base/network/unix/network_util.cpp.o[0m
+[5.262s] [ 30%] [32mBuilding CXX object sdk_core/CMakeFiles/livox_lidar_sdk_shared.dir/base/multiple_io/multiple_io_poll.cpp.o[0m
+[5.423s] [ 31%] [32mBuilding CXX object sdk_core/CMakeFiles/livox_lidar_sdk_shared.dir/base/multiple_io/multiple_io_select.cpp.o[0m
+[5.433s] [ 32%] [32mBuilding CXX object sdk_core/CMakeFiles/livox_lidar_sdk_static.dir/base/multiple_io/multiple_io_base.cpp.o[0m
+[5.462s] [ 33%] [32mBuilding CXX object sdk_core/CMakeFiles/livox_lidar_sdk_shared.dir/base/multiple_io/multiple_io_kqueue.cpp.o[0m
+[5.580s] [ 34%] [32mBuilding CXX object sdk_core/CMakeFiles/livox_lidar_sdk_static.dir/base/multiple_io/multiple_io_epoll.cpp.o[0m
+[5.618s] [ 36%] [32mBuilding CXX object sdk_core/CMakeFiles/livox_lidar_sdk_shared.dir/base/wake_up/unix/wake_up_pipe.cpp.o[0m
+[5.663s] [ 37%] [32mBuilding CXX object sdk_core/CMakeFiles/livox_lidar_sdk_static.dir/base/multiple_io/multiple_io_poll.cpp.o[0m
+[5.670s] [ 38%] [32mBuilding CXX object sdk_core/CMakeFiles/livox_lidar_sdk_static.dir/base/multiple_io/multiple_io_select.cpp.o[0m
+[5.711s] [ 39%] [32mBuilding CXX object sdk_core/CMakeFiles/livox_lidar_sdk_static.dir/base/multiple_io/multiple_io_kqueue.cpp.o[0m
+[5.830s] [ 40%] [32mBuilding CXX object sdk_core/CMakeFiles/livox_lidar_sdk_static.dir/base/wake_up/unix/wake_up_pipe.cpp.o[0m
+[5.835s] [ 42%] [32mBuilding CXX object sdk_core/CMakeFiles/livox_lidar_sdk_static.dir/comm/comm_port.cpp.o[0m
+[5.846s] [ 43%] [32mBuilding CXX object sdk_core/CMakeFiles/livox_lidar_sdk_static.dir/comm/sdk_protocol.cpp.o[0m
+[5.877s] [ 44%] [32mBuilding CXX object sdk_core/CMakeFiles/livox_lidar_sdk_static.dir/comm/generate_seq.cpp.o[0m
+[5.908s] [ 45%] [32mBuilding CXX object sdk_core/CMakeFiles/livox_lidar_sdk_static.dir/upgrade/firmware.cpp.o[0m
+[5.928s] [ 46%] [32mBuilding CXX object sdk_core/CMakeFiles/livox_lidar_sdk_static.dir/upgrade/livox_lidar_upgrader.cpp.o[0m
+[6.010s] [ 48%] [32mBuilding CXX object sdk_core/CMakeFiles/livox_lidar_sdk_shared.dir/comm/comm_port.cpp.o[0m
+[6.039s] [ 49%] [32mBuilding CXX object sdk_core/CMakeFiles/livox_lidar_sdk_shared.dir/comm/sdk_protocol.cpp.o[0m
+[6.082s] [ 50%] [32mBuilding CXX object sdk_core/CMakeFiles/livox_lidar_sdk_shared.dir/comm/generate_seq.cpp.o[0m
+[6.164s] [ 51%] [32mBuilding CXX object sdk_core/CMakeFiles/livox_lidar_sdk_static.dir/logger_handler/logger_manager.cpp.o[0m
+[6.193s] [ 53%] [32mBuilding CXX object sdk_core/CMakeFiles/livox_lidar_sdk_static.dir/logger_handler/logger_handler.cpp.o[0m
+[6.209s] [ 54%] [32mBuilding CXX object sdk_core/CMakeFiles/livox_lidar_sdk_static.dir/logger_handler/file_manager.cpp.o[0m
+[6.409s] [ 55%] [32mBuilding CXX object sdk_core/CMakeFiles/livox_lidar_sdk_static.dir/data_handler/data_handler.cpp.o[0m
+[6.496s] [ 56%] [32mBuilding CXX object sdk_core/CMakeFiles/livox_lidar_sdk_static.dir/command_handler/command_impl.cpp.o[0m
+[6.518s] [ 57%] [32mBuilding CXX object sdk_core/CMakeFiles/livox_lidar_sdk_static.dir/command_handler/general_command_handler.cpp.o[0m
+[7.288s] [ 59%] [32mBuilding CXX object sdk_core/CMakeFiles/livox_lidar_sdk_shared.dir/upgrade/firmware.cpp.o[0m
+[7.466s] [ 60%] [32mBuilding CXX object sdk_core/CMakeFiles/livox_lidar_sdk_shared.dir/upgrade/livox_lidar_upgrader.cpp.o[0m
+[7.640s] [ 61%] [32mBuilding CXX object sdk_core/CMakeFiles/livox_lidar_sdk_static.dir/command_handler/hap_command_handler.cpp.o[0m
+[8.013s] [ 62%] [32mBuilding CXX object sdk_core/CMakeFiles/livox_lidar_sdk_shared.dir/logger_handler/logger_manager.cpp.o[0m
+[8.032s] [ 63%] [32mBuilding CXX object sdk_core/CMakeFiles/livox_lidar_sdk_static.dir/command_handler/mid360_command_handler.cpp.o[0m
+[8.247s] [ 65%] [32mBuilding CXX object sdk_core/CMakeFiles/livox_lidar_sdk_static.dir/command_handler/build_request.cpp.o[0m
+[8.538s] In file included from [01m[K/home/niuniu/DT46_RM_Sentry/src/Livox-SDK2/sdk_core/../3rdparty/rapidjson/stream.h:19[m[K,
+[8.538s]                  from [01m[K/home/niuniu/DT46_RM_Sentry/src/Livox-SDK2/sdk_core/../3rdparty/rapidjson/memorystream.h:22[m[K,
+[8.539s]                  from [01m[K/home/niuniu/DT46_RM_Sentry/src/Livox-SDK2/sdk_core/../3rdparty/rapidjson/encodedstream.h:22[m[K,
+[8.539s]                  from [01m[K/home/niuniu/DT46_RM_Sentry/src/Livox-SDK2/sdk_core/../3rdparty/rapidjson/document.h:26[m[K,
+[8.539s]                  from [01m[K/home/niuniu/DT46_RM_Sentry/src/Livox-SDK2/sdk_core/command_handler/parse_lidar_state_info.h:38[m[K,
+[8.540s]                  from [01m[K/home/niuniu/DT46_RM_Sentry/src/Livox-SDK2/sdk_core/command_handler/hap_command_handler.cpp:37[m[K:
+[8.540s] [01m[K/home/niuniu/DT46_RM_Sentry/src/Livox-SDK2/sdk_core/../3rdparty/rapidjson/rapidjson.h:542:29:[m[K [01;35m[Kwarning: [m[Kunknown option after ‘[01m[K#pragma GCC diagnostic[m[K’ kind [[01;35m[K]8;;https://gcc.gnu.org/onlinedocs/gcc/Warning-Options.html#index-Wpragmas-Wpragmas]8;;[m[K]
+[8.544s]   542 | #define RAPIDJSON_PRAGMA(x) [01;35m[K_Pragma[m[K(RAPIDJSON_STRINGIFY(x))
+[8.544s]       |                             [01;35m[K^~~~~~~[m[K
+[8.544s] [01m[K/home/niuniu/DT46_RM_Sentry/src/Livox-SDK2/sdk_core/../3rdparty/rapidjson/rapidjson.h:543:34:[m[K [01;36m[Knote: [m[Kin expansion of macro ‘[01m[KRAPIDJSON_PRAGMA[m[K’
+[8.544s]   543 | #define RAPIDJSON_DIAG_PRAGMA(x) [01;36m[KRAPIDJSON_PRAGMA[m[K(GCC diagnostic x)
+[8.545s]       |                                  [01;36m[K^~~~~~~~~~~~~~~~[m[K
+[8.545s] [01m[K/home/niuniu/DT46_RM_Sentry/src/Livox-SDK2/sdk_core/../3rdparty/rapidjson/rapidjson.h:545:3:[m[K [01;36m[Knote: [m[Kin expansion of macro ‘[01m[KRAPIDJSON_DIAG_PRAGMA[m[K’
+[8.546s]   545 |   [01;36m[KRAPIDJSON_DIAG_PRAGMA[m[K(ignored RAPIDJSON_STRINGIFY(RAPIDJSON_JOIN(-W, x)))
+[8.546s]       |   [01;36m[K^~~~~~~~~~~~~~~~~~~~~[m[K
+[8.546s] [01m[K/home/niuniu/DT46_RM_Sentry/src/Livox-SDK2/sdk_core/../3rdparty/rapidjson/internal/dtoa.h:36:1:[m[K [01;36m[Knote: [m[Kin expansion of macro ‘[01m[KRAPIDJSON_DIAG_OFF[m[K’
+[8.547s]    36 | [01;36m[KRAPIDJSON_DIAG_OFF[m[K(array - bounds)  // some gcc versions generate wrong warnings
+[8.547s]       | [01;36m[K^~~~~~~~~~~~~~~~~~[m[K
+[8.547s] [01m[K/home/niuniu/DT46_RM_Sentry/src/Livox-SDK2/sdk_core/../3rdparty/rapidjson/rapidjson.h:542:29:[m[K [01;36m[Knote: [m[Kdid you mean ‘[01m[K-Warray-bounds[m[K’?
+[8.548s]   542 | #define RAPIDJSON_PRAGMA(x) [01;36m[K_Pragma[m[K(RAPIDJSON_STRINGIFY(x))
+[8.548s]       |                             [01;36m[K^~~~~~~[m[K
+[8.548s] [01m[K/home/niuniu/DT46_RM_Sentry/src/Livox-SDK2/sdk_core/../3rdparty/rapidjson/rapidjson.h:543:34:[m[K [01;36m[Knote: [m[Kin expansion of macro ‘[01m[KRAPIDJSON_PRAGMA[m[K’
+[8.548s]   543 | #define RAPIDJSON_DIAG_PRAGMA(x) [01;36m[KRAPIDJSON_PRAGMA[m[K(GCC diagnostic x)
+[8.548s]       |                                  [01;36m[K^~~~~~~~~~~~~~~~[m[K
+[8.548s] [01m[K/home/niuniu/DT46_RM_Sentry/src/Livox-SDK2/sdk_core/../3rdparty/rapidjson/rapidjson.h:545:3:[m[K [01;36m[Knote: [m[Kin expansion of macro ‘[01m[KRAPIDJSON_DIAG_PRAGMA[m[K’
+[8.548s]   545 |   [01;36m[KRAPIDJSON_DIAG_PRAGMA[m[K(ignored RAPIDJSON_STRINGIFY(RAPIDJSON_JOIN(-W, x)))
+[8.548s]       |   [01;36m[K^~~~~~~~~~~~~~~~~~~~~[m[K
+[8.548s] [01m[K/home/niuniu/DT46_RM_Sentry/src/Livox-SDK2/sdk_core/../3rdparty/rapidjson/internal/dtoa.h:36:1:[m[K [01;36m[Knote: [m[Kin expansion of macro ‘[01m[KRAPIDJSON_DIAG_OFF[m[K’
+[8.548s]    36 | [01;36m[KRAPIDJSON_DIAG_OFF[m[K(array - bounds)  // some gcc versions generate wrong warnings
+[8.548s]       | [01;36m[K^~~~~~~~~~~~~~~~~~[m[K
+[8.759s] [ 66%] [32mBuilding CXX object sdk_core/CMakeFiles/livox_lidar_sdk_shared.dir/logger_handler/logger_handler.cpp.o[0m
+[8.816s] [ 67%] [32mBuilding CXX object sdk_core/CMakeFiles/livox_lidar_sdk_shared.dir/logger_handler/file_manager.cpp.o[0m
+[8.830s] In file included from [01m[K/home/niuniu/DT46_RM_Sentry/src/Livox-SDK2/sdk_core/../3rdparty/rapidjson/stream.h:19[m[K,
+[8.831s]                  from [01m[K/home/niuniu/DT46_RM_Sentry/src/Livox-SDK2/sdk_core/../3rdparty/rapidjson/memorystream.h:22[m[K,
+[8.831s]                  from [01m[K/home/niuniu/DT46_RM_Sentry/src/Livox-SDK2/sdk_core/../3rdparty/rapidjson/encodedstream.h:22[m[K,
+[8.832s]                  from [01m[K/home/niuniu/DT46_RM_Sentry/src/Livox-SDK2/sdk_core/../3rdparty/rapidjson/document.h:26[m[K,
+[8.832s]                  from [01m[K/home/niuniu/DT46_RM_Sentry/src/Livox-SDK2/sdk_core/command_handler/parse_lidar_state_info.h:38[m[K,
+[8.832s]                  from [01m[K/home/niuniu/DT46_RM_Sentry/src/Livox-SDK2/sdk_core/command_handler/mid360_command_handler.cpp:37[m[K:
+[8.833s] [01m[K/home/niuniu/DT46_RM_Sentry/src/Livox-SDK2/sdk_core/../3rdparty/rapidjson/rapidjson.h:542:29:[m[K [01;35m[Kwarning: [m[Kunknown option after ‘[01m[K#pragma GCC diagnostic[m[K’ kind [[01;35m[K]8;;https://gcc.gnu.org/onlinedocs/gcc/Warning-Options.html#index-Wpragmas-Wpragmas]8;;[m[K]
+[8.834s]   542 | #define RAPIDJSON_PRAGMA(x) [01;35m[K_Pragma[m[K(RAPIDJSON_STRINGIFY(x))
+[8.834s]       |                             [01;35m[K^~~~~~~[m[K
+[8.834s] [01m[K/home/niuniu/DT46_RM_Sentry/src/Livox-SDK2/sdk_core/../3rdparty/rapidjson/rapidjson.h:543:34:[m[K [01;36m[Knote: [m[Kin expansion of macro ‘[01m[KRAPIDJSON_PRAGMA[m[K’
+[8.835s]   543 | #define RAPIDJSON_DIAG_PRAGMA(x) [01;36m[KRAPIDJSON_PRAGMA[m[K(GCC diagnostic x)
+[8.835s]       |                                  [01;36m[K^~~~~~~~~~~~~~~~[m[K
+[8.836s] [01m[K/home/niuniu/DT46_RM_Sentry/src/Livox-SDK2/sdk_core/../3rdparty/rapidjson/rapidjson.h:545:3:[m[K [01;36m[Knote: [m[Kin expansion of macro ‘[01m[KRAPIDJSON_DIAG_PRAGMA[m[K’
+[8.836s]   545 |   [01;36m[KRAPIDJSON_DIAG_PRAGMA[m[K(ignored RAPIDJSON_STRINGIFY(RAPIDJSON_JOIN(-W, x)))
+[8.836s]       |   [01;36m[K^~~~~~~~~~~~~~~~~~~~~[m[K
+[8.837s] [01m[K/home/niuniu/DT46_RM_Sentry/src/Livox-SDK2/sdk_core/../3rdparty/rapidjson/internal/dtoa.h:36:1:[m[K [01;36m[Knote: [m[Kin expansion of macro ‘[01m[KRAPIDJSON_DIAG_OFF[m[K’
+[8.837s]    36 | [01;36m[KRAPIDJSON_DIAG_OFF[m[K(array - bounds)  // some gcc versions generate wrong warnings
+[8.838s]       | [01;36m[K^~~~~~~~~~~~~~~~~~[m[K
+[8.838s] [01m[K/home/niuniu/DT46_RM_Sentry/src/Livox-SDK2/sdk_core/../3rdparty/rapidjson/rapidjson.h:542:29:[m[K [01;36m[Knote: [m[Kdid you mean ‘[01m[K-Warray-bounds[m[K’?
+[8.839s]   542 | #define RAPIDJSON_PRAGMA(x) [01;36m[K_Pragma[m[K(RAPIDJSON_STRINGIFY(x))
+[8.839s]       |                             [01;36m[K^~~~~~~[m[K
+[8.840s] [01m[K/home/niuniu/DT46_RM_Sentry/src/Livox-SDK2/sdk_core/../3rdparty/rapidjson/rapidjson.h:543:34:[m[K [01;36m[Knote: [m[Kin expansion of macro ‘[01m[KRAPIDJSON_PRAGMA[m[K’
+[8.840s]   543 | #define RAPIDJSON_DIAG_PRAGMA(x) [01;36m[KRAPIDJSON_PRAGMA[m[K(GCC diagnostic x)
+[8.841s]       |                                  [01;36m[K^~~~~~~~~~~~~~~~[m[K
+[8.841s] [01m[K/home/niuniu/DT46_RM_Sentry/src/Livox-SDK2/sdk_core/../3rdparty/rapidjson/rapidjson.h:545:3:[m[K [01;36m[Knote: [m[Kin expansion of macro ‘[01m[KRAPIDJSON_DIAG_PRAGMA[m[K’
+[8.841s]   545 |   [01;36m[KRAPIDJSON_DIAG_PRAGMA[m[K(ignored RAPIDJSON_STRINGIFY(RAPIDJSON_JOIN(-W, x)))
+[8.841s]       |   [01;36m[K^~~~~~~~~~~~~~~~~~~~~[m[K
+[8.841s] [01m[K/home/niuniu/DT46_RM_Sentry/src/Livox-SDK2/sdk_core/../3rdparty/rapidjson/internal/dtoa.h:36:1:[m[K [01;36m[Knote: [m[Kin expansion of macro ‘[01m[KRAPIDJSON_DIAG_OFF[m[K’
+[8.841s]    36 | [01;36m[KRAPIDJSON_DIAG_OFF[m[K(array - bounds)  // some gcc versions generate wrong warnings
+[8.841s]       | [01;36m[K^~~~~~~~~~~~~~~~~~[m[K
+[8.935s] [ 68%] [32mBuilding CXX object sdk_core/CMakeFiles/livox_lidar_sdk_shared.dir/data_handler/data_handler.cpp.o[0m
+[9.628s] [ 69%] [32mBuilding CXX object sdk_core/CMakeFiles/livox_lidar_sdk_static.dir/command_handler/parse_lidar_state_info.cpp.o[0m
+[9.903s] In file included from [01m[K/home/niuniu/DT46_RM_Sentry/src/Livox-SDK2/sdk_core/../3rdparty/rapidjson/stream.h:19[m[K,
+[9.904s]                  from [01m[K/home/niuniu/DT46_RM_Sentry/src/Livox-SDK2/sdk_core/../3rdparty/rapidjson/memorystream.h:22[m[K,
+[9.904s]                  from [01m[K/home/niuniu/DT46_RM_Sentry/src/Livox-SDK2/sdk_core/../3rdparty/rapidjson/encodedstream.h:22[m[K,
+[9.904s]                  from [01m[K/home/niuniu/DT46_RM_Sentry/src/Livox-SDK2/sdk_core/../3rdparty/rapidjson/document.h:26[m[K,
+[9.904s]                  from [01m[K/home/niuniu/DT46_RM_Sentry/src/Livox-SDK2/sdk_core/command_handler/parse_lidar_state_info.h:38[m[K,
+[9.905s]                  from [01m[K/home/niuniu/DT46_RM_Sentry/src/Livox-SDK2/sdk_core/command_handler/parse_lidar_state_info.cpp:2[m[K:
+[9.905s] [01m[K/home/niuniu/DT46_RM_Sentry/src/Livox-SDK2/sdk_core/../3rdparty/rapidjson/rapidjson.h:542:29:[m[K [01;35m[Kwarning: [m[Kunknown option after ‘[01m[K#pragma GCC diagnostic[m[K’ kind [[01;35m[K]8;;https://gcc.gnu.org/onlinedocs/gcc/Warning-Options.html#index-Wpragmas-Wpragmas]8;;[m[K]
+[9.905s]   542 | #define RAPIDJSON_PRAGMA(x) [01;35m[K_Pragma[m[K(RAPIDJSON_STRINGIFY(x))
+[9.905s]       |                             [01;35m[K^~~~~~~[m[K
+[9.906s] [01m[K/home/niuniu/DT46_RM_Sentry/src/Livox-SDK2/sdk_core/../3rdparty/rapidjson/rapidjson.h:543:34:[m[K [01;36m[Knote: [m[Kin expansion of macro ‘[01m[KRAPIDJSON_PRAGMA[m[K’
+[9.906s]   543 | #define RAPIDJSON_DIAG_PRAGMA(x) [01;36m[KRAPIDJSON_PRAGMA[m[K(GCC diagnostic x)
+[9.906s]       |                                  [01;36m[K^~~~~~~~~~~~~~~~[m[K
+[9.907s] [01m[K/home/niuniu/DT46_RM_Sentry/src/Livox-SDK2/sdk_core/../3rdparty/rapidjson/rapidjson.h:545:3:[m[K [01;36m[Knote: [m[Kin expansion of macro ‘[01m[KRAPIDJSON_DIAG_PRAGMA[m[K’
+[9.907s]   545 |   [01;36m[KRAPIDJSON_DIAG_PRAGMA[m[K(ignored RAPIDJSON_STRINGIFY(RAPIDJSON_JOIN(-W, x)))
+[9.907s]       |   [01;36m[K^~~~~~~~~~~~~~~~~~~~~[m[K
+[9.907s] [01m[K/home/niuniu/DT46_RM_Sentry/src/Livox-SDK2/sdk_core/../3rdparty/rapidjson/internal/dtoa.h:36:1:[m[K [01;36m[Knote: [m[Kin expansion of macro ‘[01m[KRAPIDJSON_DIAG_OFF[m[K’
+[9.908s]    36 | [01;36m[KRAPIDJSON_DIAG_OFF[m[K(array - bounds)  // some gcc versions generate wrong warnings
+[9.908s]       | [01;36m[K^~~~~~~~~~~~~~~~~~[m[K
+[9.908s] [01m[K/home/niuniu/DT46_RM_Sentry/src/Livox-SDK2/sdk_core/../3rdparty/rapidjson/rapidjson.h:542:29:[m[K [01;36m[Knote: [m[Kdid you mean ‘[01m[K-Warray-bounds[m[K’?
+[9.908s]   542 | #define RAPIDJSON_PRAGMA(x) [01;36m[K_Pragma[m[K(RAPIDJSON_STRINGIFY(x))
+[9.908s]       |                             [01;36m[K^~~~~~~[m[K
+[9.909s] [01m[K/home/niuniu/DT46_RM_Sentry/src/Livox-SDK2/sdk_core/../3rdparty/rapidjson/rapidjson.h:543:34:[m[K [01;36m[Knote: [m[Kin expansion of macro ‘[01m[KRAPIDJSON_PRAGMA[m[K’
+[9.909s]   543 | #define RAPIDJSON_DIAG_PRAGMA(x) [01;36m[KRAPIDJSON_PRAGMA[m[K(GCC diagnostic x)
+[9.909s]       |                                  [01;36m[K^~~~~~~~~~~~~~~~[m[K
+[9.909s] [01m[K/home/niuniu/DT46_RM_Sentry/src/Livox-SDK2/sdk_core/../3rdparty/rapidjson/rapidjson.h:545:3:[m[K [01;36m[Knote: [m[Kin expansion of macro ‘[01m[KRAPIDJSON_DIAG_PRAGMA[m[K’
+[9.910s]   545 |   [01;36m[KRAPIDJSON_DIAG_PRAGMA[m[K(ignored RAPIDJSON_STRINGIFY(RAPIDJSON_JOIN(-W, x)))
+[9.910s]       |   [01;36m[K^~~~~~~~~~~~~~~~~~~~~[m[K
+[9.910s] [01m[K/home/niuniu/DT46_RM_Sentry/src/Livox-SDK2/sdk_core/../3rdparty/rapidjson/internal/dtoa.h:36:1:[m[K [01;36m[Knote: [m[Kin expansion of macro ‘[01m[KRAPIDJSON_DIAG_OFF[m[K’
+[9.910s]    36 | [01;36m[KRAPIDJSON_DIAG_OFF[m[K(array - bounds)  // some gcc versions generate wrong warnings
+[9.913s]       | [01;36m[K^~~~~~~~~~~~~~~~~~[m[K
+[9.963s] [ 71%] [32mBuilding CXX object sdk_core/CMakeFiles/livox_lidar_sdk_shared.dir/command_handler/command_impl.cpp.o[0m
+[10.077s] [ 72%] [32mBuilding CXX object sdk_core/CMakeFiles/livox_lidar_sdk_static.dir/debug_point_cloud_handler/debug_point_cloud_manager.cpp.o[0m
+[10.266s] [ 73%] [32mBuilding CXX object sdk_core/CMakeFiles/livox_lidar_sdk_shared.dir/command_handler/general_command_handler.cpp.o[0m
+[10.430s] [ 74%] [32mBuilding CXX object sdk_core/CMakeFiles/livox_lidar_sdk_static.dir/debug_point_cloud_handler/debug_point_cloud_handler.cpp.o[0m
+[10.514s] [ 75%] [32mBuilding CXX object sdk_core/CMakeFiles/livox_lidar_sdk_shared.dir/command_handler/hap_command_handler.cpp.o[0m
+[10.581s] [ 77%] [32mBuilding CXX object sdk_core/CMakeFiles/livox_lidar_sdk_shared.dir/command_handler/mid360_command_handler.cpp.o[0m
+[10.953s] [ 78%] [32mBuilding CXX object sdk_core/CMakeFiles/livox_lidar_sdk_shared.dir/command_handler/build_request.cpp.o[0m
+[11.293s] In file included from [01m[K/home/niuniu/DT46_RM_Sentry/src/Livox-SDK2/sdk_core/../3rdparty/rapidjson/stream.h:19[m[K,
+[11.294s]                  from [01m[K/home/niuniu/DT46_RM_Sentry/src/Livox-SDK2/sdk_core/../3rdparty/rapidjson/memorystream.h:22[m[K,
+[11.294s]                  from [01m[K/home/niuniu/DT46_RM_Sentry/src/Livox-SDK2/sdk_core/../3rdparty/rapidjson/encodedstream.h:22[m[K,
+[11.294s]                  from [01m[K/home/niuniu/DT46_RM_Sentry/src/Livox-SDK2/sdk_core/../3rdparty/rapidjson/document.h:26[m[K,
+[11.294s]                  from [01m[K/home/niuniu/DT46_RM_Sentry/src/Livox-SDK2/sdk_core/command_handler/parse_lidar_state_info.h:38[m[K,
+[11.294s]                  from [01m[K/home/niuniu/DT46_RM_Sentry/src/Livox-SDK2/sdk_core/command_handler/hap_command_handler.cpp:37[m[K:
+[11.294s] [01m[K/home/niuniu/DT46_RM_Sentry/src/Livox-SDK2/sdk_core/../3rdparty/rapidjson/rapidjson.h:542:29:[m[K [01;35m[Kwarning: [m[Kunknown option after ‘[01m[K#pragma GCC diagnostic[m[K’ kind [[01;35m[K]8;;https://gcc.gnu.org/onlinedocs/gcc/Warning-Options.html#index-Wpragmas-Wpragmas]8;;[m[K]
+[11.294s]   542 | #define RAPIDJSON_PRAGMA(x) [01;35m[K_Pragma[m[K(RAPIDJSON_STRINGIFY(x))
+[11.295s]       |                             [01;35m[K^~~~~~~[m[K
+[11.295s] [01m[K/home/niuniu/DT46_RM_Sentry/src/Livox-SDK2/sdk_core/../3rdparty/rapidjson/rapidjson.h:543:34:[m[K [01;36m[Knote: [m[Kin expansion of macro ‘[01m[KRAPIDJSON_PRAGMA[m[K’
+[11.295s]   543 | #define RAPIDJSON_DIAG_PRAGMA(x) [01;36m[KRAPIDJSON_PRAGMA[m[K(GCC diagnostic x)
+[11.295s]       |                                  [01;36m[K^~~~~~~~~~~~~~~~[m[K
+[11.295s] [01m[K/home/niuniu/DT46_RM_Sentry/src/Livox-SDK2/sdk_core/../3rdparty/rapidjson/rapidjson.h:545:3:[m[K [01;36m[Knote: [m[Kin expansion of macro ‘[01m[KRAPIDJSON_DIAG_PRAGMA[m[K’
+[11.295s]   545 |   [01;36m[KRAPIDJSON_DIAG_PRAGMA[m[K(ignored RAPIDJSON_STRINGIFY(RAPIDJSON_JOIN(-W, x)))
+[11.295s]       |   [01;36m[K^~~~~~~~~~~~~~~~~~~~~[m[K
+[11.295s] [01m[K/home/niuniu/DT46_RM_Sentry/src/Livox-SDK2/sdk_core/../3rdparty/rapidjson/internal/dtoa.h:36:1:[m[K [01;36m[Knote: [m[Kin expansion of macro ‘[01m[KRAPIDJSON_DIAG_OFF[m[K’
+[11.295s]    36 | [01;36m[KRAPIDJSON_DIAG_OFF[m[K(array - bounds)  // some gcc versions generate wrong warnings
+[11.295s]       | [01;36m[K^~~~~~~~~~~~~~~~~~[m[K
+[11.295s] [01m[K/home/niuniu/DT46_RM_Sentry/src/Livox-SDK2/sdk_core/../3rdparty/rapidjson/rapidjson.h:542:29:[m[K [01;36m[Knote: [m[Kdid you mean ‘[01m[K-Warray-bounds[m[K’?
+[11.295s]   542 | #define RAPIDJSON_PRAGMA(x) [01;36m[K_Pragma[m[K(RAPIDJSON_STRINGIFY(x))
+[11.295s]       |                             [01;36m[K^~~~~~~[m[K
+[11.295s] [01m[K/home/niuniu/DT46_RM_Sentry/src/Livox-SDK2/sdk_core/../3rdparty/rapidjson/rapidjson.h:543:34:[m[K [01;36m[Knote: [m[Kin expansion of macro ‘[01m[KRAPIDJSON_PRAGMA[m[K’
+[11.295s]   543 | #define RAPIDJSON_DIAG_PRAGMA(x) [01;36m[KRAPIDJSON_PRAGMA[m[K(GCC diagnostic x)
+[11.295s]       |                                  [01;36m[K^~~~~~~~~~~~~~~~[m[K
+[11.295s] [01m[K/home/niuniu/DT46_RM_Sentry/src/Livox-SDK2/sdk_core/../3rdparty/rapidjson/rapidjson.h:545:3:[m[K [01;36m[Knote: [m[Kin expansion of macro ‘[01m[KRAPIDJSON_DIAG_PRAGMA[m[K’
+[11.295s]   545 |   [01;36m[KRAPIDJSON_DIAG_PRAGMA[m[K(ignored RAPIDJSON_STRINGIFY(RAPIDJSON_JOIN(-W, x)))
+[11.295s]       |   [01;36m[K^~~~~~~~~~~~~~~~~~~~~[m[K
+[11.295s] [01m[K/home/niuniu/DT46_RM_Sentry/src/Livox-SDK2/sdk_core/../3rdparty/rapidjson/internal/dtoa.h:36:1:[m[K [01;36m[Knote: [m[Kin expansion of macro ‘[01m[KRAPIDJSON_DIAG_OFF[m[K’
+[11.295s]    36 | [01;36m[KRAPIDJSON_DIAG_OFF[m[K(array - bounds)  // some gcc versions generate wrong warnings
+[11.295s]       | [01;36m[K^~~~~~~~~~~~~~~~~~[m[K
+[11.339s] In file included from [01m[K/home/niuniu/DT46_RM_Sentry/src/Livox-SDK2/sdk_core/../3rdparty/rapidjson/stream.h:19[m[K,
+[11.339s]                  from [01m[K/home/niuniu/DT46_RM_Sentry/src/Livox-SDK2/sdk_core/../3rdparty/rapidjson/memorystream.h:22[m[K,
+[11.340s]                  from [01m[K/home/niuniu/DT46_RM_Sentry/src/Livox-SDK2/sdk_core/../3rdparty/rapidjson/encodedstream.h:22[m[K,
+[11.340s]                  from [01m[K/home/niuniu/DT46_RM_Sentry/src/Livox-SDK2/sdk_core/../3rdparty/rapidjson/document.h:26[m[K,
+[11.340s]                  from [01m[K/home/niuniu/DT46_RM_Sentry/src/Livox-SDK2/sdk_core/command_handler/parse_lidar_state_info.h:38[m[K,
+[11.340s]                  from [01m[K/home/niuniu/DT46_RM_Sentry/src/Livox-SDK2/sdk_core/command_handler/mid360_command_handler.cpp:37[m[K:
+[11.340s] [01m[K/home/niuniu/DT46_RM_Sentry/src/Livox-SDK2/sdk_core/../3rdparty/rapidjson/rapidjson.h:542:29:[m[K [01;35m[Kwarning: [m[Kunknown option after ‘[01m[K#pragma GCC diagnostic[m[K’ kind [[01;35m[K]8;;https://gcc.gnu.org/onlinedocs/gcc/Warning-Options.html#index-Wpragmas-Wpragmas]8;;[m[K]
+[11.340s]   542 | #define RAPIDJSON_PRAGMA(x) [01;35m[K_Pragma[m[K(RAPIDJSON_STRINGIFY(x))
+[11.340s]       |                             [01;35m[K^~~~~~~[m[K
+[11.340s] [01m[K/home/niuniu/DT46_RM_Sentry/src/Livox-SDK2/sdk_core/../3rdparty/rapidjson/rapidjson.h:543:34:[m[K [01;36m[Knote: [m[Kin expansion of macro ‘[01m[KRAPIDJSON_PRAGMA[m[K’
+[11.340s]   543 | #define RAPIDJSON_DIAG_PRAGMA(x) [01;36m[KRAPIDJSON_PRAGMA[m[K(GCC diagnostic x)
+[11.340s]       |                                  [01;36m[K^~~~~~~~~~~~~~~~[m[K
+[11.340s] [01m[K/home/niuniu/DT46_RM_Sentry/src/Livox-SDK2/sdk_core/../3rdparty/rapidjson/rapidjson.h:545:3:[m[K [01;36m[Knote: [m[Kin expansion of macro ‘[01m[KRAPIDJSON_DIAG_PRAGMA[m[K’
+[11.340s]   545 |   [01;36m[KRAPIDJSON_DIAG_PRAGMA[m[K(ignored RAPIDJSON_STRINGIFY(RAPIDJSON_JOIN(-W, x)))
+[11.340s]       |   [01;36m[K^~~~~~~~~~~~~~~~~~~~~[m[K
+[11.340s] [01m[K/home/niuniu/DT46_RM_Sentry/src/Livox-SDK2/sdk_core/../3rdparty/rapidjson/internal/dtoa.h:36:1:[m[K [01;36m[Knote: [m[Kin expansion of macro ‘[01m[KRAPIDJSON_DIAG_OFF[m[K’
+[11.340s]    36 | [01;36m[KRAPIDJSON_DIAG_OFF[m[K(array - bounds)  // some gcc versions generate wrong warnings
+[11.340s]       | [01;36m[K^~~~~~~~~~~~~~~~~~[m[K
+[11.343s] [01m[K/home/niuniu/DT46_RM_Sentry/src/Livox-SDK2/sdk_core/../3rdparty/rapidjson/rapidjson.h:542:29:[m[K [01;36m[Knote: [m[Kdid you mean ‘[01m[K-Warray-bounds[m[K’?
+[11.343s]   542 | #define RAPIDJSON_PRAGMA(x) [01;36m[K_Pragma[m[K(RAPIDJSON_STRINGIFY(x))
+[11.343s]       |                             [01;36m[K^~~~~~~[m[K
+[11.343s] [01m[K/home/niuniu/DT46_RM_Sentry/src/Livox-SDK2/sdk_core/../3rdparty/rapidjson/rapidjson.h:543:34:[m[K [01;36m[Knote: [m[Kin expansion of macro ‘[01m[KRAPIDJSON_PRAGMA[m[K’
+[11.344s]   543 | #define RAPIDJSON_DIAG_PRAGMA(x) [01;36m[KRAPIDJSON_PRAGMA[m[K(GCC diagnostic x)
+[11.344s]       |                                  [01;36m[K^~~~~~~~~~~~~~~~[m[K
+[11.344s] [01m[K/home/niuniu/DT46_RM_Sentry/src/Livox-SDK2/sdk_core/../3rdparty/rapidjson/rapidjson.h:545:3:[m[K [01;36m[Knote: [m[Kin expansion of macro ‘[01m[KRAPIDJSON_DIAG_PRAGMA[m[K’
+[11.344s]   545 |   [01;36m[KRAPIDJSON_DIAG_PRAGMA[m[K(ignored RAPIDJSON_STRINGIFY(RAPIDJSON_JOIN(-W, x)))
+[11.345s]       |   [01;36m[K^~~~~~~~~~~~~~~~~~~~~[m[K
+[11.345s] [01m[K/home/niuniu/DT46_RM_Sentry/src/Livox-SDK2/sdk_core/../3rdparty/rapidjson/internal/dtoa.h:36:1:[m[K [01;36m[Knote: [m[Kin expansion of macro ‘[01m[KRAPIDJSON_DIAG_OFF[m[K’
+[11.345s]    36 | [01;36m[KRAPIDJSON_DIAG_OFF[m[K(array - bounds)  // some gcc versions generate wrong warnings
+[11.345s]       | [01;36m[K^~~~~~~~~~~~~~~~~~[m[K
+[11.483s] [ 79%] [32mBuilding CXX object sdk_core/CMakeFiles/livox_lidar_sdk_shared.dir/command_handler/parse_lidar_state_info.cpp.o[0m
+[11.830s] In file included from [01m[K/home/niuniu/DT46_RM_Sentry/src/Livox-SDK2/sdk_core/../3rdparty/rapidjson/stream.h:19[m[K,
+[11.831s]                  from [01m[K/home/niuniu/DT46_RM_Sentry/src/Livox-SDK2/sdk_core/../3rdparty/rapidjson/memorystream.h:22[m[K,
+[11.831s]                  from [01m[K/home/niuniu/DT46_RM_Sentry/src/Livox-SDK2/sdk_core/../3rdparty/rapidjson/encodedstream.h:22[m[K,
+[11.831s]                  from [01m[K/home/niuniu/DT46_RM_Sentry/src/Livox-SDK2/sdk_core/../3rdparty/rapidjson/document.h:26[m[K,
+[11.832s]                  from [01m[K/home/niuniu/DT46_RM_Sentry/src/Livox-SDK2/sdk_core/command_handler/parse_lidar_state_info.h:38[m[K,
+[11.832s]                  from [01m[K/home/niuniu/DT46_RM_Sentry/src/Livox-SDK2/sdk_core/command_handler/parse_lidar_state_info.cpp:2[m[K:
+[11.832s] [01m[K/home/niuniu/DT46_RM_Sentry/src/Livox-SDK2/sdk_core/../3rdparty/rapidjson/rapidjson.h:542:29:[m[K [01;35m[Kwarning: [m[Kunknown option after ‘[01m[K#pragma GCC diagnostic[m[K’ kind [[01;35m[K]8;;https://gcc.gnu.org/onlinedocs/gcc/Warning-Options.html#index-Wpragmas-Wpragmas]8;;[m[K]
+[11.832s]   542 | #define RAPIDJSON_PRAGMA(x) [01;35m[K_Pragma[m[K(RAPIDJSON_STRINGIFY(x))
+[11.833s]       |                             [01;35m[K^~~~~~~[m[K
+[11.833s] [01m[K/home/niuniu/DT46_RM_Sentry/src/Livox-SDK2/sdk_core/../3rdparty/rapidjson/rapidjson.h:543:34:[m[K [01;36m[Knote: [m[Kin expansion of macro ‘[01m[KRAPIDJSON_PRAGMA[m[K’
+[11.833s]   543 | #define RAPIDJSON_DIAG_PRAGMA(x) [01;36m[KRAPIDJSON_PRAGMA[m[K(GCC diagnostic x)
+[11.834s]       |                                  [01;36m[K^~~~~~~~~~~~~~~~[m[K
+[11.834s] [01m[K/home/niuniu/DT46_RM_Sentry/src/Livox-SDK2/sdk_core/../3rdparty/rapidjson/rapidjson.h:545:3:[m[K [01;36m[Knote: [m[Kin expansion of macro ‘[01m[KRAPIDJSON_DIAG_PRAGMA[m[K’
+[11.834s]   545 |   [01;36m[KRAPIDJSON_DIAG_PRAGMA[m[K(ignored RAPIDJSON_STRINGIFY(RAPIDJSON_JOIN(-W, x)))
+[11.834s]       |   [01;36m[K^~~~~~~~~~~~~~~~~~~~~[m[K
+[11.835s] [01m[K/home/niuniu/DT46_RM_Sentry/src/Livox-SDK2/sdk_core/../3rdparty/rapidjson/internal/dtoa.h:36:1:[m[K [01;36m[Knote: [m[Kin expansion of macro ‘[01m[KRAPIDJSON_DIAG_OFF[m[K’
+[11.835s]    36 | [01;36m[KRAPIDJSON_DIAG_OFF[m[K(array - bounds)  // some gcc versions generate wrong warnings
+[11.835s]       | [01;36m[K^~~~~~~~~~~~~~~~~~[m[K
+[11.848s] [01m[K/home/niuniu/DT46_RM_Sentry/src/Livox-SDK2/sdk_core/../3rdparty/rapidjson/rapidjson.h:542:29:[m[K [01;36m[Knote: [m[Kdid you mean ‘[01m[K-Warray-bounds[m[K’?
+[11.848s]   542 | #define RAPIDJSON_PRAGMA(x) [01;36m[K_Pragma[m[K(RAPIDJSON_STRINGIFY(x))
+[11.849s]       |                             [01;36m[K^~~~~~~[m[K
+[11.849s] [01m[K/home/niuniu/DT46_RM_Sentry/src/Livox-SDK2/sdk_core/../3rdparty/rapidjson/rapidjson.h:543:34:[m[K [01;36m[Knote: [m[Kin expansion of macro ‘[01m[KRAPIDJSON_PRAGMA[m[K’
+[11.849s]   543 | #define RAPIDJSON_DIAG_PRAGMA(x) [01;36m[KRAPIDJSON_PRAGMA[m[K(GCC diagnostic x)
+[11.850s]       |                                  [01;36m[K^~~~~~~~~~~~~~~~[m[K
+[11.850s] [01m[K/home/niuniu/DT46_RM_Sentry/src/Livox-SDK2/sdk_core/../3rdparty/rapidjson/rapidjson.h:545:3:[m[K [01;36m[Knote: [m[Kin expansion of macro ‘[01m[KRAPIDJSON_DIAG_PRAGMA[m[K’
+[11.850s]   545 |   [01;36m[KRAPIDJSON_DIAG_PRAGMA[m[K(ignored RAPIDJSON_STRINGIFY(RAPIDJSON_JOIN(-W, x)))
+[11.850s]       |   [01;36m[K^~~~~~~~~~~~~~~~~~~~~[m[K
+[11.851s] [01m[K/home/niuniu/DT46_RM_Sentry/src/Livox-SDK2/sdk_core/../3rdparty/rapidjson/internal/dtoa.h:36:1:[m[K [01;36m[Knote: [m[Kin expansion of macro ‘[01m[KRAPIDJSON_DIAG_OFF[m[K’
+[11.851s]    36 | [01;36m[KRAPIDJSON_DIAG_OFF[m[K(array - bounds)  // some gcc versions generate wrong warnings
+[11.851s]       | [01;36m[K^~~~~~~~~~~~~~~~~~[m[K
+[12.086s] [ 80%] [32mBuilding CXX object sdk_core/CMakeFiles/livox_lidar_sdk_shared.dir/debug_point_cloud_handler/debug_point_cloud_manager.cpp.o[0m
+[12.210s] [ 81%] [32mBuilding CXX object sdk_core/CMakeFiles/livox_lidar_sdk_shared.dir/debug_point_cloud_handler/debug_point_cloud_handler.cpp.o[0m
+[12.644s] [ 83%] [32m[1mLinking CXX static library liblivox_lidar_sdk_static.a[0m
+[13.040s] [ 83%] Built target livox_lidar_sdk_static
+[13.067s] [ 84%] [32mBuilding CXX object samples/livox_lidar_quick_start/CMakeFiles/livox_lidar_quick_start.dir/main.cpp.o[0m
+[13.068s] [ 85%] [32mBuilding CXX object samples/debug_point_cloud/CMakeFiles/debug_point_cloud.dir/main.cpp.o[0m
+[13.070s] [ 86%] [32mBuilding CXX object samples/multi_lidars_upgrade/CMakeFiles/multi_lidars_upgrade.dir/main.cpp.o[0m
+[13.079s] [ 87%] [32mBuilding CXX object samples/logger/CMakeFiles/logger.dir/main.cpp.o[0m
+[13.220s] [ 89%] [32mBuilding CXX object samples/lidar_cmd_observer/CMakeFiles/lidar_cmd_observer.dir/main.cpp.o[0m
+[13.282s] [ 90%] [32m[1mLinking CXX executable livox_lidar_quick_start[0m
+[13.334s] [ 91%] [32m[1mLinking CXX executable debug_point_cloud[0m
+[13.339s] [ 92%] [32m[1mLinking CXX executable logger[0m
+[13.354s] [ 93%] [32m[1mLinking CXX executable multi_lidars_upgrade[0m
+[13.415s] [ 95%] [32mBuilding CXX object samples/livox_lidar_rmc_time_sync/CMakeFiles/livox_lidar_rmc_time_sync.dir/main.cpp.o[0m
+[13.427s] [ 96%] [32m[1mLinking CXX executable lidar_cmd_observer[0m
+[13.723s] [ 97%] [32mBuilding CXX object samples/livox_lidar_rmc_time_sync/CMakeFiles/livox_lidar_rmc_time_sync.dir/linux/synchro.cpp.o[0m
+[14.044s] [ 97%] Built target livox_lidar_quick_start
+[14.052s] [ 98%] [32m[1mLinking CXX executable livox_lidar_rmc_time_sync[0m
+[14.053s] [ 98%] Built target debug_point_cloud
+[14.089s] [ 98%] Built target multi_lidars_upgrade
+[14.111s] [ 98%] Built target logger
+[14.122s] [ 98%] Built target lidar_cmd_observer
+[14.350s] [100%] [32m[1mLinking CXX shared library liblivox_lidar_sdk_shared.so[0m
+[14.605s] [100%] Built target livox_lidar_rmc_time_sync
+[15.478s] [100%] Built target livox_lidar_sdk_shared

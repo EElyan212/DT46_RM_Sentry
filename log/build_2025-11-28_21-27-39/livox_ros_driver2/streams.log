@@ -1,0 +1,361 @@
+[0.016s] Invoking command in '/home/niuniu/DT46_RM_Sentry/build/livox_ros_driver2': CMAKE_PREFIX_PATH=${CMAKE_PREFIX_PATH}:/opt/ros/humble /usr/bin/cmake /home/niuniu/DT46_RM_Sentry/src/livox_ros_driver2 -DROS_EDITION=ROS2 -DHUMBLE_ROS=humble -DCMAKE_INSTALL_PREFIX=/home/niuniu/DT46_RM_Sentry/install/livox_ros_driver2
+[0.374s] -- The C compiler identification is GNU 11.4.0
+[0.433s] -- The CXX compiler identification is GNU 11.4.0
+[0.445s] -- Detecting C compiler ABI info
+[0.546s] -- Detecting C compiler ABI info - done
+[0.551s] -- Check for working C compiler: /usr/bin/cc - skipped
+[0.552s] -- Detecting C compile features
+[0.553s] -- Detecting C compile features - done
+[0.557s] -- Detecting CXX compiler ABI info
+[0.638s] -- Detecting CXX compiler ABI info - done
+[0.645s] -- Check for working CXX compiler: /usr/bin/c++ - skipped
+[0.645s] -- Detecting CXX compile features
+[0.645s] -- Detecting CXX compile features - done
+[0.649s] -- livox_ros_driver2 version: 1.2.4
+[0.653s] -- Found ament_cmake_auto: 1.3.11 (/opt/ros/humble/share/ament_cmake_auto/cmake)
+[0.807s] -- Found Python3: /usr/bin/python3 (found version "3.10.12") found components: Interpreter 
+[1.157s] -- Using all available rosidl_typesupport_c: rosidl_typesupport_fastrtps_c;rosidl_typesupport_introspection_c
+[1.172s] -- Found rosidl_adapter: 3.1.6 (/opt/ros/humble/share/rosidl_adapter/cmake)
+[1.298s] -- Using all available rosidl_typesupport_cpp: rosidl_typesupport_fastrtps_cpp;rosidl_typesupport_introspection_cpp
+[1.568s] -- Found rmw_implementation_cmake: 6.1.2 (/opt/ros/humble/share/rmw_implementation_cmake/cmake)
+[1.579s] -- Found rmw_fastrtps_cpp: 6.2.7 (/opt/ros/humble/share/rmw_fastrtps_cpp/cmake)
+[1.854s] -- Found OpenSSL: /usr/lib/x86_64-linux-gnu/libcrypto.so (found version "3.0.2")  
+[1.914s] -- Found FastRTPS: /opt/ros/humble/include  
+[1.956s] -- Using RMW implementation 'rmw_fastrtps_cpp' as default
+[1.986s] -- Looking for pthread.h
+[2.257s] -- Looking for pthread.h - found
+[2.257s] -- Performing Test CMAKE_HAVE_LIBC_PTHREAD
+[2.549s] -- Performing Test CMAKE_HAVE_LIBC_PTHREAD - Success
+[2.550s] -- Found Threads: TRUE  
+[2.945s] -- Checking for module 'eigen3'
+[2.984s] --   Found eigen3, version 3.4.0
+[3.091s] -- Found Eigen: /usr/include/eigen3 (Required is at least version "3.1") 
+[3.091s] -- Eigen found (include: /usr/include/eigen3, version: 3.4.0)
+[3.181s] -- Checking for module 'flann'
+[3.198s] --   Found flann, version 1.9.1
+[3.263s] -- Found FLANN: /usr/lib/x86_64-linux-gnu/libflann_cpp.so  
+[3.264s] -- FLANN found (include: /usr/include, lib: /usr/lib/x86_64-linux-gnu/libflann_cpp.so)
+[5.388s] -- Checking for module 'libusb-1.0'
+[5.430s] --   Found libusb-1.0, version 1.0.25
+[5.527s] -- Found libusb: /usr/lib/x86_64-linux-gnu/libusb-1.0.so  
+[5.528s] -- OpenNI found (version: 1.5.4.0, include: /usr/include/ni, lib: /usr/lib/libOpenNI.so;libusb::libusb)
+[5.652s] -- OpenNI2 found (version: 2.2.0.33, include: /usr/include/openni2, lib: /usr/lib/x86_64-linux-gnu/libOpenNI2.so;libusb::libusb)
+[5.909s] -- Eigen found (include: /usr/include/eigen3, version: 3.4.0)
+[5.931s] -- OpenNI found (version: 1.5.4.0, include: /usr/include/ni, lib: /usr/lib/libOpenNI.so;libusb::libusb)
+[5.945s] -- OpenNI2 found (version: 2.2.0.33, include: /usr/include/openni2, lib: /usr/lib/x86_64-linux-gnu/libOpenNI2.so;libusb::libusb)
+[6.082s] -- Found Qhull version 8.0.2
+[6.211s] -- OpenNI found (version: 1.5.4.0, include: /usr/include/ni, lib: /usr/lib/libOpenNI.so;libusb::libusb)
+[6.335s] -- Found PCL_COMMON: /usr/lib/x86_64-linux-gnu/libpcl_common.so  
+[6.335s] -- Found PCL_KDTREE: /usr/lib/x86_64-linux-gnu/libpcl_kdtree.so  
+[6.337s] -- Found PCL_OCTREE: /usr/lib/x86_64-linux-gnu/libpcl_octree.so  
+[6.337s] -- Found PCL_SEARCH: /usr/lib/x86_64-linux-gnu/libpcl_search.so  
+[6.339s] -- Found PCL_SAMPLE_CONSENSUS: /usr/lib/x86_64-linux-gnu/libpcl_sample_consensus.so  
+[6.339s] -- Found PCL_FILTERS: /usr/lib/x86_64-linux-gnu/libpcl_filters.so  
+[6.339s] -- Found PCL_2D: /usr/include/pcl-1.12  
+[6.339s] -- Found PCL_GEOMETRY: /usr/include/pcl-1.12  
+[6.340s] -- Found PCL_IO: /usr/lib/x86_64-linux-gnu/libpcl_io.so  
+[6.341s] -- Found PCL_FEATURES: /usr/lib/x86_64-linux-gnu/libpcl_features.so  
+[6.342s] -- Found PCL_ML: /usr/lib/x86_64-linux-gnu/libpcl_ml.so  
+[6.344s] -- Found PCL_SEGMENTATION: /usr/lib/x86_64-linux-gnu/libpcl_segmentation.so  
+[6.344s] -- Found PCL_VISUALIZATION: /usr/lib/x86_64-linux-gnu/libpcl_visualization.so  
+[6.344s] -- Found PCL_SURFACE: /usr/lib/x86_64-linux-gnu/libpcl_surface.so  
+[6.345s] -- Found PCL_REGISTRATION: /usr/lib/x86_64-linux-gnu/libpcl_registration.so  
+[6.345s] -- Found PCL_KEYPOINTS: /usr/lib/x86_64-linux-gnu/libpcl_keypoints.so  
+[6.346s] -- Found PCL_TRACKING: /usr/lib/x86_64-linux-gnu/libpcl_tracking.so  
+[6.346s] -- Found PCL_RECOGNITION: /usr/lib/x86_64-linux-gnu/libpcl_recognition.so  
+[6.347s] -- Found PCL_STEREO: /usr/lib/x86_64-linux-gnu/libpcl_stereo.so  
+[6.348s] -- Found PCL_APPS: /usr/lib/x86_64-linux-gnu/libpcl_apps.so  
+[6.349s] -- Found PCL_IN_HAND_SCANNER: /usr/include/pcl-1.12  
+[6.349s] -- Found PCL_MODELER: /usr/include/pcl-1.12  
+[6.349s] -- Found PCL_POINT_CLOUD_EDITOR: /usr/include/pcl-1.12  
+[6.350s] -- Found PCL_OUTOFCORE: /usr/lib/x86_64-linux-gnu/libpcl_outofcore.so  
+[6.351s] -- Found PCL_PEOPLE: /usr/lib/x86_64-linux-gnu/libpcl_people.so  
+[6.395s] -- Found PkgConfig: /usr/bin/pkg-config (found version "0.29.2") 
+[6.396s] -- Checking for module 'apr-1'
+[6.414s] --   Found apr-1, version 1.7.0
+[6.459s] [0m/usr/include/apr-1.0[0m
+[6.459s] [0mapr-1[0m
+[6.660s] -- Found ament_cmake_ros: 0.10.0 (/opt/ros/humble/share/ament_cmake_ros/cmake)
+[6.859s] -- Using all available rosidl_typesupport_c: rosidl_typesupport_fastrtps_c;rosidl_typesupport_introspection_c
+[7.245s] -- Using all available rosidl_typesupport_cpp: rosidl_typesupport_fastrtps_cpp;rosidl_typesupport_introspection_cpp
+[7.265s] -- Found PythonInterp: /usr/bin/python3 (found suitable version "3.10.12", minimum required is "3.6") 
+[7.266s] -- Found python_cmake_module: 0.10.0 (/opt/ros/humble/share/python_cmake_module/cmake)
+[7.290s] -- Found PythonLibs: /usr/lib/x86_64-linux-gnu/libpython3.10.so (found suitable version "3.10.12", minimum required is "3.5") 
+[7.290s] -- Using PYTHON_EXECUTABLE: /usr/bin/python3
+[7.291s] -- Using PYTHON_INCLUDE_DIRS: /usr/include/python3.10
+[7.291s] -- Using PYTHON_LIBRARIES: /usr/lib/x86_64-linux-gnu/libpython3.10.so
+[7.309s] -- Found PythonExtra: .so  
+[7.360s] -- Found ament_lint_auto: 0.12.12 (/opt/ros/humble/share/ament_lint_auto/cmake)
+[7.382s] -- Added test 'copyright' to check source files copyright and LICENSE
+[7.390s] -- Added test 'cppcheck' to perform static code analysis on C / C++ code
+[7.392s] -- Configured cppcheck include dirs: /home/niuniu/DT46_RM_Sentry/src/livox_ros_driver2/3rdparty;/home/niuniu/DT46_RM_Sentry/src/livox_ros_driver2/src
+[7.393s] -- Configured cppcheck exclude dirs and/or files: 
+[7.399s] -- Added test 'cpplint' to check C / C++ code against the Google style
+[7.399s] -- Configured cpplint exclude dirs and/or files: 
+[7.400s] -- Added test 'flake8' to check Python code syntax and style conventions
+[7.403s] -- Added test 'lint_cmake' to check CMake code style
+[7.405s] -- Added test 'pep257' to check Python code against some of the docstring style conventions in PEP 257
+[7.412s] -- Added test 'uncrustify' to check C / C++ code style
+[7.412s] -- Configured uncrustify additional arguments: 
+[7.413s] -- Added test 'xmllint' to check XML markup files
+[7.417s] -- Configuring done
+[7.711s] -- Generating done
+[7.770s] -- Build files have been written to: /home/niuniu/DT46_RM_Sentry/build/livox_ros_driver2
+[7.838s] Invoked command in '/home/niuniu/DT46_RM_Sentry/build/livox_ros_driver2' returned '0': CMAKE_PREFIX_PATH=${CMAKE_PREFIX_PATH}:/opt/ros/humble /usr/bin/cmake /home/niuniu/DT46_RM_Sentry/src/livox_ros_driver2 -DROS_EDITION=ROS2 -DHUMBLE_ROS=humble -DCMAKE_INSTALL_PREFIX=/home/niuniu/DT46_RM_Sentry/install/livox_ros_driver2
+[7.843s] Invoking command in '/home/niuniu/DT46_RM_Sentry/build/livox_ros_driver2': CMAKE_PREFIX_PATH=${CMAKE_PREFIX_PATH}:/opt/ros/humble /usr/bin/cmake --build /home/niuniu/DT46_RM_Sentry/build/livox_ros_driver2 -- -j8 -l8
+[7.983s] [  1%] [34m[1mGenerating C code for ROS interfaces[0m
+[8.007s] [  3%] [34m[1mGenerating C++ code for ROS interfaces[0m
+[8.020s] [  5%] [32mBuilding CXX object CMakeFiles/livox_ros_driver2_node.dir/rclcpp_components/node_main_livox_ros_driver2_node.cpp.o[0m
+[8.038s] [  5%] Built target ament_cmake_python_copy_livox_ros_driver2
+[8.267s] running egg_info
+[8.267s] creating livox_ros_driver2.egg-info
+[8.268s] writing livox_ros_driver2.egg-info/PKG-INFO
+[8.268s] writing dependency_links to livox_ros_driver2.egg-info/dependency_links.txt
+[8.268s] writing top-level names to livox_ros_driver2.egg-info/top_level.txt
+[8.268s] writing manifest file 'livox_ros_driver2.egg-info/SOURCES.txt'
+[8.274s] reading manifest file 'livox_ros_driver2.egg-info/SOURCES.txt'
+[8.275s] writing manifest file 'livox_ros_driver2.egg-info/SOURCES.txt'
+[8.343s] [  5%] Built target ament_cmake_python_build_livox_ros_driver2_egg
+[8.673s] [  7%] [32mBuilding C object CMakeFiles/livox_interfaces2__rosidl_generator_c.dir/rosidl_generator_c/livox_ros_driver2/msg/detail/custom_point__functions.c.o[0m
+[8.681s] [  8%] [32mBuilding C object CMakeFiles/livox_interfaces2__rosidl_generator_c.dir/rosidl_generator_c/livox_ros_driver2/msg/detail/custom_msg__functions.c.o[0m
+[8.703s] [  8%] Built target livox_interfaces2__cpp
+[8.728s] [ 10%] [34m[1mGenerating C++ type support dispatch for ROS interfaces[0m
+[8.733s] [ 12%] [34m[1mGenerating C++ introspection for ROS interfaces[0m
+[8.740s] [ 14%] [34m[1mGenerating C++ type support for eProsima Fast-RTPS[0m
+[8.847s] [ 15%] [32m[1mLinking C shared library liblivox_ros_driver2__rosidl_generator_c.so[0m
+[9.010s] [ 15%] Built target livox_interfaces2__rosidl_generator_c
+[9.054s] [ 17%] [34m[1mGenerating C introspection for ROS interfaces[0m
+[9.061s] [ 19%] [34m[1mGenerating C type support for eProsima Fast-RTPS[0m
+[9.061s] [ 21%] [34m[1mGenerating C type support dispatch for ROS interfaces[0m
+[9.303s] [ 22%] [32mBuilding CXX object CMakeFiles/livox_interfaces2__rosidl_typesupport_cpp.dir/rosidl_typesupport_cpp/livox_ros_driver2/msg/custom_msg__type_support.cpp.o[0m
+[9.306s] [ 24%] [32mBuilding CXX object CMakeFiles/livox_interfaces2__rosidl_typesupport_cpp.dir/rosidl_typesupport_cpp/livox_ros_driver2/msg/custom_point__type_support.cpp.o[0m
+[10.023s] [ 26%] [32mBuilding CXX object CMakeFiles/livox_interfaces2__rosidl_typesupport_fastrtps_cpp.dir/rosidl_typesupport_fastrtps_cpp/livox_ros_driver2/msg/detail/dds_fastrtps/custom_point__type_support.cpp.o[0m
+[10.023s] [ 28%] [32mBuilding CXX object CMakeFiles/livox_interfaces2__rosidl_typesupport_introspection_cpp.dir/rosidl_typesupport_introspection_cpp/livox_ros_driver2/msg/detail/custom_point__type_support.cpp.o[0m
+[10.413s] [ 29%] [32mBuilding CXX object CMakeFiles/livox_interfaces2__rosidl_typesupport_fastrtps_cpp.dir/rosidl_typesupport_fastrtps_cpp/livox_ros_driver2/msg/detail/dds_fastrtps/custom_msg__type_support.cpp.o[0m
+[10.438s] [ 31%] [32mBuilding CXX object CMakeFiles/livox_interfaces2__rosidl_typesupport_c.dir/rosidl_typesupport_c/livox_ros_driver2/msg/custom_point__type_support.cpp.o[0m
+[10.484s] [ 33%] [32mBuilding C object CMakeFiles/livox_interfaces2__rosidl_typesupport_introspection_c.dir/rosidl_typesupport_introspection_c/livox_ros_driver2/msg/detail/custom_point__type_support.c.o[0m
+[10.491s] [ 35%] [32m[1mLinking CXX shared library liblivox_ros_driver2__rosidl_typesupport_cpp.so[0m
+[10.508s] [ 36%] [32mBuilding CXX object CMakeFiles/livox_interfaces2__rosidl_typesupport_c.dir/rosidl_typesupport_c/livox_ros_driver2/msg/custom_msg__type_support.cpp.o[0m
+[10.606s] [ 38%] [32mBuilding CXX object CMakeFiles/livox_interfaces2__rosidl_typesupport_fastrtps_c.dir/rosidl_typesupport_fastrtps_c/livox_ros_driver2/msg/detail/custom_point__type_support_c.cpp.o[0m
+[10.610s] [ 40%] [32m[1mLinking CXX shared library liblivox_ros_driver2__rosidl_typesupport_c.so[0m
+[10.644s] [ 42%] [32mBuilding C object CMakeFiles/livox_interfaces2__rosidl_typesupport_introspection_c.dir/rosidl_typesupport_introspection_c/livox_ros_driver2/msg/detail/custom_msg__type_support.c.o[0m
+[10.650s] [ 42%] Built target livox_interfaces2__rosidl_typesupport_cpp
+[10.699s] [ 43%] [32mBuilding CXX object CMakeFiles/livox_ros_driver2.dir/src/livox_ros_driver2.cpp.o[0m
+[10.710s] [ 43%] Built target livox_interfaces2__rosidl_typesupport_c
+[10.741s] [ 45%] [32mBuilding CXX object CMakeFiles/livox_interfaces2__rosidl_typesupport_fastrtps_c.dir/rosidl_typesupport_fastrtps_c/livox_ros_driver2/msg/detail/custom_msg__type_support_c.cpp.o[0m
+[10.785s] [ 47%] [32m[1mLinking C shared library liblivox_ros_driver2__rosidl_typesupport_introspection_c.so[0m
+[10.870s] [ 47%] Built target livox_interfaces2__rosidl_typesupport_introspection_c
+[10.892s] [ 49%] [32mBuilding CXX object CMakeFiles/livox_interfaces2__rosidl_typesupport_introspection_cpp.dir/rosidl_typesupport_introspection_cpp/livox_ros_driver2/msg/detail/custom_msg__type_support.cpp.o[0m
+[11.091s] [ 50%] [32mBuilding CXX object CMakeFiles/livox_ros_driver2.dir/src/lddc.cpp.o[0m
+[11.375s] [ 52%] [32mBuilding CXX object CMakeFiles/livox_ros_driver2.dir/src/driver_node.cpp.o[0m
+[11.394s] [ 54%] [32mBuilding CXX object CMakeFiles/livox_ros_driver2.dir/src/lds.cpp.o[0m
+[11.423s] [ 56%] [32m[1mLinking CXX shared library liblivox_ros_driver2__rosidl_typesupport_fastrtps_cpp.so[0m
+[11.448s] [ 57%] [32m[1mLinking CXX shared library liblivox_ros_driver2__rosidl_typesupport_fastrtps_c.so[0m
+[11.817s] [ 57%] Built target livox_interfaces2__rosidl_typesupport_fastrtps_cpp
+[11.824s] [ 59%] [32m[1mLinking CXX shared library liblivox_ros_driver2__rosidl_typesupport_introspection_cpp.so[0m
+[11.847s] [ 61%] [32mBuilding CXX object CMakeFiles/livox_ros_driver2.dir/src/lds_lidar.cpp.o[0m
+[11.959s] [ 61%] Built target livox_interfaces2__rosidl_typesupport_fastrtps_c
+[11.989s] [ 63%] [32mBuilding CXX object CMakeFiles/livox_ros_driver2.dir/src/comm/comm.cpp.o[0m
+[12.143s] [ 63%] Built target livox_interfaces2__rosidl_typesupport_introspection_cpp
+[12.217s] [ 63%] Built target livox_interfaces2
+[12.285s] [ 64%] [34m[1mGenerating Python code for ROS interfaces[0m
+[14.071s] [ 64%] Built target livox_interfaces2__py
+[14.108s] [ 66%] [32mBuilding CXX object CMakeFiles/livox_ros_driver2.dir/src/comm/ldq.cpp.o[0m
+[14.133s] [ 68%] [32mBuilding C object CMakeFiles/livox_interfaces2__rosidl_generator_py.dir/rosidl_generator_py/livox_ros_driver2/msg/_custom_point_s.c.o[0m
+[14.324s] [ 70%] [32mBuilding C object CMakeFiles/livox_interfaces2__rosidl_generator_py.dir/rosidl_generator_py/livox_ros_driver2/msg/_custom_msg_s.c.o[0m
+[14.457s] [ 71%] [32mBuilding CXX object CMakeFiles/livox_ros_driver2.dir/src/comm/semaphore.cpp.o[0m
+[14.527s] [ 73%] [32mBuilding CXX object CMakeFiles/livox_ros_driver2.dir/src/comm/lidar_imu_data_queue.cpp.o[0m
+[14.652s] [ 75%] [32m[1mLinking C shared library rosidl_generator_py/livox_ros_driver2/liblivox_interfaces2__rosidl_generator_py.so[0m
+[14.760s] [ 75%] Built target livox_interfaces2__rosidl_generator_py
+[14.834s] [ 77%] [32mBuilding C object CMakeFiles/livox_ros_driver2__rosidl_typesupport_fastrtps_c__pyext.dir/rosidl_generator_py/livox_ros_driver2/_livox_ros_driver2_s.ep.rosidl_typesupport_fastrtps_c.c.o[0m
+[15.255s] [ 78%] [32mBuilding C object CMakeFiles/livox_ros_driver2__rosidl_typesupport_introspection_c__pyext.dir/rosidl_generator_py/livox_ros_driver2/_livox_ros_driver2_s.ep.rosidl_typesupport_introspection_c.c.o[0m
+[15.338s] [ 80%] [32m[1mLinking C shared library rosidl_generator_py/livox_ros_driver2/livox_ros_driver2_s__rosidl_typesupport_fastrtps_c.cpython-310-x86_64-linux-gnu.so[0m
+[15.358s] [ 82%] [32mBuilding C object CMakeFiles/livox_ros_driver2__rosidl_typesupport_c__pyext.dir/rosidl_generator_py/livox_ros_driver2/_livox_ros_driver2_s.ep.rosidl_typesupport_c.c.o[0m
+[15.404s] [ 84%] [32mBuilding CXX object CMakeFiles/livox_ros_driver2.dir/src/comm/cache_index.cpp.o[0m
+[15.424s] [ 85%] [32m[1mLinking C shared library rosidl_generator_py/livox_ros_driver2/livox_ros_driver2_s__rosidl_typesupport_introspection_c.cpython-310-x86_64-linux-gnu.so[0m
+[15.477s] [ 85%] Built target livox_ros_driver2__rosidl_typesupport_fastrtps_c__pyext
+[15.505s] [ 87%] [32mBuilding CXX object CMakeFiles/livox_ros_driver2.dir/src/comm/pub_handler.cpp.o[0m
+[15.574s] [ 89%] [32m[1mLinking C shared library rosidl_generator_py/livox_ros_driver2/livox_ros_driver2_s__rosidl_typesupport_c.cpython-310-x86_64-linux-gnu.so[0m
+[15.583s] [ 89%] Built target livox_ros_driver2__rosidl_typesupport_introspection_c__pyext
+[15.615s] [ 91%] [32mBuilding CXX object CMakeFiles/livox_ros_driver2.dir/src/parse_cfg_file/parse_cfg_file.cpp.o[0m
+[15.676s] [ 91%] Built target livox_ros_driver2__rosidl_typesupport_c__pyext
+[15.940s] [ 92%] [32mBuilding CXX object CMakeFiles/livox_ros_driver2.dir/src/parse_cfg_file/parse_livox_lidar_cfg.cpp.o[0m
+[19.328s] [ 94%] [32mBuilding CXX object CMakeFiles/livox_ros_driver2.dir/src/call_back/lidar_common_callback.cpp.o[0m
+[19.358s] [ 96%] [32mBuilding CXX object CMakeFiles/livox_ros_driver2.dir/src/call_back/livox_lidar_callback.cpp.o[0m
+[19.819s] [ 98%] [32m[1mLinking CXX executable livox_ros_driver2_node[0m
+[20.097s] [ 98%] Built target livox_ros_driver2_node
+[26.818s] [100%] [32m[1mLinking CXX shared library liblivox_ros_driver2.so[0m
+[27.616s] [100%] Built target livox_ros_driver2
+[27.761s] Invoked command in '/home/niuniu/DT46_RM_Sentry/build/livox_ros_driver2' returned '0': CMAKE_PREFIX_PATH=${CMAKE_PREFIX_PATH}:/opt/ros/humble /usr/bin/cmake --build /home/niuniu/DT46_RM_Sentry/build/livox_ros_driver2 -- -j8 -l8
+[27.794s] Invoking command in '/home/niuniu/DT46_RM_Sentry/build/livox_ros_driver2': CMAKE_PREFIX_PATH=${CMAKE_PREFIX_PATH}:/opt/ros/humble /usr/bin/cmake --install /home/niuniu/DT46_RM_Sentry/build/livox_ros_driver2
+[27.805s] -- Install configuration: ""
+[27.806s] -- Installing: /home/niuniu/DT46_RM_Sentry/install/livox_ros_driver2/share/ament_index/resource_index/rosidl_interfaces/livox_ros_driver2
+[27.806s] -- Installing: /home/niuniu/DT46_RM_Sentry/install/livox_ros_driver2/include/livox_ros_driver2/livox_ros_driver2
+[27.806s] -- Installing: /home/niuniu/DT46_RM_Sentry/install/livox_ros_driver2/include/livox_ros_driver2/livox_ros_driver2/msg
+[27.808s] -- Installing: /home/niuniu/DT46_RM_Sentry/install/livox_ros_driver2/include/livox_ros_driver2/livox_ros_driver2/msg/detail
+[27.808s] -- Installing: /home/niuniu/DT46_RM_Sentry/install/livox_ros_driver2/include/livox_ros_driver2/livox_ros_driver2/msg/detail/custom_point__functions.c
+[27.809s] -- Installing: /home/niuniu/DT46_RM_Sentry/install/livox_ros_driver2/include/livox_ros_driver2/livox_ros_driver2/msg/detail/custom_point__type_support.h
+[27.810s] -- Installing: /home/niuniu/DT46_RM_Sentry/install/livox_ros_driver2/include/livox_ros_driver2/livox_ros_driver2/msg/detail/custom_msg__type_support.h
+[27.810s] -- Installing: /home/niuniu/DT46_RM_Sentry/install/livox_ros_driver2/include/livox_ros_driver2/livox_ros_driver2/msg/detail/custom_point__struct.h
+[27.811s] -- Installing: /home/niuniu/DT46_RM_Sentry/install/livox_ros_driver2/include/livox_ros_driver2/livox_ros_driver2/msg/detail/custom_msg__struct.h
+[27.811s] -- Installing: /home/niuniu/DT46_RM_Sentry/install/livox_ros_driver2/include/livox_ros_driver2/livox_ros_driver2/msg/detail/custom_msg__functions.h
+[27.812s] -- Installing: /home/niuniu/DT46_RM_Sentry/install/livox_ros_driver2/include/livox_ros_driver2/livox_ros_driver2/msg/detail/custom_msg__functions.c
+[27.813s] -- Installing: /home/niuniu/DT46_RM_Sentry/install/livox_ros_driver2/include/livox_ros_driver2/livox_ros_driver2/msg/detail/custom_point__functions.h
+[27.814s] -- Installing: /home/niuniu/DT46_RM_Sentry/install/livox_ros_driver2/include/livox_ros_driver2/livox_ros_driver2/msg/rosidl_generator_c__visibility_control.h
+[27.814s] -- Installing: /home/niuniu/DT46_RM_Sentry/install/livox_ros_driver2/include/livox_ros_driver2/livox_ros_driver2/msg/custom_point.h
+[27.815s] -- Installing: /home/niuniu/DT46_RM_Sentry/install/livox_ros_driver2/include/livox_ros_driver2/livox_ros_driver2/msg/custom_msg.h
+[27.819s] -- Installing: /home/niuniu/DT46_RM_Sentry/install/livox_ros_driver2/share/livox_ros_driver2/environment/library_path.sh
+[27.819s] -- Installing: /home/niuniu/DT46_RM_Sentry/install/livox_ros_driver2/share/livox_ros_driver2/environment/library_path.dsv
+[27.821s] -- Installing: /home/niuniu/DT46_RM_Sentry/install/livox_ros_driver2/lib/liblivox_ros_driver2__rosidl_generator_c.so
+[27.821s] -- Set runtime path of "/home/niuniu/DT46_RM_Sentry/install/livox_ros_driver2/lib/liblivox_ros_driver2__rosidl_generator_c.so" to ""
+[27.822s] -- Up-to-date: /home/niuniu/DT46_RM_Sentry/install/livox_ros_driver2/include/livox_ros_driver2/livox_ros_driver2
+[27.822s] -- Up-to-date: /home/niuniu/DT46_RM_Sentry/install/livox_ros_driver2/include/livox_ros_driver2/livox_ros_driver2/msg
+[27.822s] -- Installing: /home/niuniu/DT46_RM_Sentry/install/livox_ros_driver2/include/livox_ros_driver2/livox_ros_driver2/msg/rosidl_typesupport_fastrtps_c__visibility_control.h
+[27.823s] -- Up-to-date: /home/niuniu/DT46_RM_Sentry/install/livox_ros_driver2/include/livox_ros_driver2/livox_ros_driver2/msg/detail
+[27.823s] -- Installing: /home/niuniu/DT46_RM_Sentry/install/livox_ros_driver2/include/livox_ros_driver2/livox_ros_driver2/msg/detail/custom_msg__rosidl_typesupport_fastrtps_c.h
+[27.823s] -- Installing: /home/niuniu/DT46_RM_Sentry/install/livox_ros_driver2/include/livox_ros_driver2/livox_ros_driver2/msg/detail/custom_point__rosidl_typesupport_fastrtps_c.h
+[27.824s] -- Installing: /home/niuniu/DT46_RM_Sentry/install/livox_ros_driver2/lib/liblivox_ros_driver2__rosidl_typesupport_fastrtps_c.so
+[27.825s] -- Set runtime path of "/home/niuniu/DT46_RM_Sentry/install/livox_ros_driver2/lib/liblivox_ros_driver2__rosidl_typesupport_fastrtps_c.so" to ""
+[27.825s] -- Up-to-date: /home/niuniu/DT46_RM_Sentry/install/livox_ros_driver2/include/livox_ros_driver2/livox_ros_driver2
+[27.825s] -- Up-to-date: /home/niuniu/DT46_RM_Sentry/install/livox_ros_driver2/include/livox_ros_driver2/livox_ros_driver2/msg
+[27.825s] -- Up-to-date: /home/niuniu/DT46_RM_Sentry/install/livox_ros_driver2/include/livox_ros_driver2/livox_ros_driver2/msg/detail
+[27.826s] -- Installing: /home/niuniu/DT46_RM_Sentry/install/livox_ros_driver2/include/livox_ros_driver2/livox_ros_driver2/msg/detail/custom_msg__rosidl_typesupport_introspection_c.h
+[27.827s] -- Installing: /home/niuniu/DT46_RM_Sentry/install/livox_ros_driver2/include/livox_ros_driver2/livox_ros_driver2/msg/detail/custom_msg__type_support.c
+[27.827s] -- Installing: /home/niuniu/DT46_RM_Sentry/install/livox_ros_driver2/include/livox_ros_driver2/livox_ros_driver2/msg/detail/custom_point__type_support.c
+[27.827s] -- Installing: /home/niuniu/DT46_RM_Sentry/install/livox_ros_driver2/include/livox_ros_driver2/livox_ros_driver2/msg/detail/custom_point__rosidl_typesupport_introspection_c.h
+[27.828s] -- Installing: /home/niuniu/DT46_RM_Sentry/install/livox_ros_driver2/include/livox_ros_driver2/livox_ros_driver2/msg/rosidl_typesupport_introspection_c__visibility_control.h
+[27.828s] -- Installing: /home/niuniu/DT46_RM_Sentry/install/livox_ros_driver2/lib/liblivox_ros_driver2__rosidl_typesupport_introspection_c.so
+[27.830s] -- Set runtime path of "/home/niuniu/DT46_RM_Sentry/install/livox_ros_driver2/lib/liblivox_ros_driver2__rosidl_typesupport_introspection_c.so" to ""
+[27.830s] -- Installing: /home/niuniu/DT46_RM_Sentry/install/livox_ros_driver2/lib/liblivox_ros_driver2__rosidl_typesupport_c.so
+[27.831s] -- Set runtime path of "/home/niuniu/DT46_RM_Sentry/install/livox_ros_driver2/lib/liblivox_ros_driver2__rosidl_typesupport_c.so" to ""
+[27.831s] -- Up-to-date: /home/niuniu/DT46_RM_Sentry/install/livox_ros_driver2/include/livox_ros_driver2/livox_ros_driver2
+[27.831s] -- Up-to-date: /home/niuniu/DT46_RM_Sentry/install/livox_ros_driver2/include/livox_ros_driver2/livox_ros_driver2/msg
+[27.832s] -- Installing: /home/niuniu/DT46_RM_Sentry/install/livox_ros_driver2/include/livox_ros_driver2/livox_ros_driver2/msg/rosidl_generator_cpp__visibility_control.hpp
+[27.832s] -- Installing: /home/niuniu/DT46_RM_Sentry/install/livox_ros_driver2/include/livox_ros_driver2/livox_ros_driver2/msg/custom_point.hpp
+[27.832s] -- Up-to-date: /home/niuniu/DT46_RM_Sentry/install/livox_ros_driver2/include/livox_ros_driver2/livox_ros_driver2/msg/detail
+[27.832s] -- Installing: /home/niuniu/DT46_RM_Sentry/install/livox_ros_driver2/include/livox_ros_driver2/livox_ros_driver2/msg/detail/custom_msg__type_support.hpp
+[27.832s] -- Installing: /home/niuniu/DT46_RM_Sentry/install/livox_ros_driver2/include/livox_ros_driver2/livox_ros_driver2/msg/detail/custom_point__type_support.hpp
+[27.832s] -- Installing: /home/niuniu/DT46_RM_Sentry/install/livox_ros_driver2/include/livox_ros_driver2/livox_ros_driver2/msg/detail/custom_point__traits.hpp
+[27.832s] -- Installing: /home/niuniu/DT46_RM_Sentry/install/livox_ros_driver2/include/livox_ros_driver2/livox_ros_driver2/msg/detail/custom_msg__builder.hpp
+[27.833s] -- Installing: /home/niuniu/DT46_RM_Sentry/install/livox_ros_driver2/include/livox_ros_driver2/livox_ros_driver2/msg/detail/custom_point__builder.hpp
+[27.833s] -- Installing: /home/niuniu/DT46_RM_Sentry/install/livox_ros_driver2/include/livox_ros_driver2/livox_ros_driver2/msg/detail/custom_msg__struct.hpp
+[27.833s] -- Installing: /home/niuniu/DT46_RM_Sentry/install/livox_ros_driver2/include/livox_ros_driver2/livox_ros_driver2/msg/detail/custom_msg__traits.hpp
+[27.833s] -- Installing: /home/niuniu/DT46_RM_Sentry/install/livox_ros_driver2/include/livox_ros_driver2/livox_ros_driver2/msg/detail/custom_point__struct.hpp
+[27.833s] -- Installing: /home/niuniu/DT46_RM_Sentry/install/livox_ros_driver2/include/livox_ros_driver2/livox_ros_driver2/msg/custom_msg.hpp
+[27.834s] -- Up-to-date: /home/niuniu/DT46_RM_Sentry/install/livox_ros_driver2/include/livox_ros_driver2/livox_ros_driver2
+[27.834s] -- Up-to-date: /home/niuniu/DT46_RM_Sentry/install/livox_ros_driver2/include/livox_ros_driver2/livox_ros_driver2/msg
+[27.834s] -- Installing: /home/niuniu/DT46_RM_Sentry/install/livox_ros_driver2/include/livox_ros_driver2/livox_ros_driver2/msg/rosidl_typesupport_fastrtps_cpp__visibility_control.h
+[27.835s] -- Up-to-date: /home/niuniu/DT46_RM_Sentry/install/livox_ros_driver2/include/livox_ros_driver2/livox_ros_driver2/msg/detail
+[27.835s] -- Installing: /home/niuniu/DT46_RM_Sentry/install/livox_ros_driver2/include/livox_ros_driver2/livox_ros_driver2/msg/detail/custom_point__rosidl_typesupport_fastrtps_cpp.hpp
+[27.836s] -- Installing: /home/niuniu/DT46_RM_Sentry/install/livox_ros_driver2/include/livox_ros_driver2/livox_ros_driver2/msg/detail/custom_msg__rosidl_typesupport_fastrtps_cpp.hpp
+[27.836s] -- Installing: /home/niuniu/DT46_RM_Sentry/install/livox_ros_driver2/include/livox_ros_driver2/livox_ros_driver2/msg/detail/dds_fastrtps
+[27.836s] -- Installing: /home/niuniu/DT46_RM_Sentry/install/livox_ros_driver2/lib/liblivox_ros_driver2__rosidl_typesupport_fastrtps_cpp.so
+[27.838s] -- Set runtime path of "/home/niuniu/DT46_RM_Sentry/install/livox_ros_driver2/lib/liblivox_ros_driver2__rosidl_typesupport_fastrtps_cpp.so" to ""
+[27.838s] -- Up-to-date: /home/niuniu/DT46_RM_Sentry/install/livox_ros_driver2/include/livox_ros_driver2/livox_ros_driver2
+[27.839s] -- Up-to-date: /home/niuniu/DT46_RM_Sentry/install/livox_ros_driver2/include/livox_ros_driver2/livox_ros_driver2/msg
+[27.839s] -- Up-to-date: /home/niuniu/DT46_RM_Sentry/install/livox_ros_driver2/include/livox_ros_driver2/livox_ros_driver2/msg/detail
+[27.839s] -- Installing: /home/niuniu/DT46_RM_Sentry/install/livox_ros_driver2/include/livox_ros_driver2/livox_ros_driver2/msg/detail/custom_msg__type_support.cpp
+[27.839s] -- Installing: /home/niuniu/DT46_RM_Sentry/install/livox_ros_driver2/include/livox_ros_driver2/livox_ros_driver2/msg/detail/custom_point__type_support.cpp
+[27.840s] -- Installing: /home/niuniu/DT46_RM_Sentry/install/livox_ros_driver2/include/livox_ros_driver2/livox_ros_driver2/msg/detail/custom_point__rosidl_typesupport_introspection_cpp.hpp
+[27.841s] -- Installing: /home/niuniu/DT46_RM_Sentry/install/livox_ros_driver2/include/livox_ros_driver2/livox_ros_driver2/msg/detail/custom_msg__rosidl_typesupport_introspection_cpp.hpp
+[27.841s] -- Installing: /home/niuniu/DT46_RM_Sentry/install/livox_ros_driver2/lib/liblivox_ros_driver2__rosidl_typesupport_introspection_cpp.so
+[27.843s] -- Set runtime path of "/home/niuniu/DT46_RM_Sentry/install/livox_ros_driver2/lib/liblivox_ros_driver2__rosidl_typesupport_introspection_cpp.so" to ""
+[27.843s] -- Installing: /home/niuniu/DT46_RM_Sentry/install/livox_ros_driver2/lib/liblivox_ros_driver2__rosidl_typesupport_cpp.so
+[27.844s] -- Set runtime path of "/home/niuniu/DT46_RM_Sentry/install/livox_ros_driver2/lib/liblivox_ros_driver2__rosidl_typesupport_cpp.so" to ""
+[27.845s] -- Installing: /home/niuniu/DT46_RM_Sentry/install/livox_ros_driver2/share/livox_ros_driver2/environment/pythonpath.sh
+[27.845s] -- Installing: /home/niuniu/DT46_RM_Sentry/install/livox_ros_driver2/share/livox_ros_driver2/environment/pythonpath.dsv
+[27.846s] -- Installing: /home/niuniu/DT46_RM_Sentry/install/livox_ros_driver2/local/lib/python3.10/dist-packages/livox_ros_driver2-1.0.0-py3.10.egg-info
+[27.847s] -- Installing: /home/niuniu/DT46_RM_Sentry/install/livox_ros_driver2/local/lib/python3.10/dist-packages/livox_ros_driver2-1.0.0-py3.10.egg-info/SOURCES.txt
+[27.848s] -- Installing: /home/niuniu/DT46_RM_Sentry/install/livox_ros_driver2/local/lib/python3.10/dist-packages/livox_ros_driver2-1.0.0-py3.10.egg-info/PKG-INFO
+[27.848s] -- Installing: /home/niuniu/DT46_RM_Sentry/install/livox_ros_driver2/local/lib/python3.10/dist-packages/livox_ros_driver2-1.0.0-py3.10.egg-info/dependency_links.txt
+[27.849s] -- Installing: /home/niuniu/DT46_RM_Sentry/install/livox_ros_driver2/local/lib/python3.10/dist-packages/livox_ros_driver2-1.0.0-py3.10.egg-info/top_level.txt
+[27.850s] -- Installing: /home/niuniu/DT46_RM_Sentry/install/livox_ros_driver2/local/lib/python3.10/dist-packages/livox_ros_driver2
+[27.850s] -- Installing: /home/niuniu/DT46_RM_Sentry/install/livox_ros_driver2/local/lib/python3.10/dist-packages/livox_ros_driver2/_livox_ros_driver2_s.ep.rosidl_typesupport_fastrtps_c.c
+[27.851s] -- Installing: /home/niuniu/DT46_RM_Sentry/install/livox_ros_driver2/local/lib/python3.10/dist-packages/livox_ros_driver2/livox_ros_driver2_s__rosidl_typesupport_c.cpython-310-x86_64-linux-gnu.so
+[27.852s] -- Installing: /home/niuniu/DT46_RM_Sentry/install/livox_ros_driver2/local/lib/python3.10/dist-packages/livox_ros_driver2/liblivox_interfaces2__rosidl_generator_py.so
+[27.853s] -- Installing: /home/niuniu/DT46_RM_Sentry/install/livox_ros_driver2/local/lib/python3.10/dist-packages/livox_ros_driver2/msg
+[27.853s] -- Installing: /home/niuniu/DT46_RM_Sentry/install/livox_ros_driver2/local/lib/python3.10/dist-packages/livox_ros_driver2/msg/_custom_msg.py
+[27.853s] -- Installing: /home/niuniu/DT46_RM_Sentry/install/livox_ros_driver2/local/lib/python3.10/dist-packages/livox_ros_driver2/msg/_custom_point.py
+[27.854s] -- Installing: /home/niuniu/DT46_RM_Sentry/install/livox_ros_driver2/local/lib/python3.10/dist-packages/livox_ros_driver2/msg/_custom_msg_s.c
+[27.855s] -- Installing: /home/niuniu/DT46_RM_Sentry/install/livox_ros_driver2/local/lib/python3.10/dist-packages/livox_ros_driver2/msg/_custom_point_s.c
+[27.856s] -- Installing: /home/niuniu/DT46_RM_Sentry/install/livox_ros_driver2/local/lib/python3.10/dist-packages/livox_ros_driver2/msg/__init__.py
+[27.857s] -- Installing: /home/niuniu/DT46_RM_Sentry/install/livox_ros_driver2/local/lib/python3.10/dist-packages/livox_ros_driver2/livox_ros_driver2_s__rosidl_typesupport_fastrtps_c.cpython-310-x86_64-linux-gnu.so
+[27.860s] -- Installing: /home/niuniu/DT46_RM_Sentry/install/livox_ros_driver2/local/lib/python3.10/dist-packages/livox_ros_driver2/__init__.py
+[27.860s] -- Installing: /home/niuniu/DT46_RM_Sentry/install/livox_ros_driver2/local/lib/python3.10/dist-packages/livox_ros_driver2/livox_ros_driver2_s__rosidl_typesupport_introspection_c.cpython-310-x86_64-linux-gnu.so
+[27.861s] -- Installing: /home/niuniu/DT46_RM_Sentry/install/livox_ros_driver2/local/lib/python3.10/dist-packages/livox_ros_driver2/_livox_ros_driver2_s.ep.rosidl_typesupport_c.c
+[27.862s] -- Installing: /home/niuniu/DT46_RM_Sentry/install/livox_ros_driver2/local/lib/python3.10/dist-packages/livox_ros_driver2/_livox_ros_driver2_s.ep.rosidl_typesupport_introspection_c.c
+[27.988s] Listing '/home/niuniu/DT46_RM_Sentry/install/livox_ros_driver2/local/lib/python3.10/dist-packages/livox_ros_driver2'...
+[27.989s] Compiling '/home/niuniu/DT46_RM_Sentry/install/livox_ros_driver2/local/lib/python3.10/dist-packages/livox_ros_driver2/__init__.py'...
+[27.989s] Listing '/home/niuniu/DT46_RM_Sentry/install/livox_ros_driver2/local/lib/python3.10/dist-packages/livox_ros_driver2/msg'...
+[27.989s] Compiling '/home/niuniu/DT46_RM_Sentry/install/livox_ros_driver2/local/lib/python3.10/dist-packages/livox_ros_driver2/msg/__init__.py'...
+[27.989s] Compiling '/home/niuniu/DT46_RM_Sentry/install/livox_ros_driver2/local/lib/python3.10/dist-packages/livox_ros_driver2/msg/_custom_msg.py'...
+[27.989s] Compiling '/home/niuniu/DT46_RM_Sentry/install/livox_ros_driver2/local/lib/python3.10/dist-packages/livox_ros_driver2/msg/_custom_point.py'...
+[27.997s] -- Installing: /home/niuniu/DT46_RM_Sentry/install/livox_ros_driver2/local/lib/python3.10/dist-packages/livox_ros_driver2/livox_ros_driver2_s__rosidl_typesupport_fastrtps_c.cpython-310-x86_64-linux-gnu.so
+[27.997s] -- Set runtime path of "/home/niuniu/DT46_RM_Sentry/install/livox_ros_driver2/local/lib/python3.10/dist-packages/livox_ros_driver2/livox_ros_driver2_s__rosidl_typesupport_fastrtps_c.cpython-310-x86_64-linux-gnu.so" to ""
+[27.997s] -- Installing: /home/niuniu/DT46_RM_Sentry/install/livox_ros_driver2/local/lib/python3.10/dist-packages/livox_ros_driver2/livox_ros_driver2_s__rosidl_typesupport_introspection_c.cpython-310-x86_64-linux-gnu.so
+[27.998s] -- Set runtime path of "/home/niuniu/DT46_RM_Sentry/install/livox_ros_driver2/local/lib/python3.10/dist-packages/livox_ros_driver2/livox_ros_driver2_s__rosidl_typesupport_introspection_c.cpython-310-x86_64-linux-gnu.so" to ""
+[27.999s] -- Installing: /home/niuniu/DT46_RM_Sentry/install/livox_ros_driver2/local/lib/python3.10/dist-packages/livox_ros_driver2/livox_ros_driver2_s__rosidl_typesupport_c.cpython-310-x86_64-linux-gnu.so
+[27.999s] -- Set runtime path of "/home/niuniu/DT46_RM_Sentry/install/livox_ros_driver2/local/lib/python3.10/dist-packages/livox_ros_driver2/livox_ros_driver2_s__rosidl_typesupport_c.cpython-310-x86_64-linux-gnu.so" to ""
+[27.999s] -- Installing: /home/niuniu/DT46_RM_Sentry/install/livox_ros_driver2/lib/liblivox_interfaces2__rosidl_generator_py.so
+[27.999s] -- Set runtime path of "/home/niuniu/DT46_RM_Sentry/install/livox_ros_driver2/lib/liblivox_interfaces2__rosidl_generator_py.so" to ""
+[27.999s] -- Installing: /home/niuniu/DT46_RM_Sentry/install/livox_ros_driver2/share/livox_ros_driver2/msg/CustomPoint.idl
+[28.001s] -- Installing: /home/niuniu/DT46_RM_Sentry/install/livox_ros_driver2/share/livox_ros_driver2/msg/CustomMsg.idl
+[28.003s] -- Installing: /home/niuniu/DT46_RM_Sentry/install/livox_ros_driver2/share/livox_ros_driver2/msg/CustomPoint.msg
+[28.003s] -- Installing: /home/niuniu/DT46_RM_Sentry/install/livox_ros_driver2/share/livox_ros_driver2/msg/CustomMsg.msg
+[28.004s] -- Installing: /home/niuniu/DT46_RM_Sentry/install/livox_ros_driver2/lib/livox_ros_driver2/livox_ros_driver2_node
+[28.005s] -- Set runtime path of "/home/niuniu/DT46_RM_Sentry/install/livox_ros_driver2/lib/livox_ros_driver2/livox_ros_driver2_node" to ""
+[28.005s] -- Installing: /home/niuniu/DT46_RM_Sentry/install/livox_ros_driver2/lib/liblivox_ros_driver2.so
+[28.017s] -- Set runtime path of "/home/niuniu/DT46_RM_Sentry/install/livox_ros_driver2/lib/liblivox_ros_driver2.so" to ""
+[28.017s] -- Installing: /home/niuniu/DT46_RM_Sentry/install/livox_ros_driver2/share/livox_ros_driver2/config
+[28.017s] -- Installing: /home/niuniu/DT46_RM_Sentry/install/livox_ros_driver2/share/livox_ros_driver2/config/HAP_config.json
+[28.018s] -- Installing: /home/niuniu/DT46_RM_Sentry/install/livox_ros_driver2/share/livox_ros_driver2/config/display_point_cloud_ROS1.rviz
+[28.019s] -- Installing: /home/niuniu/DT46_RM_Sentry/install/livox_ros_driver2/share/livox_ros_driver2/config/display_point_cloud_ROS2.rviz
+[28.020s] -- Installing: /home/niuniu/DT46_RM_Sentry/install/livox_ros_driver2/share/livox_ros_driver2/config/mixed_HAP_MID360_config.json
+[28.020s] -- Installing: /home/niuniu/DT46_RM_Sentry/install/livox_ros_driver2/share/livox_ros_driver2/config/MID360_config.json
+[28.021s] -- Installing: /home/niuniu/DT46_RM_Sentry/install/livox_ros_driver2/share/livox_ros_driver2/launch_ROS2
+[28.022s] -- Installing: /home/niuniu/DT46_RM_Sentry/install/livox_ros_driver2/share/livox_ros_driver2/launch_ROS2/msg_MID360_launch.py
+[28.023s] -- Installing: /home/niuniu/DT46_RM_Sentry/install/livox_ros_driver2/share/livox_ros_driver2/launch_ROS2/rviz_mixed.py
+[28.024s] -- Installing: /home/niuniu/DT46_RM_Sentry/install/livox_ros_driver2/share/livox_ros_driver2/launch_ROS2/rviz_MID360_launch.py
+[28.024s] -- Installing: /home/niuniu/DT46_RM_Sentry/install/livox_ros_driver2/share/livox_ros_driver2/launch_ROS2/msg_HAP_launch.py
+[28.025s] -- Installing: /home/niuniu/DT46_RM_Sentry/install/livox_ros_driver2/share/livox_ros_driver2/launch_ROS2/rviz_HAP_launch.py
+[28.026s] -- Installing: /home/niuniu/DT46_RM_Sentry/install/livox_ros_driver2/share/ament_index/resource_index/package_run_dependencies/livox_ros_driver2
+[28.028s] -- Installing: /home/niuniu/DT46_RM_Sentry/install/livox_ros_driver2/share/ament_index/resource_index/parent_prefix_path/livox_ros_driver2
+[28.031s] -- Installing: /home/niuniu/DT46_RM_Sentry/install/livox_ros_driver2/share/livox_ros_driver2/environment/ament_prefix_path.sh
+[28.033s] -- Installing: /home/niuniu/DT46_RM_Sentry/install/livox_ros_driver2/share/livox_ros_driver2/environment/ament_prefix_path.dsv
+[28.033s] -- Installing: /home/niuniu/DT46_RM_Sentry/install/livox_ros_driver2/share/livox_ros_driver2/environment/path.sh
+[28.034s] -- Installing: /home/niuniu/DT46_RM_Sentry/install/livox_ros_driver2/share/livox_ros_driver2/environment/path.dsv
+[28.035s] -- Installing: /home/niuniu/DT46_RM_Sentry/install/livox_ros_driver2/share/livox_ros_driver2/local_setup.bash
+[28.035s] -- Installing: /home/niuniu/DT46_RM_Sentry/install/livox_ros_driver2/share/livox_ros_driver2/local_setup.sh
+[28.036s] -- Installing: /home/niuniu/DT46_RM_Sentry/install/livox_ros_driver2/share/livox_ros_driver2/local_setup.zsh
+[28.036s] -- Installing: /home/niuniu/DT46_RM_Sentry/install/livox_ros_driver2/share/livox_ros_driver2/local_setup.dsv
+[28.037s] -- Installing: /home/niuniu/DT46_RM_Sentry/install/livox_ros_driver2/share/livox_ros_driver2/package.dsv
+[28.037s] -- Installing: /home/niuniu/DT46_RM_Sentry/install/livox_ros_driver2/share/ament_index/resource_index/packages/livox_ros_driver2
+[28.037s] -- Installing: /home/niuniu/DT46_RM_Sentry/install/livox_ros_driver2/share/livox_ros_driver2/cmake/export_livox_interfaces2__rosidl_generator_cExport.cmake
+[28.038s] -- Installing: /home/niuniu/DT46_RM_Sentry/install/livox_ros_driver2/share/livox_ros_driver2/cmake/export_livox_interfaces2__rosidl_generator_cExport-noconfig.cmake
+[28.039s] -- Installing: /home/niuniu/DT46_RM_Sentry/install/livox_ros_driver2/share/livox_ros_driver2/cmake/export_livox_interfaces2__rosidl_typesupport_fastrtps_cExport.cmake
+[28.039s] -- Installing: /home/niuniu/DT46_RM_Sentry/install/livox_ros_driver2/share/livox_ros_driver2/cmake/export_livox_interfaces2__rosidl_typesupport_fastrtps_cExport-noconfig.cmake
+[28.040s] -- Installing: /home/niuniu/DT46_RM_Sentry/install/livox_ros_driver2/share/livox_ros_driver2/cmake/livox_interfaces2__rosidl_typesupport_introspection_cExport.cmake
+[28.041s] -- Installing: /home/niuniu/DT46_RM_Sentry/install/livox_ros_driver2/share/livox_ros_driver2/cmake/livox_interfaces2__rosidl_typesupport_introspection_cExport-noconfig.cmake
+[28.041s] -- Installing: /home/niuniu/DT46_RM_Sentry/install/livox_ros_driver2/share/livox_ros_driver2/cmake/livox_interfaces2__rosidl_typesupport_cExport.cmake
+[28.042s] -- Installing: /home/niuniu/DT46_RM_Sentry/install/livox_ros_driver2/share/livox_ros_driver2/cmake/livox_interfaces2__rosidl_typesupport_cExport-noconfig.cmake
+[28.043s] -- Installing: /home/niuniu/DT46_RM_Sentry/install/livox_ros_driver2/share/livox_ros_driver2/cmake/export_livox_interfaces2__rosidl_generator_cppExport.cmake
+[28.044s] -- Installing: /home/niuniu/DT46_RM_Sentry/install/livox_ros_driver2/share/livox_ros_driver2/cmake/export_livox_interfaces2__rosidl_typesupport_fastrtps_cppExport.cmake
+[28.044s] -- Installing: /home/niuniu/DT46_RM_Sentry/install/livox_ros_driver2/share/livox_ros_driver2/cmake/export_livox_interfaces2__rosidl_typesupport_fastrtps_cppExport-noconfig.cmake
+[28.045s] -- Installing: /home/niuniu/DT46_RM_Sentry/install/livox_ros_driver2/share/livox_ros_driver2/cmake/livox_interfaces2__rosidl_typesupport_introspection_cppExport.cmake
+[28.046s] -- Installing: /home/niuniu/DT46_RM_Sentry/install/livox_ros_driver2/share/livox_ros_driver2/cmake/livox_interfaces2__rosidl_typesupport_introspection_cppExport-noconfig.cmake
+[28.047s] -- Installing: /home/niuniu/DT46_RM_Sentry/install/livox_ros_driver2/share/livox_ros_driver2/cmake/livox_interfaces2__rosidl_typesupport_cppExport.cmake
+[28.048s] -- Installing: /home/niuniu/DT46_RM_Sentry/install/livox_ros_driver2/share/livox_ros_driver2/cmake/livox_interfaces2__rosidl_typesupport_cppExport-noconfig.cmake
+[28.049s] -- Installing: /home/niuniu/DT46_RM_Sentry/install/livox_ros_driver2/share/livox_ros_driver2/cmake/export_livox_interfaces2__rosidl_generator_pyExport.cmake
+[28.050s] -- Installing: /home/niuniu/DT46_RM_Sentry/install/livox_ros_driver2/share/livox_ros_driver2/cmake/export_livox_interfaces2__rosidl_generator_pyExport-noconfig.cmake
+[28.052s] -- Installing: /home/niuniu/DT46_RM_Sentry/install/livox_ros_driver2/share/ament_index/resource_index/rclcpp_components/livox_ros_driver2
+[28.053s] -- Installing: /home/niuniu/DT46_RM_Sentry/install/livox_ros_driver2/share/livox_ros_driver2/cmake/rosidl_cmake-extras.cmake
+[28.054s] -- Installing: /home/niuniu/DT46_RM_Sentry/install/livox_ros_driver2/share/livox_ros_driver2/cmake/ament_cmake_export_dependencies-extras.cmake
+[28.054s] -- Installing: /home/niuniu/DT46_RM_Sentry/install/livox_ros_driver2/share/livox_ros_driver2/cmake/ament_cmake_export_include_directories-extras.cmake
+[28.055s] -- Installing: /home/niuniu/DT46_RM_Sentry/install/livox_ros_driver2/share/livox_ros_driver2/cmake/ament_cmake_export_libraries-extras.cmake
+[28.056s] -- Installing: /home/niuniu/DT46_RM_Sentry/install/livox_ros_driver2/share/livox_ros_driver2/cmake/ament_cmake_export_targets-extras.cmake
+[28.056s] -- Installing: /home/niuniu/DT46_RM_Sentry/install/livox_ros_driver2/share/livox_ros_driver2/cmake/rosidl_cmake_export_typesupport_targets-extras.cmake
+[28.057s] -- Installing: /home/niuniu/DT46_RM_Sentry/install/livox_ros_driver2/share/livox_ros_driver2/cmake/rosidl_cmake_export_typesupport_libraries-extras.cmake
+[28.058s] -- Installing: /home/niuniu/DT46_RM_Sentry/install/livox_ros_driver2/share/livox_ros_driver2/cmake/livox_ros_driver2Config.cmake
+[28.058s] -- Installing: /home/niuniu/DT46_RM_Sentry/install/livox_ros_driver2/share/livox_ros_driver2/cmake/livox_ros_driver2Config-version.cmake
+[28.059s] -- Installing: /home/niuniu/DT46_RM_Sentry/install/livox_ros_driver2/share/livox_ros_driver2/package.xml
+[28.065s] Invoked command in '/home/niuniu/DT46_RM_Sentry/build/livox_ros_driver2' returned '0': CMAKE_PREFIX_PATH=${CMAKE_PREFIX_PATH}:/opt/ros/humble /usr/bin/cmake --install /home/niuniu/DT46_RM_Sentry/build/livox_ros_driver2

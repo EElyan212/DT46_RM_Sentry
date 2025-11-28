@@ -1,0 +1,560 @@
+[0.000000] (-) TimerEvent: {}
+[0.001103] (livox_ros_driver2) JobQueued: {'identifier': 'livox_ros_driver2', 'dependencies': OrderedDict()}
+[0.001149] (livox_sdk2) JobQueued: {'identifier': 'livox_sdk2', 'dependencies': OrderedDict()}
+[0.001165] (fast_lio) JobQueued: {'identifier': 'fast_lio', 'dependencies': OrderedDict([('livox_ros_driver2', '/home/niuniu/DT46_RM_Sentry/install/livox_ros_driver2')])}
+[0.001177] (livox_ros_driver2) JobStarted: {'identifier': 'livox_ros_driver2'}
+[0.012744] (livox_sdk2) JobStarted: {'identifier': 'livox_sdk2'}
+[0.018130] (livox_ros_driver2) JobProgress: {'identifier': 'livox_ros_driver2', 'progress': 'cmake'}
+[0.019555] (livox_ros_driver2) Command: {'cmd': ['/usr/bin/cmake', '/home/niuniu/DT46_RM_Sentry/src/livox_ros_driver2', '-DROS_EDITION=ROS2', '-DHUMBLE_ROS=humble', '-DCMAKE_INSTALL_PREFIX=/home/niuniu/DT46_RM_Sentry/install/livox_ros_driver2'], 'cwd': '/home/niuniu/DT46_RM_Sentry/build/livox_ros_driver2', 'env': OrderedDict([('LESSOPEN', '| /usr/bin/lesspipe %s'), ('HTTPS_PROXY', 'http://192.168.1.222:7897/'), ('no_proxy', 'localhost,127.0.0.0/8,::1'), ('LANGUAGE', 'zh_CN:en'), ('USER', 'niuniu'), ('LC_TIME', 'zh_CN.UTF-8'), ('all_proxy', 'socks://192.168.1.222:7897/'), ('XDG_SESSION_TYPE', 'x11'), ('SHLVL', '2'), ('LD_LIBRARY_PATH', '/lib:/opt/ros/humble/lib:/usr/lib/x86_64-linux-gnu/gazebo-11/plugins:/opt/ros/humble/opt/rviz_ogre_vendor/lib:/opt/ros/humble/lib/x86_64-linux-gnu:/opt/ros/humble/lib:/usr/local/lib'), ('HOME', '/home/niuniu'), ('OLDPWD', '/home/niuniu/DT46_RM_Sentry/src/livox_ros_driver2'), ('DESKTOP_SESSION', 'ubuntu'), ('RUSTUP_UPDATE_ROOT', 'https://mirrors.ustc.edu.cn/rust-static/rustup'), ('NO_PROXY', 'localhost,127.0.0.0/8,::1'), ('ROS_PYTHON_VERSION', '3'), ('GNOME_SHELL_SESSION_MODE', 'ubuntu'), ('GTK_MODULES', 'gail:atk-bridge'), ('LC_MONETARY', 'zh_CN.UTF-8'), ('SYSTEMD_EXEC_PID', '1806'), ('RUSTUP_DIST_SERVER', 'https://mirrors.ustc.edu.cn/rust-static'), ('DBUS_SESSION_BUS_ADDRESS', 'unix:path=/run/user/1000/bus'), ('COLORTERM', 'truecolor'), ('https_proxy', 'http://192.168.1.222:7897/'), ('COLCON_PREFIX_PATH', '/home/niuniu/ydlidar_ws/install'), ('ROS_DISTRO', 'humble'), ('GTK_IM_MODULE', 'ibus'), ('LOGNAME', 'niuniu'), ('ALL_PROXY', 'socks://192.168.1.222:7897/'), ('http_proxy', 'http://192.168.1.222:7897/'), ('_', '/usr/bin/colcon'), ('ROS_VERSION', 'ROS2'), ('XDG_SESSION_CLASS', 'user'), ('USERNAME', 'niuniu'), ('TERM', 'xterm-256color'), ('GAZEBO_MODEL_PATH', ':/usr/share/gazebo/models:/usr/share/gazebo-11/models'), ('GNOME_DESKTOP_SESSION_ID', 'this-is-deprecated'), ('ROS_LOCALHOST_ONLY', '0'), ('WINDOWPATH', '2'), ('PATH', '/opt/ros/humble/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/games:/usr/local/games:/snap/bin:/snap/bin'), ('SESSION_MANAGER', 'local/niuniu-virtual-machine:@/tmp/.ICE-unix/1779,unix/niuniu-virtual-machine:/tmp/.ICE-unix/1779'), ('PAPERSIZE', 'a4'), ('XDG_MENU_PREFIX', 'gnome-'), ('LC_ADDRESS', 'zh_CN.UTF-8'), ('GNOME_TERMINAL_SCREEN', '/org/gnome/Terminal/screen/a6b1cf5e_5eeb_48cf_b9e7_f13e3e586e64'), ('XDG_RUNTIME_DIR', '/run/user/1000'), ('DISPLAY', ':1'), ('LANG', 'zh_CN.UTF-8'), ('XDG_CURRENT_DESKTOP', 'ubuntu:GNOME'), ('LC_TELEPHONE', 'zh_CN.UTF-8'), ('XMODIFIERS', '@im=ibus'), ('XDG_SESSION_DESKTOP', 'ubuntu'), ('XAUTHORITY', '/run/user/1000/gdm/Xauthority'), ('LS_COLORS', 'rs=0:di=01;34:ln=01;36:mh=00:pi=40;33:so=01;35:do=01;35:bd=40;33;01:cd=40;33;01:or=40;31;01:mi=00:su=37;41:sg=30;43:ca=30;41:tw=30;42:ow=34;42:st=37;44:ex=01;32:*.tar=01;31:*.tgz=01;31:*.arc=01;31:*.arj=01;31:*.taz=01;31:*.lha=01;31:*.lz4=01;31:*.lzh=01;31:*.lzma=01;31:*.tlz=01;31:*.txz=01;31:*.tzo=01;31:*.t7z=01;31:*.zip=01;31:*.z=01;31:*.dz=01;31:*.gz=01;31:*.lrz=01;31:*.lz=01;31:*.lzo=01;31:*.xz=01;31:*.zst=01;31:*.tzst=01;31:*.bz2=01;31:*.bz=01;31:*.tbz=01;31:*.tbz2=01;31:*.tz=01;31:*.deb=01;31:*.rpm=01;31:*.jar=01;31:*.war=01;31:*.ear=01;31:*.sar=01;31:*.rar=01;31:*.alz=01;31:*.ace=01;31:*.zoo=01;31:*.cpio=01;31:*.7z=01;31:*.rz=01;31:*.cab=01;31:*.wim=01;31:*.swm=01;31:*.dwm=01;31:*.esd=01;31:*.jpg=01;35:*.jpeg=01;35:*.mjpg=01;35:*.mjpeg=01;35:*.gif=01;35:*.bmp=01;35:*.pbm=01;35:*.pgm=01;35:*.ppm=01;35:*.tga=01;35:*.xbm=01;35:*.xpm=01;35:*.tif=01;35:*.tiff=01;35:*.png=01;35:*.svg=01;35:*.svgz=01;35:*.mng=01;35:*.pcx=01;35:*.mov=01;35:*.mpg=01;35:*.mpeg=01;35:*.m2v=01;35:*.mkv=01;35:*.webm=01;35:*.webp=01;35:*.ogm=01;35:*.mp4=01;35:*.m4v=01;35:*.mp4v=01;35:*.vob=01;35:*.qt=01;35:*.nuv=01;35:*.wmv=01;35:*.asf=01;35:*.rm=01;35:*.rmvb=01;35:*.flc=01;35:*.avi=01;35:*.fli=01;35:*.flv=01;35:*.gl=01;35:*.dl=01;35:*.xcf=01;35:*.xwd=01;35:*.yuv=01;35:*.cgm=01;35:*.emf=01;35:*.ogv=01;35:*.ogx=01;35:*.aac=00;36:*.au=00;36:*.flac=00;36:*.m4a=00;36:*.mid=00;36:*.midi=00;36:*.mka=00;36:*.mp3=00;36:*.mpc=00;36:*.ogg=00;36:*.ra=00;36:*.wav=00;36:*.oga=00;36:*.opus=00;36:*.spx=00;36:*.xspf=00;36:'), ('GNOME_TERMINAL_SERVICE', ':1.160'), ('SSH_AGENT_LAUNCHER', 'gnome-keyring'), ('SSH_AUTH_SOCK', '/run/user/1000/keyring/ssh'), ('AMENT_PREFIX_PATH', '/home/niuniu/ydlidar_ws/install/ydlidar_ros2_driver:/opt/ros/humble'), ('SHELL', '/bin/bash'), ('LC_NAME', 'zh_CN.UTF-8'), ('QT_ACCESSIBILITY', '1'), ('GDMSESSION', 'ubuntu'), ('LESSCLOSE', '/usr/bin/lesspipe %s %s'), ('LC_MEASUREMENT', 'zh_CN.UTF-8'), ('GPG_AGENT_INFO', '/run/user/1000/gnupg/S.gpg-agent:0:1'), ('GAZEBO_RESOURCE_PATH', '/usr/share/gazebo-11::/usr/share/gazebo:/usr/share/gazebo-11'), ('LC_IDENTIFICATION', 'zh_CN.UTF-8'), ('GAZEBO_MODEL_DATABASE_URI', ''), ('QT_IM_MODULE', 'ibus'), ('PWD', '/home/niuniu/DT46_RM_Sentry/build/livox_ros_driver2'), ('XDG_CONFIG_DIRS', '/etc/xdg/xdg-ubuntu:/etc/xdg'), ('GAZEBO_PLUGIN_PATH', ':/usr/lib/x86_64-linux-gnu/gazebo-11/plugins'), ('XDG_DATA_DIRS', '/usr/share/ubuntu:/usr/share/gnome:/usr/local/share/:/usr/share/:/var/lib/snapd/desktop'), ('PYTHONPATH', '/opt/ros/humble/lib/python3.10/site-packages:/opt/ros/humble/local/lib/python3.10/dist-packages'), ('HTTP_PROXY', 'http://192.168.1.222:7897/'), ('LC_NUMERIC', 'zh_CN.UTF-8'), ('LC_PAPER', 'zh_CN.UTF-8'), ('COLCON', '1'), ('VTE_VERSION', '6800'), ('CMAKE_PREFIX_PATH', '/home/niuniu/ydlidar_ws/install/ydlidar_ros2_driver:/opt/ros/humble')]), 'shell': False}
+[0.038705] (livox_sdk2) JobProgress: {'identifier': 'livox_sdk2', 'progress': 'cmake'}
+[0.042266] (livox_sdk2) Command: {'cmd': ['/usr/bin/cmake', '/home/niuniu/DT46_RM_Sentry/src/Livox-SDK2', '-DROS_EDITION=ROS2', '-DHUMBLE_ROS=humble', '-DCMAKE_INSTALL_PREFIX=/home/niuniu/DT46_RM_Sentry/install/livox_sdk2'], 'cwd': '/home/niuniu/DT46_RM_Sentry/build/livox_sdk2', 'env': OrderedDict([('LESSOPEN', '| /usr/bin/lesspipe %s'), ('HTTPS_PROXY', 'http://192.168.1.222:7897/'), ('no_proxy', 'localhost,127.0.0.0/8,::1'), ('LANGUAGE', 'zh_CN:en'), ('USER', 'niuniu'), ('LC_TIME', 'zh_CN.UTF-8'), ('all_proxy', 'socks://192.168.1.222:7897/'), ('XDG_SESSION_TYPE', 'x11'), ('SHLVL', '2'), ('LD_LIBRARY_PATH', '/lib:/opt/ros/humble/lib:/usr/lib/x86_64-linux-gnu/gazebo-11/plugins:/opt/ros/humble/opt/rviz_ogre_vendor/lib:/opt/ros/humble/lib/x86_64-linux-gnu:/opt/ros/humble/lib:/usr/local/lib'), ('HOME', '/home/niuniu'), ('OLDPWD', '/home/niuniu/DT46_RM_Sentry/src/livox_ros_driver2'), ('DESKTOP_SESSION', 'ubuntu'), ('RUSTUP_UPDATE_ROOT', 'https://mirrors.ustc.edu.cn/rust-static/rustup'), ('NO_PROXY', 'localhost,127.0.0.0/8,::1'), ('ROS_PYTHON_VERSION', '3'), ('GNOME_SHELL_SESSION_MODE', 'ubuntu'), ('GTK_MODULES', 'gail:atk-bridge'), ('LC_MONETARY', 'zh_CN.UTF-8'), ('SYSTEMD_EXEC_PID', '1806'), ('RUSTUP_DIST_SERVER', 'https://mirrors.ustc.edu.cn/rust-static'), ('DBUS_SESSION_BUS_ADDRESS', 'unix:path=/run/user/1000/bus'), ('COLORTERM', 'truecolor'), ('https_proxy', 'http://192.168.1.222:7897/'), ('COLCON_PREFIX_PATH', '/home/niuniu/ydlidar_ws/install'), ('ROS_DISTRO', 'humble'), ('GTK_IM_MODULE', 'ibus'), ('LOGNAME', 'niuniu'), ('ALL_PROXY', 'socks://192.168.1.222:7897/'), ('http_proxy', 'http://192.168.1.222:7897/'), ('_', '/usr/bin/colcon'), ('ROS_VERSION', 'ROS2'), ('XDG_SESSION_CLASS', 'user'), ('USERNAME', 'niuniu'), ('TERM', 'xterm-256color'), ('GAZEBO_MODEL_PATH', ':/usr/share/gazebo/models:/usr/share/gazebo-11/models'), ('GNOME_DESKTOP_SESSION_ID', 'this-is-deprecated'), ('ROS_LOCALHOST_ONLY', '0'), ('WINDOWPATH', '2'), ('PATH', '/opt/ros/humble/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/games:/usr/local/games:/snap/bin:/snap/bin'), ('SESSION_MANAGER', 'local/niuniu-virtual-machine:@/tmp/.ICE-unix/1779,unix/niuniu-virtual-machine:/tmp/.ICE-unix/1779'), ('PAPERSIZE', 'a4'), ('XDG_MENU_PREFIX', 'gnome-'), ('LC_ADDRESS', 'zh_CN.UTF-8'), ('GNOME_TERMINAL_SCREEN', '/org/gnome/Terminal/screen/a6b1cf5e_5eeb_48cf_b9e7_f13e3e586e64'), ('XDG_RUNTIME_DIR', '/run/user/1000'), ('DISPLAY', ':1'), ('LANG', 'zh_CN.UTF-8'), ('XDG_CURRENT_DESKTOP', 'ubuntu:GNOME'), ('LC_TELEPHONE', 'zh_CN.UTF-8'), ('XMODIFIERS', '@im=ibus'), ('XDG_SESSION_DESKTOP', 'ubuntu'), ('XAUTHORITY', '/run/user/1000/gdm/Xauthority'), ('LS_COLORS', 'rs=0:di=01;34:ln=01;36:mh=00:pi=40;33:so=01;35:do=01;35:bd=40;33;01:cd=40;33;01:or=40;31;01:mi=00:su=37;41:sg=30;43:ca=30;41:tw=30;42:ow=34;42:st=37;44:ex=01;32:*.tar=01;31:*.tgz=01;31:*.arc=01;31:*.arj=01;31:*.taz=01;31:*.lha=01;31:*.lz4=01;31:*.lzh=01;31:*.lzma=01;31:*.tlz=01;31:*.txz=01;31:*.tzo=01;31:*.t7z=01;31:*.zip=01;31:*.z=01;31:*.dz=01;31:*.gz=01;31:*.lrz=01;31:*.lz=01;31:*.lzo=01;31:*.xz=01;31:*.zst=01;31:*.tzst=01;31:*.bz2=01;31:*.bz=01;31:*.tbz=01;31:*.tbz2=01;31:*.tz=01;31:*.deb=01;31:*.rpm=01;31:*.jar=01;31:*.war=01;31:*.ear=01;31:*.sar=01;31:*.rar=01;31:*.alz=01;31:*.ace=01;31:*.zoo=01;31:*.cpio=01;31:*.7z=01;31:*.rz=01;31:*.cab=01;31:*.wim=01;31:*.swm=01;31:*.dwm=01;31:*.esd=01;31:*.jpg=01;35:*.jpeg=01;35:*.mjpg=01;35:*.mjpeg=01;35:*.gif=01;35:*.bmp=01;35:*.pbm=01;35:*.pgm=01;35:*.ppm=01;35:*.tga=01;35:*.xbm=01;35:*.xpm=01;35:*.tif=01;35:*.tiff=01;35:*.png=01;35:*.svg=01;35:*.svgz=01;35:*.mng=01;35:*.pcx=01;35:*.mov=01;35:*.mpg=01;35:*.mpeg=01;35:*.m2v=01;35:*.mkv=01;35:*.webm=01;35:*.webp=01;35:*.ogm=01;35:*.mp4=01;35:*.m4v=01;35:*.mp4v=01;35:*.vob=01;35:*.qt=01;35:*.nuv=01;35:*.wmv=01;35:*.asf=01;35:*.rm=01;35:*.rmvb=01;35:*.flc=01;35:*.avi=01;35:*.fli=01;35:*.flv=01;35:*.gl=01;35:*.dl=01;35:*.xcf=01;35:*.xwd=01;35:*.yuv=01;35:*.cgm=01;35:*.emf=01;35:*.ogv=01;35:*.ogx=01;35:*.aac=00;36:*.au=00;36:*.flac=00;36:*.m4a=00;36:*.mid=00;36:*.midi=00;36:*.mka=00;36:*.mp3=00;36:*.mpc=00;36:*.ogg=00;36:*.ra=00;36:*.wav=00;36:*.oga=00;36:*.opus=00;36:*.spx=00;36:*.xspf=00;36:'), ('GNOME_TERMINAL_SERVICE', ':1.160'), ('SSH_AGENT_LAUNCHER', 'gnome-keyring'), ('SSH_AUTH_SOCK', '/run/user/1000/keyring/ssh'), ('AMENT_PREFIX_PATH', '/home/niuniu/ydlidar_ws/install/ydlidar_ros2_driver:/opt/ros/humble'), ('SHELL', '/bin/bash'), ('LC_NAME', 'zh_CN.UTF-8'), ('QT_ACCESSIBILITY', '1'), ('GDMSESSION', 'ubuntu'), ('LESSCLOSE', '/usr/bin/lesspipe %s %s'), ('LC_MEASUREMENT', 'zh_CN.UTF-8'), ('GPG_AGENT_INFO', '/run/user/1000/gnupg/S.gpg-agent:0:1'), ('GAZEBO_RESOURCE_PATH', '/usr/share/gazebo-11::/usr/share/gazebo:/usr/share/gazebo-11'), ('LC_IDENTIFICATION', 'zh_CN.UTF-8'), ('GAZEBO_MODEL_DATABASE_URI', ''), ('QT_IM_MODULE', 'ibus'), ('PWD', '/home/niuniu/DT46_RM_Sentry/build/livox_sdk2'), ('XDG_CONFIG_DIRS', '/etc/xdg/xdg-ubuntu:/etc/xdg'), ('GAZEBO_PLUGIN_PATH', ':/usr/lib/x86_64-linux-gnu/gazebo-11/plugins'), ('XDG_DATA_DIRS', '/usr/share/ubuntu:/usr/share/gnome:/usr/local/share/:/usr/share/:/var/lib/snapd/desktop'), ('PYTHONPATH', '/opt/ros/humble/lib/python3.10/site-packages:/opt/ros/humble/local/lib/python3.10/dist-packages'), ('HTTP_PROXY', 'http://192.168.1.222:7897/'), ('LC_NUMERIC', 'zh_CN.UTF-8'), ('LC_PAPER', 'zh_CN.UTF-8'), ('COLCON', '1'), ('VTE_VERSION', '6800'), ('CMAKE_PREFIX_PATH', '/home/niuniu/ydlidar_ws/install/ydlidar_ros2_driver')]), 'shell': False}
+[0.099310] (-) TimerEvent: {}
+[0.147665] (livox_ros_driver2) StdoutLine: {'line': b'-- The CXX compiler identification is GNU 11.4.0\n'}
+[0.164591] (livox_ros_driver2) StdoutLine: {'line': b'-- Detecting CXX compiler ABI info\n'}
+[0.199748] (-) TimerEvent: {}
+[0.300421] (-) TimerEvent: {}
+[0.312715] (livox_ros_driver2) StdoutLine: {'line': b'-- Detecting CXX compiler ABI info - done\n'}
+[0.317318] (livox_ros_driver2) StdoutLine: {'line': b'-- Check for working CXX compiler: /usr/bin/c++ - skipped\n'}
+[0.318095] (livox_ros_driver2) StdoutLine: {'line': b'-- Detecting CXX compile features\n'}
+[0.318698] (livox_ros_driver2) StdoutLine: {'line': b'-- Detecting CXX compile features - done\n'}
+[0.319967] (livox_ros_driver2) StdoutLine: {'line': b'-- livox_ros_driver2 version: 1.2.4\n'}
+[0.321583] (livox_ros_driver2) StdoutLine: {'line': b'-- Found ament_cmake_auto: 1.3.11 (/opt/ros/humble/share/ament_cmake_auto/cmake)\n'}
+[0.336377] (livox_sdk2) StdoutLine: {'line': b'-- The C compiler identification is GNU 11.4.0\n'}
+[0.397884] (livox_sdk2) StdoutLine: {'line': b'-- The CXX compiler identification is GNU 11.4.0\n'}
+[0.400920] (-) TimerEvent: {}
+[0.408760] (livox_sdk2) StdoutLine: {'line': b'-- Detecting C compiler ABI info\n'}
+[0.451181] (livox_ros_driver2) StdoutLine: {'line': b'-- Found Python3: /usr/bin/python3 (found version "3.10.12") found components: Interpreter \n'}
+[0.495928] (livox_sdk2) StdoutLine: {'line': b'-- Detecting C compiler ABI info - done\n'}
+[0.502013] (livox_sdk2) StdoutLine: {'line': b'-- Check for working C compiler: /usr/bin/cc - skipped\n'}
+[0.502448] (-) TimerEvent: {}
+[0.502545] (livox_sdk2) StdoutLine: {'line': b'-- Detecting C compile features\n'}
+[0.502597] (livox_sdk2) StdoutLine: {'line': b'-- Detecting C compile features - done\n'}
+[0.505206] (livox_sdk2) StdoutLine: {'line': b'-- Detecting CXX compiler ABI info\n'}
+[0.589127] (livox_ros_driver2) StdoutLine: {'line': b'-- Using all available rosidl_typesupport_c: rosidl_typesupport_fastrtps_c;rosidl_typesupport_introspection_c\n'}
+[0.597728] (livox_ros_driver2) StdoutLine: {'line': b'-- Found rosidl_adapter: 3.1.6 (/opt/ros/humble/share/rosidl_adapter/cmake)\n'}
+[0.602985] (-) TimerEvent: {}
+[0.618499] (livox_sdk2) StdoutLine: {'line': b'-- Detecting CXX compiler ABI info - done\n'}
+[0.624679] (livox_sdk2) StdoutLine: {'line': b'-- Check for working CXX compiler: /usr/bin/c++ - skipped\n'}
+[0.624820] (livox_sdk2) StdoutLine: {'line': b'-- Detecting CXX compile features\n'}
+[0.624916] (livox_sdk2) StdoutLine: {'line': b'-- Detecting CXX compile features - done\n'}
+[0.625547] (livox_sdk2) StdoutLine: {'line': b'-- main project dir: /home/niuniu/DT46_RM_Sentry/src/Livox-SDK2\n'}
+[0.626789] (livox_sdk2) StdoutLine: {'line': b'-- main project dir: /home/niuniu/DT46_RM_Sentry/src/Livox-SDK2/samples\n'}
+[0.631423] (livox_sdk2) StdoutLine: {'line': b'-- Configuring done\n'}
+[0.652716] (livox_ros_driver2) StdoutLine: {'line': b'-- Using all available rosidl_typesupport_cpp: rosidl_typesupport_fastrtps_cpp;rosidl_typesupport_introspection_cpp\n'}
+[0.674753] (livox_sdk2) StdoutLine: {'line': b'-- Generating done\n'}
+[0.677952] (livox_sdk2) StderrLine: {'line': b'\x1b[33mCMake Warning:\n'}
+[0.678097] (livox_sdk2) StderrLine: {'line': b'  Manually-specified variables were not used by the project:\n'}
+[0.678134] (livox_sdk2) StderrLine: {'line': b'\n'}
+[0.678162] (livox_sdk2) StderrLine: {'line': b'    HUMBLE_ROS\n'}
+[0.678188] (livox_sdk2) StderrLine: {'line': b'    ROS_EDITION\n'}
+[0.678213] (livox_sdk2) StderrLine: {'line': b'\n'}
+[0.678237] (livox_sdk2) StderrLine: {'line': b'\x1b[0m\n'}
+[0.690777] (livox_sdk2) StdoutLine: {'line': b'-- Build files have been written to: /home/niuniu/DT46_RM_Sentry/build/livox_sdk2\n'}
+[0.698610] (livox_sdk2) CommandEnded: {'returncode': 0}
+[0.699074] (livox_sdk2) JobProgress: {'identifier': 'livox_sdk2', 'progress': 'build'}
+[0.699130] (livox_sdk2) Command: {'cmd': ['/usr/bin/cmake', '--build', '/home/niuniu/DT46_RM_Sentry/build/livox_sdk2', '--', '-j8', '-l8'], 'cwd': '/home/niuniu/DT46_RM_Sentry/build/livox_sdk2', 'env': OrderedDict([('LESSOPEN', '| /usr/bin/lesspipe %s'), ('HTTPS_PROXY', 'http://192.168.1.222:7897/'), ('no_proxy', 'localhost,127.0.0.0/8,::1'), ('LANGUAGE', 'zh_CN:en'), ('USER', 'niuniu'), ('LC_TIME', 'zh_CN.UTF-8'), ('all_proxy', 'socks://192.168.1.222:7897/'), ('XDG_SESSION_TYPE', 'x11'), ('SHLVL', '2'), ('LD_LIBRARY_PATH', '/lib:/opt/ros/humble/lib:/usr/lib/x86_64-linux-gnu/gazebo-11/plugins:/opt/ros/humble/opt/rviz_ogre_vendor/lib:/opt/ros/humble/lib/x86_64-linux-gnu:/opt/ros/humble/lib:/usr/local/lib'), ('HOME', '/home/niuniu'), ('OLDPWD', '/home/niuniu/DT46_RM_Sentry/src/livox_ros_driver2'), ('DESKTOP_SESSION', 'ubuntu'), ('RUSTUP_UPDATE_ROOT', 'https://mirrors.ustc.edu.cn/rust-static/rustup'), ('NO_PROXY', 'localhost,127.0.0.0/8,::1'), ('ROS_PYTHON_VERSION', '3'), ('GNOME_SHELL_SESSION_MODE', 'ubuntu'), ('GTK_MODULES', 'gail:atk-bridge'), ('LC_MONETARY', 'zh_CN.UTF-8'), ('SYSTEMD_EXEC_PID', '1806'), ('RUSTUP_DIST_SERVER', 'https://mirrors.ustc.edu.cn/rust-static'), ('DBUS_SESSION_BUS_ADDRESS', 'unix:path=/run/user/1000/bus'), ('COLORTERM', 'truecolor'), ('https_proxy', 'http://192.168.1.222:7897/'), ('COLCON_PREFIX_PATH', '/home/niuniu/ydlidar_ws/install'), ('ROS_DISTRO', 'humble'), ('GTK_IM_MODULE', 'ibus'), ('LOGNAME', 'niuniu'), ('ALL_PROXY', 'socks://192.168.1.222:7897/'), ('http_proxy', 'http://192.168.1.222:7897/'), ('_', '/usr/bin/colcon'), ('ROS_VERSION', 'ROS2'), ('XDG_SESSION_CLASS', 'user'), ('USERNAME', 'niuniu'), ('TERM', 'xterm-256color'), ('GAZEBO_MODEL_PATH', ':/usr/share/gazebo/models:/usr/share/gazebo-11/models'), ('GNOME_DESKTOP_SESSION_ID', 'this-is-deprecated'), ('ROS_LOCALHOST_ONLY', '0'), ('WINDOWPATH', '2'), ('PATH', '/opt/ros/humble/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/games:/usr/local/games:/snap/bin:/snap/bin'), ('SESSION_MANAGER', 'local/niuniu-virtual-machine:@/tmp/.ICE-unix/1779,unix/niuniu-virtual-machine:/tmp/.ICE-unix/1779'), ('PAPERSIZE', 'a4'), ('XDG_MENU_PREFIX', 'gnome-'), ('LC_ADDRESS', 'zh_CN.UTF-8'), ('GNOME_TERMINAL_SCREEN', '/org/gnome/Terminal/screen/a6b1cf5e_5eeb_48cf_b9e7_f13e3e586e64'), ('XDG_RUNTIME_DIR', '/run/user/1000'), ('DISPLAY', ':1'), ('LANG', 'zh_CN.UTF-8'), ('XDG_CURRENT_DESKTOP', 'ubuntu:GNOME'), ('LC_TELEPHONE', 'zh_CN.UTF-8'), ('XMODIFIERS', '@im=ibus'), ('XDG_SESSION_DESKTOP', 'ubuntu'), ('XAUTHORITY', '/run/user/1000/gdm/Xauthority'), ('LS_COLORS', 'rs=0:di=01;34:ln=01;36:mh=00:pi=40;33:so=01;35:do=01;35:bd=40;33;01:cd=40;33;01:or=40;31;01:mi=00:su=37;41:sg=30;43:ca=30;41:tw=30;42:ow=34;42:st=37;44:ex=01;32:*.tar=01;31:*.tgz=01;31:*.arc=01;31:*.arj=01;31:*.taz=01;31:*.lha=01;31:*.lz4=01;31:*.lzh=01;31:*.lzma=01;31:*.tlz=01;31:*.txz=01;31:*.tzo=01;31:*.t7z=01;31:*.zip=01;31:*.z=01;31:*.dz=01;31:*.gz=01;31:*.lrz=01;31:*.lz=01;31:*.lzo=01;31:*.xz=01;31:*.zst=01;31:*.tzst=01;31:*.bz2=01;31:*.bz=01;31:*.tbz=01;31:*.tbz2=01;31:*.tz=01;31:*.deb=01;31:*.rpm=01;31:*.jar=01;31:*.war=01;31:*.ear=01;31:*.sar=01;31:*.rar=01;31:*.alz=01;31:*.ace=01;31:*.zoo=01;31:*.cpio=01;31:*.7z=01;31:*.rz=01;31:*.cab=01;31:*.wim=01;31:*.swm=01;31:*.dwm=01;31:*.esd=01;31:*.jpg=01;35:*.jpeg=01;35:*.mjpg=01;35:*.mjpeg=01;35:*.gif=01;35:*.bmp=01;35:*.pbm=01;35:*.pgm=01;35:*.ppm=01;35:*.tga=01;35:*.xbm=01;35:*.xpm=01;35:*.tif=01;35:*.tiff=01;35:*.png=01;35:*.svg=01;35:*.svgz=01;35:*.mng=01;35:*.pcx=01;35:*.mov=01;35:*.mpg=01;35:*.mpeg=01;35:*.m2v=01;35:*.mkv=01;35:*.webm=01;35:*.webp=01;35:*.ogm=01;35:*.mp4=01;35:*.m4v=01;35:*.mp4v=01;35:*.vob=01;35:*.qt=01;35:*.nuv=01;35:*.wmv=01;35:*.asf=01;35:*.rm=01;35:*.rmvb=01;35:*.flc=01;35:*.avi=01;35:*.fli=01;35:*.flv=01;35:*.gl=01;35:*.dl=01;35:*.xcf=01;35:*.xwd=01;35:*.yuv=01;35:*.cgm=01;35:*.emf=01;35:*.ogv=01;35:*.ogx=01;35:*.aac=00;36:*.au=00;36:*.flac=00;36:*.m4a=00;36:*.mid=00;36:*.midi=00;36:*.mka=00;36:*.mp3=00;36:*.mpc=00;36:*.ogg=00;36:*.ra=00;36:*.wav=00;36:*.oga=00;36:*.opus=00;36:*.spx=00;36:*.xspf=00;36:'), ('GNOME_TERMINAL_SERVICE', ':1.160'), ('SSH_AGENT_LAUNCHER', 'gnome-keyring'), ('SSH_AUTH_SOCK', '/run/user/1000/keyring/ssh'), ('AMENT_PREFIX_PATH', '/home/niuniu/ydlidar_ws/install/ydlidar_ros2_driver:/opt/ros/humble'), ('SHELL', '/bin/bash'), ('LC_NAME', 'zh_CN.UTF-8'), ('QT_ACCESSIBILITY', '1'), ('GDMSESSION', 'ubuntu'), ('LESSCLOSE', '/usr/bin/lesspipe %s %s'), ('LC_MEASUREMENT', 'zh_CN.UTF-8'), ('GPG_AGENT_INFO', '/run/user/1000/gnupg/S.gpg-agent:0:1'), ('GAZEBO_RESOURCE_PATH', '/usr/share/gazebo-11::/usr/share/gazebo:/usr/share/gazebo-11'), ('LC_IDENTIFICATION', 'zh_CN.UTF-8'), ('GAZEBO_MODEL_DATABASE_URI', ''), ('QT_IM_MODULE', 'ibus'), ('PWD', '/home/niuniu/DT46_RM_Sentry/build/livox_sdk2'), ('XDG_CONFIG_DIRS', '/etc/xdg/xdg-ubuntu:/etc/xdg'), ('GAZEBO_PLUGIN_PATH', ':/usr/lib/x86_64-linux-gnu/gazebo-11/plugins'), ('XDG_DATA_DIRS', '/usr/share/ubuntu:/usr/share/gnome:/usr/local/share/:/usr/share/:/var/lib/snapd/desktop'), ('PYTHONPATH', '/opt/ros/humble/lib/python3.10/site-packages:/opt/ros/humble/local/lib/python3.10/dist-packages'), ('HTTP_PROXY', 'http://192.168.1.222:7897/'), ('LC_NUMERIC', 'zh_CN.UTF-8'), ('LC_PAPER', 'zh_CN.UTF-8'), ('COLCON', '1'), ('VTE_VERSION', '6800'), ('CMAKE_PREFIX_PATH', '/home/niuniu/ydlidar_ws/install/ydlidar_ros2_driver')]), 'shell': False}
+[0.703790] (-) TimerEvent: {}
+[0.753340] (livox_sdk2) StdoutLine: {'line': b'[  2%] \x1b[32mBuilding CXX object sdk_core/CMakeFiles/livox_lidar_sdk_shared.dir/__/3rdparty/FastCRC/FastCRCsw.cpp.o\x1b[0m\n'}
+[0.753577] (livox_sdk2) StdoutLine: {'line': b'[  2%] \x1b[32mBuilding CXX object sdk_core/CMakeFiles/livox_lidar_sdk_shared.dir/params_check.cpp.o\x1b[0m\n'}
+[0.753736] (livox_sdk2) StdoutLine: {'line': b'[  4%] \x1b[32mBuilding CXX object sdk_core/CMakeFiles/livox_lidar_sdk_shared.dir/parse_cfg_file.cpp.o\x1b[0m\n'}
+[0.753820] (livox_sdk2) StdoutLine: {'line': b'[  3%] \x1b[32mBuilding CXX object sdk_core/CMakeFiles/livox_lidar_sdk_shared.dir/device_manager.cpp.o\x1b[0m\n'}
+[0.753909] (livox_sdk2) StdoutLine: {'line': b'[  8%] \x1b[32mBuilding CXX object sdk_core/CMakeFiles/livox_lidar_sdk_static.dir/__/3rdparty/FastCRC/FastCRCsw.cpp.o\x1b[0m\n'}
+[0.753943] (livox_sdk2) StdoutLine: {'line': b'[  8%] \x1b[32mBuilding CXX object sdk_core/CMakeFiles/livox_lidar_sdk_static.dir/device_manager.cpp.o\x1b[0m\n'}
+[0.753971] (livox_sdk2) StdoutLine: {'line': b'[  8%] \x1b[32mBuilding CXX object sdk_core/CMakeFiles/livox_lidar_sdk_shared.dir/livox_lidar_sdk.cpp.o\x1b[0m\n'}
+[0.755884] (livox_sdk2) StdoutLine: {'line': b'[  9%] \x1b[32mBuilding CXX object sdk_core/CMakeFiles/livox_lidar_sdk_static.dir/livox_lidar_sdk.cpp.o\x1b[0m\n'}
+[0.765478] (livox_ros_driver2) StdoutLine: {'line': b'-- Found rmw_implementation_cmake: 6.1.2 (/opt/ros/humble/share/rmw_implementation_cmake/cmake)\n'}
+[0.768511] (livox_ros_driver2) StdoutLine: {'line': b'-- Found rmw_fastrtps_cpp: 6.2.7 (/opt/ros/humble/share/rmw_fastrtps_cpp/cmake)\n'}
+[0.804429] (-) TimerEvent: {}
+[0.856804] (livox_sdk2) StdoutLine: {'line': b'[ 10%] \x1b[32mBuilding CXX object sdk_core/CMakeFiles/livox_lidar_sdk_static.dir/params_check.cpp.o\x1b[0m\n'}
+[0.857375] (livox_sdk2) StdoutLine: {'line': b'[ 12%] \x1b[32mBuilding CXX object sdk_core/CMakeFiles/livox_lidar_sdk_shared.dir/upgrade_manager.cpp.o\x1b[0m\n'}
+[0.906332] (-) TimerEvent: {}
+[0.958522] (livox_ros_driver2) StdoutLine: {'line': b'-- Found OpenSSL: /usr/lib/x86_64-linux-gnu/libcrypto.so (found version "3.0.2")  \n'}
+[1.006968] (-) TimerEvent: {}
+[1.013243] (livox_ros_driver2) StdoutLine: {'line': b'-- Found FastRTPS: /opt/ros/humble/include  \n'}
+[1.094900] (livox_ros_driver2) StdoutLine: {'line': b"-- Using RMW implementation 'rmw_fastrtps_cpp' as default\n"}
+[1.108056] (-) TimerEvent: {}
+[1.119006] (livox_ros_driver2) StdoutLine: {'line': b'-- Looking for C++ include pthread.h\n'}
+[1.208243] (-) TimerEvent: {}
+[1.225247] (livox_sdk2) StdoutLine: {'line': b'[ 13%] \x1b[32mBuilding CXX object sdk_core/CMakeFiles/livox_lidar_sdk_shared.dir/base/io_loop.cpp.o\x1b[0m\n'}
+[1.277506] (livox_ros_driver2) StdoutLine: {'line': b'-- Looking for C++ include pthread.h - found\n'}
+[1.279464] (livox_ros_driver2) StdoutLine: {'line': b'-- Performing Test CMAKE_HAVE_LIBC_PTHREAD\n'}
+[1.308948] (-) TimerEvent: {}
+[1.378417] (livox_ros_driver2) StdoutLine: {'line': b'-- Performing Test CMAKE_HAVE_LIBC_PTHREAD - Success\n'}
+[1.379923] (livox_ros_driver2) StdoutLine: {'line': b'-- Found Threads: TRUE  \n'}
+[1.409351] (-) TimerEvent: {}
+[1.512865] (-) TimerEvent: {}
+[1.574174] (livox_ros_driver2) StdoutLine: {'line': b"-- Checking for module 'eigen3'\n"}
+[1.589504] (livox_ros_driver2) StdoutLine: {'line': b'--   Found eigen3, version 3.4.0\n'}
+[1.613108] (-) TimerEvent: {}
+[1.628161] (livox_ros_driver2) StdoutLine: {'line': b'-- Found Eigen: /usr/include/eigen3 (Required is at least version "3.1") \n'}
+[1.628765] (livox_ros_driver2) StdoutLine: {'line': b'-- Eigen found (include: /usr/include/eigen3, version: 3.4.0)\n'}
+[1.672635] (livox_ros_driver2) StdoutLine: {'line': b"-- Checking for module 'flann'\n"}
+[1.689736] (livox_ros_driver2) StdoutLine: {'line': b'--   Found flann, version 1.9.1\n'}
+[1.713984] (-) TimerEvent: {}
+[1.734570] (livox_ros_driver2) StdoutLine: {'line': b'-- Found FLANN: /usr/lib/x86_64-linux-gnu/libflann_cpp.so  \n'}
+[1.735160] (livox_ros_driver2) StdoutLine: {'line': b'-- FLANN found (include: /usr/include, lib: /usr/lib/x86_64-linux-gnu/libflann_cpp.so)\n'}
+[1.814409] (-) TimerEvent: {}
+[1.915171] (-) TimerEvent: {}
+[2.015968] (-) TimerEvent: {}
+[2.117138] (-) TimerEvent: {}
+[2.217903] (-) TimerEvent: {}
+[2.319089] (-) TimerEvent: {}
+[2.420082] (-) TimerEvent: {}
+[2.521607] (-) TimerEvent: {}
+[2.623043] (-) TimerEvent: {}
+[2.729916] (-) TimerEvent: {}
+[2.830749] (-) TimerEvent: {}
+[2.931371] (-) TimerEvent: {}
+[3.032091] (-) TimerEvent: {}
+[3.133067] (-) TimerEvent: {}
+[3.234037] (-) TimerEvent: {}
+[3.335031] (-) TimerEvent: {}
+[3.435936] (-) TimerEvent: {}
+[3.536632] (-) TimerEvent: {}
+[3.637487] (-) TimerEvent: {}
+[3.738267] (-) TimerEvent: {}
+[3.841191] (-) TimerEvent: {}
+[3.908293] (livox_sdk2) StdoutLine: {'line': b'[ 14%] \x1b[32mBuilding CXX object sdk_core/CMakeFiles/livox_lidar_sdk_shared.dir/base/thread_base.cpp.o\x1b[0m\n'}
+[3.941522] (-) TimerEvent: {}
+[4.041036] (livox_sdk2) StdoutLine: {'line': b'[ 15%] \x1b[32mBuilding CXX object sdk_core/CMakeFiles/livox_lidar_sdk_static.dir/parse_cfg_file.cpp.o\x1b[0m\n'}
+[4.041537] (-) TimerEvent: {}
+[4.108066] (livox_sdk2) StdoutLine: {'line': b'[ 16%] \x1b[32mBuilding CXX object sdk_core/CMakeFiles/livox_lidar_sdk_static.dir/upgrade_manager.cpp.o\x1b[0m\n'}
+[4.141955] (-) TimerEvent: {}
+[4.243188] (-) TimerEvent: {}
+[4.326462] (livox_sdk2) StdoutLine: {'line': b'[ 18%] \x1b[32mBuilding CXX object sdk_core/CMakeFiles/livox_lidar_sdk_shared.dir/base/io_thread.cpp.o\x1b[0m\n'}
+[4.343835] (-) TimerEvent: {}
+[4.382898] (livox_sdk2) StdoutLine: {'line': b'[ 19%] \x1b[32mBuilding CXX object sdk_core/CMakeFiles/livox_lidar_sdk_shared.dir/base/logging.cpp.o\x1b[0m\n'}
+[4.443921] (-) TimerEvent: {}
+[4.523484] (livox_sdk2) StdoutLine: {'line': b'[ 20%] \x1b[32mBuilding CXX object sdk_core/CMakeFiles/livox_lidar_sdk_static.dir/base/io_loop.cpp.o\x1b[0m\n'}
+[4.544085] (-) TimerEvent: {}
+[4.645006] (-) TimerEvent: {}
+[4.719419] (livox_sdk2) StdoutLine: {'line': b'[ 21%] \x1b[32mBuilding CXX object sdk_core/CMakeFiles/livox_lidar_sdk_static.dir/base/thread_base.cpp.o\x1b[0m\n'}
+[4.736161] (livox_sdk2) StdoutLine: {'line': b'[ 22%] \x1b[32mBuilding CXX object sdk_core/CMakeFiles/livox_lidar_sdk_static.dir/base/io_thread.cpp.o\x1b[0m\n'}
+[4.746618] (-) TimerEvent: {}
+[4.847274] (-) TimerEvent: {}
+[4.847962] (livox_sdk2) StdoutLine: {'line': b'[ 24%] \x1b[32mBuilding CXX object sdk_core/CMakeFiles/livox_lidar_sdk_static.dir/base/logging.cpp.o\x1b[0m\n'}
+[4.926213] (livox_ros_driver2) StdoutLine: {'line': b"-- Checking for module 'libusb-1.0'\n"}
+[4.948104] (-) TimerEvent: {}
+[4.969183] (livox_ros_driver2) StdoutLine: {'line': b'--   Found libusb-1.0, version 1.0.25\n'}
+[5.048667] (-) TimerEvent: {}
+[5.060131] (livox_ros_driver2) StdoutLine: {'line': b'-- Found libusb: /usr/lib/x86_64-linux-gnu/libusb-1.0.so  \n'}
+[5.066028] (livox_ros_driver2) StdoutLine: {'line': b'-- OpenNI found (version: 1.5.4.0, include: /usr/include/ni, lib: /usr/lib/libOpenNI.so;libusb::libusb)\n'}
+[5.113226] (livox_sdk2) StdoutLine: {'line': b'[ 25%] \x1b[32mBuilding CXX object sdk_core/CMakeFiles/livox_lidar_sdk_shared.dir/base/network/unix/network_util.cpp.o\x1b[0m\n'}
+[5.123334] (livox_sdk2) StdoutLine: {'line': b'[ 26%] \x1b[32mBuilding CXX object sdk_core/CMakeFiles/livox_lidar_sdk_shared.dir/base/multiple_io/multiple_io_base.cpp.o\x1b[0m\n'}
+[5.151279] (-) TimerEvent: {}
+[5.172929] (livox_sdk2) StdoutLine: {'line': b'[ 27%] \x1b[32mBuilding CXX object sdk_core/CMakeFiles/livox_lidar_sdk_shared.dir/base/multiple_io/multiple_io_epoll.cpp.o\x1b[0m\n'}
+[5.179597] (livox_sdk2) StdoutLine: {'line': b'[ 28%] \x1b[32mBuilding CXX object sdk_core/CMakeFiles/livox_lidar_sdk_static.dir/base/network/unix/network_util.cpp.o\x1b[0m\n'}
+[5.195429] (livox_ros_driver2) StdoutLine: {'line': b'-- OpenNI2 found (version: 2.2.0.33, include: /usr/include/openni2, lib: /usr/lib/x86_64-linux-gnu/libOpenNI2.so;libusb::libusb)\n'}
+[5.252160] (-) TimerEvent: {}
+[5.275073] (livox_sdk2) StdoutLine: {'line': b'[ 30%] \x1b[32mBuilding CXX object sdk_core/CMakeFiles/livox_lidar_sdk_shared.dir/base/multiple_io/multiple_io_poll.cpp.o\x1b[0m\n'}
+[5.330381] (livox_ros_driver2) StdoutLine: {'line': b'-- Eigen found (include: /usr/include/eigen3, version: 3.4.0)\n'}
+[5.336337] (livox_ros_driver2) StdoutLine: {'line': b'-- OpenNI found (version: 1.5.4.0, include: /usr/include/ni, lib: /usr/lib/libOpenNI.so;libusb::libusb)\n'}
+[5.342874] (livox_ros_driver2) StdoutLine: {'line': b'-- OpenNI2 found (version: 2.2.0.33, include: /usr/include/openni2, lib: /usr/lib/x86_64-linux-gnu/libOpenNI2.so;libusb::libusb)\n'}
+[5.406415] (-) TimerEvent: {}
+[5.435481] (livox_sdk2) StdoutLine: {'line': b'[ 31%] \x1b[32mBuilding CXX object sdk_core/CMakeFiles/livox_lidar_sdk_shared.dir/base/multiple_io/multiple_io_select.cpp.o\x1b[0m\n'}
+[5.445574] (livox_sdk2) StdoutLine: {'line': b'[ 32%] \x1b[32mBuilding CXX object sdk_core/CMakeFiles/livox_lidar_sdk_static.dir/base/multiple_io/multiple_io_base.cpp.o\x1b[0m\n'}
+[5.474826] (livox_sdk2) StdoutLine: {'line': b'[ 33%] \x1b[32mBuilding CXX object sdk_core/CMakeFiles/livox_lidar_sdk_shared.dir/base/multiple_io/multiple_io_kqueue.cpp.o\x1b[0m\n'}
+[5.495200] (livox_ros_driver2) StdoutLine: {'line': b'-- Found Qhull version 8.0.2\n'}
+[5.507037] (-) TimerEvent: {}
+[5.592839] (livox_sdk2) StdoutLine: {'line': b'[ 34%] \x1b[32mBuilding CXX object sdk_core/CMakeFiles/livox_lidar_sdk_static.dir/base/multiple_io/multiple_io_epoll.cpp.o\x1b[0m\n'}
+[5.609307] (-) TimerEvent: {}
+[5.630241] (livox_sdk2) StdoutLine: {'line': b'[ 36%] \x1b[32mBuilding CXX object sdk_core/CMakeFiles/livox_lidar_sdk_shared.dir/base/wake_up/unix/wake_up_pipe.cpp.o\x1b[0m\n'}
+[5.653087] (livox_ros_driver2) StdoutLine: {'line': b'-- OpenNI found (version: 1.5.4.0, include: /usr/include/ni, lib: /usr/lib/libOpenNI.so;libusb::libusb)\n'}
+[5.675767] (livox_sdk2) StdoutLine: {'line': b'[ 37%] \x1b[32mBuilding CXX object sdk_core/CMakeFiles/livox_lidar_sdk_static.dir/base/multiple_io/multiple_io_poll.cpp.o\x1b[0m\n'}
+[5.682613] (livox_sdk2) StdoutLine: {'line': b'[ 38%] \x1b[32mBuilding CXX object sdk_core/CMakeFiles/livox_lidar_sdk_static.dir/base/multiple_io/multiple_io_select.cpp.o\x1b[0m\n'}
+[5.709844] (-) TimerEvent: {}
+[5.723974] (livox_sdk2) StdoutLine: {'line': b'[ 39%] \x1b[32mBuilding CXX object sdk_core/CMakeFiles/livox_lidar_sdk_static.dir/base/multiple_io/multiple_io_kqueue.cpp.o\x1b[0m\n'}
+[5.810055] (-) TimerEvent: {}
+[5.830928] (livox_ros_driver2) StdoutLine: {'line': b'-- Found PCL_COMMON: /usr/lib/x86_64-linux-gnu/libpcl_common.so  \n'}
+[5.832492] (livox_ros_driver2) StdoutLine: {'line': b'-- Found PCL_KDTREE: /usr/lib/x86_64-linux-gnu/libpcl_kdtree.so  \n'}
+[5.833999] (livox_ros_driver2) StdoutLine: {'line': b'-- Found PCL_OCTREE: /usr/lib/x86_64-linux-gnu/libpcl_octree.so  \n'}
+[5.835058] (livox_ros_driver2) StdoutLine: {'line': b'-- Found PCL_SEARCH: /usr/lib/x86_64-linux-gnu/libpcl_search.so  \n'}
+[5.836166] (livox_ros_driver2) StdoutLine: {'line': b'-- Found PCL_SAMPLE_CONSENSUS: /usr/lib/x86_64-linux-gnu/libpcl_sample_consensus.so  \n'}
+[5.838392] (livox_ros_driver2) StdoutLine: {'line': b'-- Found PCL_FILTERS: /usr/lib/x86_64-linux-gnu/libpcl_filters.so  \n'}
+[5.839491] (livox_ros_driver2) StdoutLine: {'line': b'-- Found PCL_2D: /usr/include/pcl-1.12  \n'}
+[5.840391] (livox_ros_driver2) StdoutLine: {'line': b'-- Found PCL_GEOMETRY: /usr/include/pcl-1.12  \n'}
+[5.842706] (livox_ros_driver2) StdoutLine: {'line': b'-- Found PCL_IO: /usr/lib/x86_64-linux-gnu/libpcl_io.so  \n'}
+[5.842830] (livox_sdk2) StdoutLine: {'line': b'[ 40%] \x1b[32mBuilding CXX object sdk_core/CMakeFiles/livox_lidar_sdk_static.dir/base/wake_up/unix/wake_up_pipe.cpp.o\x1b[0m\n'}
+[5.843548] (livox_ros_driver2) StdoutLine: {'line': b'-- Found PCL_FEATURES: /usr/lib/x86_64-linux-gnu/libpcl_features.so  \n'}
+[5.845814] (livox_ros_driver2) StdoutLine: {'line': b'-- Found PCL_ML: /usr/lib/x86_64-linux-gnu/libpcl_ml.so  \n'}
+[5.847407] (livox_sdk2) StdoutLine: {'line': b'[ 42%] \x1b[32mBuilding CXX object sdk_core/CMakeFiles/livox_lidar_sdk_static.dir/comm/comm_port.cpp.o\x1b[0m\n'}
+[5.848281] (livox_ros_driver2) StdoutLine: {'line': b'-- Found PCL_SEGMENTATION: /usr/lib/x86_64-linux-gnu/libpcl_segmentation.so  \n'}
+[5.850548] (livox_ros_driver2) StdoutLine: {'line': b'-- Found PCL_VISUALIZATION: /usr/lib/x86_64-linux-gnu/libpcl_visualization.so  \n'}
+[5.850880] (livox_ros_driver2) StdoutLine: {'line': b'-- Found PCL_SURFACE: /usr/lib/x86_64-linux-gnu/libpcl_surface.so  \n'}
+[5.852610] (livox_ros_driver2) StdoutLine: {'line': b'-- Found PCL_REGISTRATION: /usr/lib/x86_64-linux-gnu/libpcl_registration.so  \n'}
+[5.853738] (livox_ros_driver2) StdoutLine: {'line': b'-- Found PCL_KEYPOINTS: /usr/lib/x86_64-linux-gnu/libpcl_keypoints.so  \n'}
+[5.855520] (livox_ros_driver2) StdoutLine: {'line': b'-- Found PCL_TRACKING: /usr/lib/x86_64-linux-gnu/libpcl_tracking.so  \n'}
+[5.856003] (livox_ros_driver2) StdoutLine: {'line': b'-- Found PCL_RECOGNITION: /usr/lib/x86_64-linux-gnu/libpcl_recognition.so  \n'}
+[5.858070] (livox_ros_driver2) StdoutLine: {'line': b'-- Found PCL_STEREO: /usr/lib/x86_64-linux-gnu/libpcl_stereo.so  \n'}
+[5.858402] (livox_ros_driver2) StdoutLine: {'line': b'-- Found PCL_APPS: /usr/lib/x86_64-linux-gnu/libpcl_apps.so  \n'}
+[5.858733] (livox_sdk2) StdoutLine: {'line': b'[ 43%] \x1b[32mBuilding CXX object sdk_core/CMakeFiles/livox_lidar_sdk_static.dir/comm/sdk_protocol.cpp.o\x1b[0m\n'}
+[5.859752] (livox_ros_driver2) StdoutLine: {'line': b'-- Found PCL_IN_HAND_SCANNER: /usr/include/pcl-1.12  \n'}
+[5.861201] (livox_ros_driver2) StdoutLine: {'line': b'-- Found PCL_MODELER: /usr/include/pcl-1.12  \n'}
+[5.861636] (livox_ros_driver2) StdoutLine: {'line': b'-- Found PCL_POINT_CLOUD_EDITOR: /usr/include/pcl-1.12  \n'}
+[5.862956] (livox_ros_driver2) StdoutLine: {'line': b'-- Found PCL_OUTOFCORE: /usr/lib/x86_64-linux-gnu/libpcl_outofcore.so  \n'}
+[5.864154] (livox_ros_driver2) StdoutLine: {'line': b'-- Found PCL_PEOPLE: /usr/lib/x86_64-linux-gnu/libpcl_people.so  \n'}
+[5.889380] (livox_sdk2) StdoutLine: {'line': b'[ 44%] \x1b[32mBuilding CXX object sdk_core/CMakeFiles/livox_lidar_sdk_static.dir/comm/generate_seq.cpp.o\x1b[0m\n'}
+[5.910320] (-) TimerEvent: {}
+[5.920949] (livox_sdk2) StdoutLine: {'line': b'[ 45%] \x1b[32mBuilding CXX object sdk_core/CMakeFiles/livox_lidar_sdk_static.dir/upgrade/firmware.cpp.o\x1b[0m\n'}
+[5.921491] (livox_ros_driver2) StdoutLine: {'line': b'-- Found PkgConfig: /usr/bin/pkg-config (found version "0.29.2") \n'}
+[5.923079] (livox_ros_driver2) StdoutLine: {'line': b"-- Checking for module 'apr-1'\n"}
+[5.939904] (livox_sdk2) StdoutLine: {'line': b'[ 46%] \x1b[32mBuilding CXX object sdk_core/CMakeFiles/livox_lidar_sdk_static.dir/upgrade/livox_lidar_upgrader.cpp.o\x1b[0m\n'}
+[5.961202] (livox_ros_driver2) StdoutLine: {'line': b'--   Found apr-1, version 1.7.0\n'}
+[6.011238] (-) TimerEvent: {}
+[6.022745] (livox_sdk2) StdoutLine: {'line': b'[ 48%] \x1b[32mBuilding CXX object sdk_core/CMakeFiles/livox_lidar_sdk_shared.dir/comm/comm_port.cpp.o\x1b[0m\n'}
+[6.041924] (livox_ros_driver2) StdoutLine: {'line': b'-- APR include dirs: /usr/include/apr-1.0\n'}
+[6.042164] (livox_ros_driver2) StdoutLine: {'line': b'-- APR libs: apr-1\n'}
+[6.051016] (livox_sdk2) StdoutLine: {'line': b'[ 49%] \x1b[32mBuilding CXX object sdk_core/CMakeFiles/livox_lidar_sdk_shared.dir/comm/sdk_protocol.cpp.o\x1b[0m\n'}
+[6.094234] (livox_sdk2) StdoutLine: {'line': b'[ 50%] \x1b[32mBuilding CXX object sdk_core/CMakeFiles/livox_lidar_sdk_shared.dir/comm/generate_seq.cpp.o\x1b[0m\n'}
+[6.111490] (-) TimerEvent: {}
+[6.176653] (livox_sdk2) StdoutLine: {'line': b'[ 51%] \x1b[32mBuilding CXX object sdk_core/CMakeFiles/livox_lidar_sdk_static.dir/logger_handler/logger_manager.cpp.o\x1b[0m\n'}
+[6.206128] (livox_sdk2) StdoutLine: {'line': b'[ 53%] \x1b[32mBuilding CXX object sdk_core/CMakeFiles/livox_lidar_sdk_static.dir/logger_handler/logger_handler.cpp.o\x1b[0m\n'}
+[6.211715] (-) TimerEvent: {}
+[6.221134] (livox_sdk2) StdoutLine: {'line': b'[ 54%] \x1b[32mBuilding CXX object sdk_core/CMakeFiles/livox_lidar_sdk_static.dir/logger_handler/file_manager.cpp.o\x1b[0m\n'}
+[6.312347] (-) TimerEvent: {}
+[6.415430] (-) TimerEvent: {}
+[6.421689] (livox_sdk2) StdoutLine: {'line': b'[ 55%] \x1b[32mBuilding CXX object sdk_core/CMakeFiles/livox_lidar_sdk_static.dir/data_handler/data_handler.cpp.o\x1b[0m\n'}
+[6.508841] (livox_sdk2) StdoutLine: {'line': b'[ 56%] \x1b[32mBuilding CXX object sdk_core/CMakeFiles/livox_lidar_sdk_static.dir/command_handler/command_impl.cpp.o\x1b[0m\n'}
+[6.516307] (-) TimerEvent: {}
+[6.529907] (livox_ros_driver2) StdoutLine: {'line': b'-- Found ament_cmake_ros: 0.10.0 (/opt/ros/humble/share/ament_cmake_ros/cmake)\n'}
+[6.530466] (livox_sdk2) StdoutLine: {'line': b'[ 57%] \x1b[32mBuilding CXX object sdk_core/CMakeFiles/livox_lidar_sdk_static.dir/command_handler/general_command_handler.cpp.o\x1b[0m\n'}
+[6.616510] (-) TimerEvent: {}
+[6.717259] (-) TimerEvent: {}
+[6.763056] (livox_ros_driver2) StdoutLine: {'line': b'-- Using all available rosidl_typesupport_c: rosidl_typesupport_fastrtps_c;rosidl_typesupport_introspection_c\n'}
+[6.817370] (-) TimerEvent: {}
+[6.918236] (-) TimerEvent: {}
+[7.019000] (-) TimerEvent: {}
+[7.076097] (livox_ros_driver2) StdoutLine: {'line': b'-- Using all available rosidl_typesupport_cpp: rosidl_typesupport_fastrtps_cpp;rosidl_typesupport_introspection_cpp\n'}
+[7.120501] (livox_ros_driver2) StdoutLine: {'line': b'-- Found PythonInterp: /usr/bin/python3 (found suitable version "3.10.12", minimum required is "3.6") \n'}
+[7.121175] (-) TimerEvent: {}
+[7.127883] (livox_ros_driver2) StdoutLine: {'line': b'-- Found python_cmake_module: 0.10.0 (/opt/ros/humble/share/python_cmake_module/cmake)\n'}
+[7.186843] (livox_ros_driver2) StdoutLine: {'line': b'-- Found PythonLibs: /usr/lib/x86_64-linux-gnu/libpython3.10.so (found suitable version "3.10.12", minimum required is "3.5") \n'}
+[7.187429] (livox_ros_driver2) StdoutLine: {'line': b'-- Using PYTHON_EXECUTABLE: /usr/bin/python3\n'}
+[7.187683] (livox_ros_driver2) StdoutLine: {'line': b'-- Using PYTHON_INCLUDE_DIRS: /usr/include/python3.10\n'}
+[7.187911] (livox_ros_driver2) StdoutLine: {'line': b'-- Using PYTHON_LIBRARIES: /usr/lib/x86_64-linux-gnu/libpython3.10.so\n'}
+[7.221306] (-) TimerEvent: {}
+[7.223221] (livox_ros_driver2) StdoutLine: {'line': b'-- Found PythonExtra: .so  \n'}
+[7.300140] (livox_sdk2) StdoutLine: {'line': b'[ 59%] \x1b[32mBuilding CXX object sdk_core/CMakeFiles/livox_lidar_sdk_shared.dir/upgrade/firmware.cpp.o\x1b[0m\n'}
+[7.321660] (-) TimerEvent: {}
+[7.343869] (livox_ros_driver2) StderrLine: {'line': b'\x1b[31mCMake Error at CMakeLists.txt:196 (target_link_libraries):\n'}
+[7.345528] (livox_ros_driver2) StderrLine: {'line': b'  The plain signature for target_link_libraries has already been used with\n'}
+[7.345637] (livox_ros_driver2) StderrLine: {'line': b'  the target "livox_ros_driver2".  All uses of target_link_libraries with a\n'}
+[7.345673] (livox_ros_driver2) StderrLine: {'line': b'  target must be either all-keyword or all-plain.\n'}
+[7.345705] (livox_ros_driver2) StderrLine: {'line': b'\n'}
+[7.345736] (livox_ros_driver2) StderrLine: {'line': b'  The uses of the plain signature are here:\n'}
+[7.345763] (livox_ros_driver2) StderrLine: {'line': b'\n'}
+[7.345789] (livox_ros_driver2) StderrLine: {'line': b'   * /opt/ros/humble/share/ament_cmake_target_dependencies/cmake/ament_target_dependencies.cmake:145 (target_link_libraries)\n'}
+[7.345816] (livox_ros_driver2) StderrLine: {'line': b'   * /opt/ros/humble/share/ament_cmake_target_dependencies/cmake/ament_target_dependencies.cmake:151 (target_link_libraries)\n'}
+[7.345842] (livox_ros_driver2) StderrLine: {'line': b'\n'}
+[7.345867] (livox_ros_driver2) StderrLine: {'line': b'\n'}
+[7.345893] (livox_ros_driver2) StderrLine: {'line': b'\x1b[0m\n'}
+[7.398795] (livox_ros_driver2) StdoutLine: {'line': b'-- Configuring incomplete, errors occurred!\n'}
+[7.399035] (livox_ros_driver2) StdoutLine: {'line': b'See also "/home/niuniu/DT46_RM_Sentry/build/livox_ros_driver2/CMakeFiles/CMakeOutput.log".\n'}
+[7.422135] (-) TimerEvent: {}
+[7.448338] (livox_ros_driver2) CommandEnded: {'returncode': 1}
+[7.478098] (livox_sdk2) StdoutLine: {'line': b'[ 60%] \x1b[32mBuilding CXX object sdk_core/CMakeFiles/livox_lidar_sdk_shared.dir/upgrade/livox_lidar_upgrader.cpp.o\x1b[0m\n'}
+[7.522638] (-) TimerEvent: {}
+[7.548569] (livox_ros_driver2) JobEnded: {'identifier': 'livox_ros_driver2', 'rc': 1}
+[7.623025] (-) TimerEvent: {}
+[7.652370] (livox_sdk2) StdoutLine: {'line': b'[ 61%] \x1b[32mBuilding CXX object sdk_core/CMakeFiles/livox_lidar_sdk_static.dir/command_handler/hap_command_handler.cpp.o\x1b[0m\n'}
+[7.725046] (-) TimerEvent: {}
+[7.825762] (-) TimerEvent: {}
+[7.926623] (-) TimerEvent: {}
+[8.025354] (livox_sdk2) StdoutLine: {'line': b'[ 62%] \x1b[32mBuilding CXX object sdk_core/CMakeFiles/livox_lidar_sdk_shared.dir/logger_handler/logger_manager.cpp.o\x1b[0m\n'}
+[8.026981] (-) TimerEvent: {}
+[8.041515] (livox_sdk2) StdoutLine: {'line': b'[ 63%] \x1b[32mBuilding CXX object sdk_core/CMakeFiles/livox_lidar_sdk_static.dir/command_handler/mid360_command_handler.cpp.o\x1b[0m\n'}
+[8.127629] (-) TimerEvent: {}
+[8.237927] (-) TimerEvent: {}
+[8.259556] (livox_sdk2) StdoutLine: {'line': b'[ 65%] \x1b[32mBuilding CXX object sdk_core/CMakeFiles/livox_lidar_sdk_static.dir/command_handler/build_request.cpp.o\x1b[0m\n'}
+[8.338160] (-) TimerEvent: {}
+[8.438958] (-) TimerEvent: {}
+[8.539844] (-) TimerEvent: {}
+[8.549776] (livox_sdk2) StderrLine: {'line': b'In file included from \x1b[01m\x1b[K/home/niuniu/DT46_RM_Sentry/src/Livox-SDK2/sdk_core/../3rdparty/rapidjson/stream.h:19\x1b[m\x1b[K,\n'}
+[8.550850] (livox_sdk2) StderrLine: {'line': b'                 from \x1b[01m\x1b[K/home/niuniu/DT46_RM_Sentry/src/Livox-SDK2/sdk_core/../3rdparty/rapidjson/memorystream.h:22\x1b[m\x1b[K,\n'}
+[8.551170] (livox_sdk2) StderrLine: {'line': b'                 from \x1b[01m\x1b[K/home/niuniu/DT46_RM_Sentry/src/Livox-SDK2/sdk_core/../3rdparty/rapidjson/encodedstream.h:22\x1b[m\x1b[K,\n'}
+[8.551584] (livox_sdk2) StderrLine: {'line': b'                 from \x1b[01m\x1b[K/home/niuniu/DT46_RM_Sentry/src/Livox-SDK2/sdk_core/../3rdparty/rapidjson/document.h:26\x1b[m\x1b[K,\n'}
+[8.551858] (livox_sdk2) StderrLine: {'line': b'                 from \x1b[01m\x1b[K/home/niuniu/DT46_RM_Sentry/src/Livox-SDK2/sdk_core/command_handler/parse_lidar_state_info.h:38\x1b[m\x1b[K,\n'}
+[8.552083] (livox_sdk2) StderrLine: {'line': b'                 from \x1b[01m\x1b[K/home/niuniu/DT46_RM_Sentry/src/Livox-SDK2/sdk_core/command_handler/hap_command_handler.cpp:37\x1b[m\x1b[K:\n'}
+[8.552448] (livox_sdk2) StderrLine: {'line': b'\x1b[01m\x1b[K/home/niuniu/DT46_RM_Sentry/src/Livox-SDK2/sdk_core/../3rdparty/rapidjson/rapidjson.h:542:29:\x1b[m\x1b[K \x1b[01;35m\x1b[Kwarning: \x1b[m\x1b[Kunknown option after \xe2\x80\x98\x1b[01m\x1b[K#pragma GCC diagnostic\x1b[m\x1b[K\xe2\x80\x99 kind [\x1b[01;35m\x1b[K\x1b]8;;https://gcc.gnu.org/onlinedocs/gcc/Warning-Options.html#index-Wpragmas\x07-Wpragmas\x1b]8;;\x07\x1b[m\x1b[K]\n'}
+[8.556079] (livox_sdk2) StderrLine: {'line': b'  542 | #define RAPIDJSON_PRAGMA(x) \x1b[01;35m\x1b[K_Pragma\x1b[m\x1b[K(RAPIDJSON_STRINGIFY(x))\n'}
+[8.556479] (livox_sdk2) StderrLine: {'line': b'      |                             \x1b[01;35m\x1b[K^~~~~~~\x1b[m\x1b[K\n'}
+[8.556733] (livox_sdk2) StderrLine: {'line': b'\x1b[01m\x1b[K/home/niuniu/DT46_RM_Sentry/src/Livox-SDK2/sdk_core/../3rdparty/rapidjson/rapidjson.h:543:34:\x1b[m\x1b[K \x1b[01;36m\x1b[Knote: \x1b[m\x1b[Kin expansion of macro \xe2\x80\x98\x1b[01m\x1b[KRAPIDJSON_PRAGMA\x1b[m\x1b[K\xe2\x80\x99\n'}
+[8.557066] (livox_sdk2) StderrLine: {'line': b'  543 | #define RAPIDJSON_DIAG_PRAGMA(x) \x1b[01;36m\x1b[KRAPIDJSON_PRAGMA\x1b[m\x1b[K(GCC diagnostic x)\n'}
+[8.557340] (livox_sdk2) StderrLine: {'line': b'      |                                  \x1b[01;36m\x1b[K^~~~~~~~~~~~~~~~\x1b[m\x1b[K\n'}
+[8.557805] (livox_sdk2) StderrLine: {'line': b'\x1b[01m\x1b[K/home/niuniu/DT46_RM_Sentry/src/Livox-SDK2/sdk_core/../3rdparty/rapidjson/rapidjson.h:545:3:\x1b[m\x1b[K \x1b[01;36m\x1b[Knote: \x1b[m\x1b[Kin expansion of macro \xe2\x80\x98\x1b[01m\x1b[KRAPIDJSON_DIAG_PRAGMA\x1b[m\x1b[K\xe2\x80\x99\n'}
+[8.558237] (livox_sdk2) StderrLine: {'line': b'  545 |   \x1b[01;36m\x1b[KRAPIDJSON_DIAG_PRAGMA\x1b[m\x1b[K(ignored RAPIDJSON_STRINGIFY(RAPIDJSON_JOIN(-W, x)))\n'}
+[8.558497] (livox_sdk2) StderrLine: {'line': b'      |   \x1b[01;36m\x1b[K^~~~~~~~~~~~~~~~~~~~~\x1b[m\x1b[K\n'}
+[8.558719] (livox_sdk2) StderrLine: {'line': b'\x1b[01m\x1b[K/home/niuniu/DT46_RM_Sentry/src/Livox-SDK2/sdk_core/../3rdparty/rapidjson/internal/dtoa.h:36:1:\x1b[m\x1b[K \x1b[01;36m\x1b[Knote: \x1b[m\x1b[Kin expansion of macro \xe2\x80\x98\x1b[01m\x1b[KRAPIDJSON_DIAG_OFF\x1b[m\x1b[K\xe2\x80\x99\n'}
+[8.559219] (livox_sdk2) StderrLine: {'line': b'   36 | \x1b[01;36m\x1b[KRAPIDJSON_DIAG_OFF\x1b[m\x1b[K(array - bounds)  // some gcc versions generate wrong warnings\n'}
+[8.559461] (livox_sdk2) StderrLine: {'line': b'      | \x1b[01;36m\x1b[K^~~~~~~~~~~~~~~~~~\x1b[m\x1b[K\n'}
+[8.559788] (livox_sdk2) StderrLine: {'line': b'\x1b[01m\x1b[K/home/niuniu/DT46_RM_Sentry/src/Livox-SDK2/sdk_core/../3rdparty/rapidjson/rapidjson.h:542:29:\x1b[m\x1b[K \x1b[01;36m\x1b[Knote: \x1b[m\x1b[Kdid you mean \xe2\x80\x98\x1b[01m\x1b[K-Warray-bounds\x1b[m\x1b[K\xe2\x80\x99?\n'}
+[8.560076] (livox_sdk2) StderrLine: {'line': b'  542 | #define RAPIDJSON_PRAGMA(x) \x1b[01;36m\x1b[K_Pragma\x1b[m\x1b[K(RAPIDJSON_STRINGIFY(x))\n'}
+[8.560395] (livox_sdk2) StderrLine: {'line': b'      |                             \x1b[01;36m\x1b[K^~~~~~~\x1b[m\x1b[K\n'}
+[8.560569] (livox_sdk2) StderrLine: {'line': b'\x1b[01m\x1b[K/home/niuniu/DT46_RM_Sentry/src/Livox-SDK2/sdk_core/../3rdparty/rapidjson/rapidjson.h:543:34:\x1b[m\x1b[K \x1b[01;36m\x1b[Knote: \x1b[m\x1b[Kin expansion of macro \xe2\x80\x98\x1b[01m\x1b[KRAPIDJSON_PRAGMA\x1b[m\x1b[K\xe2\x80\x99\n'}
+[8.560604] (livox_sdk2) StderrLine: {'line': b'  543 | #define RAPIDJSON_DIAG_PRAGMA(x) \x1b[01;36m\x1b[KRAPIDJSON_PRAGMA\x1b[m\x1b[K(GCC diagnostic x)\n'}
+[8.560632] (livox_sdk2) StderrLine: {'line': b'      |                                  \x1b[01;36m\x1b[K^~~~~~~~~~~~~~~~\x1b[m\x1b[K\n'}
+[8.560661] (livox_sdk2) StderrLine: {'line': b'\x1b[01m\x1b[K/home/niuniu/DT46_RM_Sentry/src/Livox-SDK2/sdk_core/../3rdparty/rapidjson/rapidjson.h:545:3:\x1b[m\x1b[K \x1b[01;36m\x1b[Knote: \x1b[m\x1b[Kin expansion of macro \xe2\x80\x98\x1b[01m\x1b[KRAPIDJSON_DIAG_PRAGMA\x1b[m\x1b[K\xe2\x80\x99\n'}
+[8.560691] (livox_sdk2) StderrLine: {'line': b'  545 |   \x1b[01;36m\x1b[KRAPIDJSON_DIAG_PRAGMA\x1b[m\x1b[K(ignored RAPIDJSON_STRINGIFY(RAPIDJSON_JOIN(-W, x)))\n'}
+[8.560720] (livox_sdk2) StderrLine: {'line': b'      |   \x1b[01;36m\x1b[K^~~~~~~~~~~~~~~~~~~~~\x1b[m\x1b[K\n'}
+[8.560746] (livox_sdk2) StderrLine: {'line': b'\x1b[01m\x1b[K/home/niuniu/DT46_RM_Sentry/src/Livox-SDK2/sdk_core/../3rdparty/rapidjson/internal/dtoa.h:36:1:\x1b[m\x1b[K \x1b[01;36m\x1b[Knote: \x1b[m\x1b[Kin expansion of macro \xe2\x80\x98\x1b[01m\x1b[KRAPIDJSON_DIAG_OFF\x1b[m\x1b[K\xe2\x80\x99\n'}
+[8.560774] (livox_sdk2) StderrLine: {'line': b'   36 | \x1b[01;36m\x1b[KRAPIDJSON_DIAG_OFF\x1b[m\x1b[K(array - bounds)  // some gcc versions generate wrong warnings\n'}
+[8.560802] (livox_sdk2) StderrLine: {'line': b'      | \x1b[01;36m\x1b[K^~~~~~~~~~~~~~~~~~\x1b[m\x1b[K\n'}
+[8.640907] (-) TimerEvent: {}
+[8.742101] (-) TimerEvent: {}
+[8.771145] (livox_sdk2) StdoutLine: {'line': b'[ 66%] \x1b[32mBuilding CXX object sdk_core/CMakeFiles/livox_lidar_sdk_shared.dir/logger_handler/logger_handler.cpp.o\x1b[0m\n'}
+[8.828841] (livox_sdk2) StdoutLine: {'line': b'[ 67%] \x1b[32mBuilding CXX object sdk_core/CMakeFiles/livox_lidar_sdk_shared.dir/logger_handler/file_manager.cpp.o\x1b[0m\n'}
+[8.837536] (livox_sdk2) StderrLine: {'line': b'In file included from \x1b[01m\x1b[K/home/niuniu/DT46_RM_Sentry/src/Livox-SDK2/sdk_core/../3rdparty/rapidjson/stream.h:19\x1b[m\x1b[K,\n'}
+[8.842648] (-) TimerEvent: {}
+[8.842938] (livox_sdk2) StderrLine: {'line': b'                 from \x1b[01m\x1b[K/home/niuniu/DT46_RM_Sentry/src/Livox-SDK2/sdk_core/../3rdparty/rapidjson/memorystream.h:22\x1b[m\x1b[K,\n'}
+[8.843469] (livox_sdk2) StderrLine: {'line': b'                 from \x1b[01m\x1b[K/home/niuniu/DT46_RM_Sentry/src/Livox-SDK2/sdk_core/../3rdparty/rapidjson/encodedstream.h:22\x1b[m\x1b[K,\n'}
+[8.843880] (livox_sdk2) StderrLine: {'line': b'                 from \x1b[01m\x1b[K/home/niuniu/DT46_RM_Sentry/src/Livox-SDK2/sdk_core/../3rdparty/rapidjson/document.h:26\x1b[m\x1b[K,\n'}
+[8.844476] (livox_sdk2) StderrLine: {'line': b'                 from \x1b[01m\x1b[K/home/niuniu/DT46_RM_Sentry/src/Livox-SDK2/sdk_core/command_handler/parse_lidar_state_info.h:38\x1b[m\x1b[K,\n'}
+[8.844854] (livox_sdk2) StderrLine: {'line': b'                 from \x1b[01m\x1b[K/home/niuniu/DT46_RM_Sentry/src/Livox-SDK2/sdk_core/command_handler/mid360_command_handler.cpp:37\x1b[m\x1b[K:\n'}
+[8.845433] (livox_sdk2) StderrLine: {'line': b'\x1b[01m\x1b[K/home/niuniu/DT46_RM_Sentry/src/Livox-SDK2/sdk_core/../3rdparty/rapidjson/rapidjson.h:542:29:\x1b[m\x1b[K \x1b[01;35m\x1b[Kwarning: \x1b[m\x1b[Kunknown option after \xe2\x80\x98\x1b[01m\x1b[K#pragma GCC diagnostic\x1b[m\x1b[K\xe2\x80\x99 kind [\x1b[01;35m\x1b[K\x1b]8;;https://gcc.gnu.org/onlinedocs/gcc/Warning-Options.html#index-Wpragmas\x07-Wpragmas\x1b]8;;\x07\x1b[m\x1b[K]\n'}
+[8.845812] (livox_sdk2) StderrLine: {'line': b'  542 | #define RAPIDJSON_PRAGMA(x) \x1b[01;35m\x1b[K_Pragma\x1b[m\x1b[K(RAPIDJSON_STRINGIFY(x))\n'}
+[8.846464] (livox_sdk2) StderrLine: {'line': b'      |                             \x1b[01;35m\x1b[K^~~~~~~\x1b[m\x1b[K\n'}
+[8.846848] (livox_sdk2) StderrLine: {'line': b'\x1b[01m\x1b[K/home/niuniu/DT46_RM_Sentry/src/Livox-SDK2/sdk_core/../3rdparty/rapidjson/rapidjson.h:543:34:\x1b[m\x1b[K \x1b[01;36m\x1b[Knote: \x1b[m\x1b[Kin expansion of macro \xe2\x80\x98\x1b[01m\x1b[KRAPIDJSON_PRAGMA\x1b[m\x1b[K\xe2\x80\x99\n'}
+[8.847283] (livox_sdk2) StderrLine: {'line': b'  543 | #define RAPIDJSON_DIAG_PRAGMA(x) \x1b[01;36m\x1b[KRAPIDJSON_PRAGMA\x1b[m\x1b[K(GCC diagnostic x)\n'}
+[8.847664] (livox_sdk2) StderrLine: {'line': b'      |                                  \x1b[01;36m\x1b[K^~~~~~~~~~~~~~~~\x1b[m\x1b[K\n'}
+[8.848105] (livox_sdk2) StderrLine: {'line': b'\x1b[01m\x1b[K/home/niuniu/DT46_RM_Sentry/src/Livox-SDK2/sdk_core/../3rdparty/rapidjson/rapidjson.h:545:3:\x1b[m\x1b[K \x1b[01;36m\x1b[Knote: \x1b[m\x1b[Kin expansion of macro \xe2\x80\x98\x1b[01m\x1b[KRAPIDJSON_DIAG_PRAGMA\x1b[m\x1b[K\xe2\x80\x99\n'}
+[8.848490] (livox_sdk2) StderrLine: {'line': b'  545 |   \x1b[01;36m\x1b[KRAPIDJSON_DIAG_PRAGMA\x1b[m\x1b[K(ignored RAPIDJSON_STRINGIFY(RAPIDJSON_JOIN(-W, x)))\n'}
+[8.848868] (livox_sdk2) StderrLine: {'line': b'      |   \x1b[01;36m\x1b[K^~~~~~~~~~~~~~~~~~~~~\x1b[m\x1b[K\n'}
+[8.849327] (livox_sdk2) StderrLine: {'line': b'\x1b[01m\x1b[K/home/niuniu/DT46_RM_Sentry/src/Livox-SDK2/sdk_core/../3rdparty/rapidjson/internal/dtoa.h:36:1:\x1b[m\x1b[K \x1b[01;36m\x1b[Knote: \x1b[m\x1b[Kin expansion of macro \xe2\x80\x98\x1b[01m\x1b[KRAPIDJSON_DIAG_OFF\x1b[m\x1b[K\xe2\x80\x99\n'}
+[8.849709] (livox_sdk2) StderrLine: {'line': b'   36 | \x1b[01;36m\x1b[KRAPIDJSON_DIAG_OFF\x1b[m\x1b[K(array - bounds)  // some gcc versions generate wrong warnings\n'}
+[8.850151] (livox_sdk2) StderrLine: {'line': b'      | \x1b[01;36m\x1b[K^~~~~~~~~~~~~~~~~~\x1b[m\x1b[K\n'}
+[8.850539] (livox_sdk2) StderrLine: {'line': b'\x1b[01m\x1b[K/home/niuniu/DT46_RM_Sentry/src/Livox-SDK2/sdk_core/../3rdparty/rapidjson/rapidjson.h:542:29:\x1b[m\x1b[K \x1b[01;36m\x1b[Knote: \x1b[m\x1b[Kdid you mean \xe2\x80\x98\x1b[01m\x1b[K-Warray-bounds\x1b[m\x1b[K\xe2\x80\x99?\n'}
+[8.851294] (livox_sdk2) StderrLine: {'line': b'  542 | #define RAPIDJSON_PRAGMA(x) \x1b[01;36m\x1b[K_Pragma\x1b[m\x1b[K(RAPIDJSON_STRINGIFY(x))\n'}
+[8.851844] (livox_sdk2) StderrLine: {'line': b'      |                             \x1b[01;36m\x1b[K^~~~~~~\x1b[m\x1b[K\n'}
+[8.852278] (livox_sdk2) StderrLine: {'line': b'\x1b[01m\x1b[K/home/niuniu/DT46_RM_Sentry/src/Livox-SDK2/sdk_core/../3rdparty/rapidjson/rapidjson.h:543:34:\x1b[m\x1b[K \x1b[01;36m\x1b[Knote: \x1b[m\x1b[Kin expansion of macro \xe2\x80\x98\x1b[01m\x1b[KRAPIDJSON_PRAGMA\x1b[m\x1b[K\xe2\x80\x99\n'}
+[8.852659] (livox_sdk2) StderrLine: {'line': b'  543 | #define RAPIDJSON_DIAG_PRAGMA(x) \x1b[01;36m\x1b[KRAPIDJSON_PRAGMA\x1b[m\x1b[K(GCC diagnostic x)\n'}
+[8.853024] (livox_sdk2) StderrLine: {'line': b'      |                                  \x1b[01;36m\x1b[K^~~~~~~~~~~~~~~~\x1b[m\x1b[K\n'}
+[8.853518] (livox_sdk2) StderrLine: {'line': b'\x1b[01m\x1b[K/home/niuniu/DT46_RM_Sentry/src/Livox-SDK2/sdk_core/../3rdparty/rapidjson/rapidjson.h:545:3:\x1b[m\x1b[K \x1b[01;36m\x1b[Knote: \x1b[m\x1b[Kin expansion of macro \xe2\x80\x98\x1b[01m\x1b[KRAPIDJSON_DIAG_PRAGMA\x1b[m\x1b[K\xe2\x80\x99\n'}
+[8.853563] (livox_sdk2) StderrLine: {'line': b'  545 |   \x1b[01;36m\x1b[KRAPIDJSON_DIAG_PRAGMA\x1b[m\x1b[K(ignored RAPIDJSON_STRINGIFY(RAPIDJSON_JOIN(-W, x)))\n'}
+[8.853597] (livox_sdk2) StderrLine: {'line': b'      |   \x1b[01;36m\x1b[K^~~~~~~~~~~~~~~~~~~~~\x1b[m\x1b[K\n'}
+[8.853626] (livox_sdk2) StderrLine: {'line': b'\x1b[01m\x1b[K/home/niuniu/DT46_RM_Sentry/src/Livox-SDK2/sdk_core/../3rdparty/rapidjson/internal/dtoa.h:36:1:\x1b[m\x1b[K \x1b[01;36m\x1b[Knote: \x1b[m\x1b[Kin expansion of macro \xe2\x80\x98\x1b[01m\x1b[KRAPIDJSON_DIAG_OFF\x1b[m\x1b[K\xe2\x80\x99\n'}
+[8.853657] (livox_sdk2) StderrLine: {'line': b'   36 | \x1b[01;36m\x1b[KRAPIDJSON_DIAG_OFF\x1b[m\x1b[K(array - bounds)  // some gcc versions generate wrong warnings\n'}
+[8.853689] (livox_sdk2) StderrLine: {'line': b'      | \x1b[01;36m\x1b[K^~~~~~~~~~~~~~~~~~\x1b[m\x1b[K\n'}
+[8.942985] (-) TimerEvent: {}
+[8.947550] (livox_sdk2) StdoutLine: {'line': b'[ 68%] \x1b[32mBuilding CXX object sdk_core/CMakeFiles/livox_lidar_sdk_shared.dir/data_handler/data_handler.cpp.o\x1b[0m\n'}
+[9.043621] (-) TimerEvent: {}
+[9.145776] (-) TimerEvent: {}
+[9.246956] (-) TimerEvent: {}
+[9.347648] (-) TimerEvent: {}
+[9.450161] (-) TimerEvent: {}
+[9.551134] (-) TimerEvent: {}
+[9.640353] (livox_sdk2) StdoutLine: {'line': b'[ 69%] \x1b[32mBuilding CXX object sdk_core/CMakeFiles/livox_lidar_sdk_static.dir/command_handler/parse_lidar_state_info.cpp.o\x1b[0m\n'}
+[9.652116] (-) TimerEvent: {}
+[9.752863] (-) TimerEvent: {}
+[9.853878] (-) TimerEvent: {}
+[9.915607] (livox_sdk2) StderrLine: {'line': b'In file included from \x1b[01m\x1b[K/home/niuniu/DT46_RM_Sentry/src/Livox-SDK2/sdk_core/../3rdparty/rapidjson/stream.h:19\x1b[m\x1b[K,\n'}
+[9.916006] (livox_sdk2) StderrLine: {'line': b'                 from \x1b[01m\x1b[K/home/niuniu/DT46_RM_Sentry/src/Livox-SDK2/sdk_core/../3rdparty/rapidjson/memorystream.h:22\x1b[m\x1b[K,\n'}
+[9.916522] (livox_sdk2) StderrLine: {'line': b'                 from \x1b[01m\x1b[K/home/niuniu/DT46_RM_Sentry/src/Livox-SDK2/sdk_core/../3rdparty/rapidjson/encodedstream.h:22\x1b[m\x1b[K,\n'}
+[9.916756] (livox_sdk2) StderrLine: {'line': b'                 from \x1b[01m\x1b[K/home/niuniu/DT46_RM_Sentry/src/Livox-SDK2/sdk_core/../3rdparty/rapidjson/document.h:26\x1b[m\x1b[K,\n'}
+[9.916970] (livox_sdk2) StderrLine: {'line': b'                 from \x1b[01m\x1b[K/home/niuniu/DT46_RM_Sentry/src/Livox-SDK2/sdk_core/command_handler/parse_lidar_state_info.h:38\x1b[m\x1b[K,\n'}
+[9.917180] (livox_sdk2) StderrLine: {'line': b'                 from \x1b[01m\x1b[K/home/niuniu/DT46_RM_Sentry/src/Livox-SDK2/sdk_core/command_handler/parse_lidar_state_info.cpp:2\x1b[m\x1b[K:\n'}
+[9.917508] (livox_sdk2) StderrLine: {'line': b'\x1b[01m\x1b[K/home/niuniu/DT46_RM_Sentry/src/Livox-SDK2/sdk_core/../3rdparty/rapidjson/rapidjson.h:542:29:\x1b[m\x1b[K \x1b[01;35m\x1b[Kwarning: \x1b[m\x1b[Kunknown option after \xe2\x80\x98\x1b[01m\x1b[K#pragma GCC diagnostic\x1b[m\x1b[K\xe2\x80\x99 kind [\x1b[01;35m\x1b[K\x1b]8;;https://gcc.gnu.org/onlinedocs/gcc/Warning-Options.html#index-Wpragmas\x07-Wpragmas\x1b]8;;\x07\x1b[m\x1b[K]\n'}
+[9.917731] (livox_sdk2) StderrLine: {'line': b'  542 | #define RAPIDJSON_PRAGMA(x) \x1b[01;35m\x1b[K_Pragma\x1b[m\x1b[K(RAPIDJSON_STRINGIFY(x))\n'}
+[9.918043] (livox_sdk2) StderrLine: {'line': b'      |                             \x1b[01;35m\x1b[K^~~~~~~\x1b[m\x1b[K\n'}
+[9.918338] (livox_sdk2) StderrLine: {'line': b'\x1b[01m\x1b[K/home/niuniu/DT46_RM_Sentry/src/Livox-SDK2/sdk_core/../3rdparty/rapidjson/rapidjson.h:543:34:\x1b[m\x1b[K \x1b[01;36m\x1b[Knote: \x1b[m\x1b[Kin expansion of macro \xe2\x80\x98\x1b[01m\x1b[KRAPIDJSON_PRAGMA\x1b[m\x1b[K\xe2\x80\x99\n'}
+[9.918620] (livox_sdk2) StderrLine: {'line': b'  543 | #define RAPIDJSON_DIAG_PRAGMA(x) \x1b[01;36m\x1b[KRAPIDJSON_PRAGMA\x1b[m\x1b[K(GCC diagnostic x)\n'}
+[9.918841] (livox_sdk2) StderrLine: {'line': b'      |                                  \x1b[01;36m\x1b[K^~~~~~~~~~~~~~~~\x1b[m\x1b[K\n'}
+[9.919162] (livox_sdk2) StderrLine: {'line': b'\x1b[01m\x1b[K/home/niuniu/DT46_RM_Sentry/src/Livox-SDK2/sdk_core/../3rdparty/rapidjson/rapidjson.h:545:3:\x1b[m\x1b[K \x1b[01;36m\x1b[Knote: \x1b[m\x1b[Kin expansion of macro \xe2\x80\x98\x1b[01m\x1b[KRAPIDJSON_DIAG_PRAGMA\x1b[m\x1b[K\xe2\x80\x99\n'}
+[9.919394] (livox_sdk2) StderrLine: {'line': b'  545 |   \x1b[01;36m\x1b[KRAPIDJSON_DIAG_PRAGMA\x1b[m\x1b[K(ignored RAPIDJSON_STRINGIFY(RAPIDJSON_JOIN(-W, x)))\n'}
+[9.919606] (livox_sdk2) StderrLine: {'line': b'      |   \x1b[01;36m\x1b[K^~~~~~~~~~~~~~~~~~~~~\x1b[m\x1b[K\n'}
+[9.919815] (livox_sdk2) StderrLine: {'line': b'\x1b[01m\x1b[K/home/niuniu/DT46_RM_Sentry/src/Livox-SDK2/sdk_core/../3rdparty/rapidjson/internal/dtoa.h:36:1:\x1b[m\x1b[K \x1b[01;36m\x1b[Knote: \x1b[m\x1b[Kin expansion of macro \xe2\x80\x98\x1b[01m\x1b[KRAPIDJSON_DIAG_OFF\x1b[m\x1b[K\xe2\x80\x99\n'}
+[9.920121] (livox_sdk2) StderrLine: {'line': b'   36 | \x1b[01;36m\x1b[KRAPIDJSON_DIAG_OFF\x1b[m\x1b[K(array - bounds)  // some gcc versions generate wrong warnings\n'}
+[9.920349] (livox_sdk2) StderrLine: {'line': b'      | \x1b[01;36m\x1b[K^~~~~~~~~~~~~~~~~~\x1b[m\x1b[K\n'}
+[9.920561] (livox_sdk2) StderrLine: {'line': b'\x1b[01m\x1b[K/home/niuniu/DT46_RM_Sentry/src/Livox-SDK2/sdk_core/../3rdparty/rapidjson/rapidjson.h:542:29:\x1b[m\x1b[K \x1b[01;36m\x1b[Knote: \x1b[m\x1b[Kdid you mean \xe2\x80\x98\x1b[01m\x1b[K-Warray-bounds\x1b[m\x1b[K\xe2\x80\x99?\n'}
+[9.920772] (livox_sdk2) StderrLine: {'line': b'  542 | #define RAPIDJSON_PRAGMA(x) \x1b[01;36m\x1b[K_Pragma\x1b[m\x1b[K(RAPIDJSON_STRINGIFY(x))\n'}
+[9.921090] (livox_sdk2) StderrLine: {'line': b'      |                             \x1b[01;36m\x1b[K^~~~~~~\x1b[m\x1b[K\n'}
+[9.921319] (livox_sdk2) StderrLine: {'line': b'\x1b[01m\x1b[K/home/niuniu/DT46_RM_Sentry/src/Livox-SDK2/sdk_core/../3rdparty/rapidjson/rapidjson.h:543:34:\x1b[m\x1b[K \x1b[01;36m\x1b[Knote: \x1b[m\x1b[Kin expansion of macro \xe2\x80\x98\x1b[01m\x1b[KRAPIDJSON_PRAGMA\x1b[m\x1b[K\xe2\x80\x99\n'}
+[9.921532] (livox_sdk2) StderrLine: {'line': b'  543 | #define RAPIDJSON_DIAG_PRAGMA(x) \x1b[01;36m\x1b[KRAPIDJSON_PRAGMA\x1b[m\x1b[K(GCC diagnostic x)\n'}
+[9.921739] (livox_sdk2) StderrLine: {'line': b'      |                                  \x1b[01;36m\x1b[K^~~~~~~~~~~~~~~~\x1b[m\x1b[K\n'}
+[9.922033] (livox_sdk2) StderrLine: {'line': b'\x1b[01m\x1b[K/home/niuniu/DT46_RM_Sentry/src/Livox-SDK2/sdk_core/../3rdparty/rapidjson/rapidjson.h:545:3:\x1b[m\x1b[K \x1b[01;36m\x1b[Knote: \x1b[m\x1b[Kin expansion of macro \xe2\x80\x98\x1b[01m\x1b[KRAPIDJSON_DIAG_PRAGMA\x1b[m\x1b[K\xe2\x80\x99\n'}
+[9.922276] (livox_sdk2) StderrLine: {'line': b'  545 |   \x1b[01;36m\x1b[KRAPIDJSON_DIAG_PRAGMA\x1b[m\x1b[K(ignored RAPIDJSON_STRINGIFY(RAPIDJSON_JOIN(-W, x)))\n'}
+[9.922492] (livox_sdk2) StderrLine: {'line': b'      |   \x1b[01;36m\x1b[K^~~~~~~~~~~~~~~~~~~~~\x1b[m\x1b[K\n'}
+[9.922702] (livox_sdk2) StderrLine: {'line': b'\x1b[01m\x1b[K/home/niuniu/DT46_RM_Sentry/src/Livox-SDK2/sdk_core/../3rdparty/rapidjson/internal/dtoa.h:36:1:\x1b[m\x1b[K \x1b[01;36m\x1b[Knote: \x1b[m\x1b[Kin expansion of macro \xe2\x80\x98\x1b[01m\x1b[KRAPIDJSON_DIAG_OFF\x1b[m\x1b[K\xe2\x80\x99\n'}
+[9.922941] (livox_sdk2) StderrLine: {'line': b'   36 | \x1b[01;36m\x1b[KRAPIDJSON_DIAG_OFF\x1b[m\x1b[K(array - bounds)  // some gcc versions generate wrong warnings\n'}
+[9.923284] (livox_sdk2) StderrLine: {'line': b'      | \x1b[01;36m\x1b[K^~~~~~~~~~~~~~~~~~\x1b[m\x1b[K\n'}
+[9.954418] (-) TimerEvent: {}
+[9.975131] (livox_sdk2) StdoutLine: {'line': b'[ 71%] \x1b[32mBuilding CXX object sdk_core/CMakeFiles/livox_lidar_sdk_shared.dir/command_handler/command_impl.cpp.o\x1b[0m\n'}
+[10.055116] (-) TimerEvent: {}
+[10.089797] (livox_sdk2) StdoutLine: {'line': b'[ 72%] \x1b[32mBuilding CXX object sdk_core/CMakeFiles/livox_lidar_sdk_static.dir/debug_point_cloud_handler/debug_point_cloud_manager.cpp.o\x1b[0m\n'}
+[10.156132] (-) TimerEvent: {}
+[10.256774] (-) TimerEvent: {}
+[10.278687] (livox_sdk2) StdoutLine: {'line': b'[ 73%] \x1b[32mBuilding CXX object sdk_core/CMakeFiles/livox_lidar_sdk_shared.dir/command_handler/general_command_handler.cpp.o\x1b[0m\n'}
+[10.357004] (-) TimerEvent: {}
+[10.442567] (livox_sdk2) StdoutLine: {'line': b'[ 74%] \x1b[32mBuilding CXX object sdk_core/CMakeFiles/livox_lidar_sdk_static.dir/debug_point_cloud_handler/debug_point_cloud_handler.cpp.o\x1b[0m\n'}
+[10.457404] (-) TimerEvent: {}
+[10.525050] (livox_sdk2) StdoutLine: {'line': b'[ 75%] \x1b[32mBuilding CXX object sdk_core/CMakeFiles/livox_lidar_sdk_shared.dir/command_handler/hap_command_handler.cpp.o\x1b[0m\n'}
+[10.559794] (-) TimerEvent: {}
+[10.592835] (livox_sdk2) StdoutLine: {'line': b'[ 77%] \x1b[32mBuilding CXX object sdk_core/CMakeFiles/livox_lidar_sdk_shared.dir/command_handler/mid360_command_handler.cpp.o\x1b[0m\n'}
+[10.660155] (-) TimerEvent: {}
+[10.761123] (-) TimerEvent: {}
+[10.861998] (-) TimerEvent: {}
+[10.962758] (-) TimerEvent: {}
+[10.965726] (livox_sdk2) StdoutLine: {'line': b'[ 78%] \x1b[32mBuilding CXX object sdk_core/CMakeFiles/livox_lidar_sdk_shared.dir/command_handler/build_request.cpp.o\x1b[0m\n'}
+[11.064084] (-) TimerEvent: {}
+[11.164782] (-) TimerEvent: {}
+[11.265693] (-) TimerEvent: {}
+[11.301269] (livox_sdk2) StderrLine: {'line': b'In file included from \x1b[01m\x1b[K/home/niuniu/DT46_RM_Sentry/src/Livox-SDK2/sdk_core/../3rdparty/rapidjson/stream.h:19\x1b[m\x1b[K,\n'}
+[11.306060] (livox_sdk2) StderrLine: {'line': b'                 from \x1b[01m\x1b[K/home/niuniu/DT46_RM_Sentry/src/Livox-SDK2/sdk_core/../3rdparty/rapidjson/memorystream.h:22\x1b[m\x1b[K,\n'}
+[11.306508] (livox_sdk2) StderrLine: {'line': b'                 from \x1b[01m\x1b[K/home/niuniu/DT46_RM_Sentry/src/Livox-SDK2/sdk_core/../3rdparty/rapidjson/encodedstream.h:22\x1b[m\x1b[K,\n'}
+[11.306784] (livox_sdk2) StderrLine: {'line': b'                 from \x1b[01m\x1b[K/home/niuniu/DT46_RM_Sentry/src/Livox-SDK2/sdk_core/../3rdparty/rapidjson/document.h:26\x1b[m\x1b[K,\n'}
+[11.307093] (livox_sdk2) StderrLine: {'line': b'                 from \x1b[01m\x1b[K/home/niuniu/DT46_RM_Sentry/src/Livox-SDK2/sdk_core/command_handler/parse_lidar_state_info.h:38\x1b[m\x1b[K,\n'}
+[11.307142] (livox_sdk2) StderrLine: {'line': b'                 from \x1b[01m\x1b[K/home/niuniu/DT46_RM_Sentry/src/Livox-SDK2/sdk_core/command_handler/hap_command_handler.cpp:37\x1b[m\x1b[K:\n'}
+[11.307173] (livox_sdk2) StderrLine: {'line': b'\x1b[01m\x1b[K/home/niuniu/DT46_RM_Sentry/src/Livox-SDK2/sdk_core/../3rdparty/rapidjson/rapidjson.h:542:29:\x1b[m\x1b[K \x1b[01;35m\x1b[Kwarning: \x1b[m\x1b[Kunknown option after \xe2\x80\x98\x1b[01m\x1b[K#pragma GCC diagnostic\x1b[m\x1b[K\xe2\x80\x99 kind [\x1b[01;35m\x1b[K\x1b]8;;https://gcc.gnu.org/onlinedocs/gcc/Warning-Options.html#index-Wpragmas\x07-Wpragmas\x1b]8;;\x07\x1b[m\x1b[K]\n'}
+[11.307224] (livox_sdk2) StderrLine: {'line': b'  542 | #define RAPIDJSON_PRAGMA(x) \x1b[01;35m\x1b[K_Pragma\x1b[m\x1b[K(RAPIDJSON_STRINGIFY(x))\n'}
+[11.307277] (livox_sdk2) StderrLine: {'line': b'      |                             \x1b[01;35m\x1b[K^~~~~~~\x1b[m\x1b[K\n'}
+[11.307313] (livox_sdk2) StderrLine: {'line': b'\x1b[01m\x1b[K/home/niuniu/DT46_RM_Sentry/src/Livox-SDK2/sdk_core/../3rdparty/rapidjson/rapidjson.h:543:34:\x1b[m\x1b[K \x1b[01;36m\x1b[Knote: \x1b[m\x1b[Kin expansion of macro \xe2\x80\x98\x1b[01m\x1b[KRAPIDJSON_PRAGMA\x1b[m\x1b[K\xe2\x80\x99\n'}
+[11.307343] (livox_sdk2) StderrLine: {'line': b'  543 | #define RAPIDJSON_DIAG_PRAGMA(x) \x1b[01;36m\x1b[KRAPIDJSON_PRAGMA\x1b[m\x1b[K(GCC diagnostic x)\n'}
+[11.307369] (livox_sdk2) StderrLine: {'line': b'      |                                  \x1b[01;36m\x1b[K^~~~~~~~~~~~~~~~\x1b[m\x1b[K\n'}
+[11.307399] (livox_sdk2) StderrLine: {'line': b'\x1b[01m\x1b[K/home/niuniu/DT46_RM_Sentry/src/Livox-SDK2/sdk_core/../3rdparty/rapidjson/rapidjson.h:545:3:\x1b[m\x1b[K \x1b[01;36m\x1b[Knote: \x1b[m\x1b[Kin expansion of macro \xe2\x80\x98\x1b[01m\x1b[KRAPIDJSON_DIAG_PRAGMA\x1b[m\x1b[K\xe2\x80\x99\n'}
+[11.307425] (livox_sdk2) StderrLine: {'line': b'  545 |   \x1b[01;36m\x1b[KRAPIDJSON_DIAG_PRAGMA\x1b[m\x1b[K(ignored RAPIDJSON_STRINGIFY(RAPIDJSON_JOIN(-W, x)))\n'}
+[11.307452] (livox_sdk2) StderrLine: {'line': b'      |   \x1b[01;36m\x1b[K^~~~~~~~~~~~~~~~~~~~~\x1b[m\x1b[K\n'}
+[11.307477] (livox_sdk2) StderrLine: {'line': b'\x1b[01m\x1b[K/home/niuniu/DT46_RM_Sentry/src/Livox-SDK2/sdk_core/../3rdparty/rapidjson/internal/dtoa.h:36:1:\x1b[m\x1b[K \x1b[01;36m\x1b[Knote: \x1b[m\x1b[Kin expansion of macro \xe2\x80\x98\x1b[01m\x1b[KRAPIDJSON_DIAG_OFF\x1b[m\x1b[K\xe2\x80\x99\n'}
+[11.307502] (livox_sdk2) StderrLine: {'line': b'   36 | \x1b[01;36m\x1b[KRAPIDJSON_DIAG_OFF\x1b[m\x1b[K(array - bounds)  // some gcc versions generate wrong warnings\n'}
+[11.307527] (livox_sdk2) StderrLine: {'line': b'      | \x1b[01;36m\x1b[K^~~~~~~~~~~~~~~~~~\x1b[m\x1b[K\n'}
+[11.307552] (livox_sdk2) StderrLine: {'line': b'\x1b[01m\x1b[K/home/niuniu/DT46_RM_Sentry/src/Livox-SDK2/sdk_core/../3rdparty/rapidjson/rapidjson.h:542:29:\x1b[m\x1b[K \x1b[01;36m\x1b[Knote: \x1b[m\x1b[Kdid you mean \xe2\x80\x98\x1b[01m\x1b[K-Warray-bounds\x1b[m\x1b[K\xe2\x80\x99?\n'}
+[11.307579] (livox_sdk2) StderrLine: {'line': b'  542 | #define RAPIDJSON_PRAGMA(x) \x1b[01;36m\x1b[K_Pragma\x1b[m\x1b[K(RAPIDJSON_STRINGIFY(x))\n'}
+[11.307603] (livox_sdk2) StderrLine: {'line': b'      |                             \x1b[01;36m\x1b[K^~~~~~~\x1b[m\x1b[K\n'}
+[11.307627] (livox_sdk2) StderrLine: {'line': b'\x1b[01m\x1b[K/home/niuniu/DT46_RM_Sentry/src/Livox-SDK2/sdk_core/../3rdparty/rapidjson/rapidjson.h:543:34:\x1b[m\x1b[K \x1b[01;36m\x1b[Knote: \x1b[m\x1b[Kin expansion of macro \xe2\x80\x98\x1b[01m\x1b[KRAPIDJSON_PRAGMA\x1b[m\x1b[K\xe2\x80\x99\n'}
+[11.307655] (livox_sdk2) StderrLine: {'line': b'  543 | #define RAPIDJSON_DIAG_PRAGMA(x) \x1b[01;36m\x1b[KRAPIDJSON_PRAGMA\x1b[m\x1b[K(GCC diagnostic x)\n'}
+[11.307679] (livox_sdk2) StderrLine: {'line': b'      |                                  \x1b[01;36m\x1b[K^~~~~~~~~~~~~~~~\x1b[m\x1b[K\n'}
+[11.307703] (livox_sdk2) StderrLine: {'line': b'\x1b[01m\x1b[K/home/niuniu/DT46_RM_Sentry/src/Livox-SDK2/sdk_core/../3rdparty/rapidjson/rapidjson.h:545:3:\x1b[m\x1b[K \x1b[01;36m\x1b[Knote: \x1b[m\x1b[Kin expansion of macro \xe2\x80\x98\x1b[01m\x1b[KRAPIDJSON_DIAG_PRAGMA\x1b[m\x1b[K\xe2\x80\x99\n'}
+[11.307727] (livox_sdk2) StderrLine: {'line': b'  545 |   \x1b[01;36m\x1b[KRAPIDJSON_DIAG_PRAGMA\x1b[m\x1b[K(ignored RAPIDJSON_STRINGIFY(RAPIDJSON_JOIN(-W, x)))\n'}
+[11.307751] (livox_sdk2) StderrLine: {'line': b'      |   \x1b[01;36m\x1b[K^~~~~~~~~~~~~~~~~~~~~\x1b[m\x1b[K\n'}
+[11.307775] (livox_sdk2) StderrLine: {'line': b'\x1b[01m\x1b[K/home/niuniu/DT46_RM_Sentry/src/Livox-SDK2/sdk_core/../3rdparty/rapidjson/internal/dtoa.h:36:1:\x1b[m\x1b[K \x1b[01;36m\x1b[Knote: \x1b[m\x1b[Kin expansion of macro \xe2\x80\x98\x1b[01m\x1b[KRAPIDJSON_DIAG_OFF\x1b[m\x1b[K\xe2\x80\x99\n'}
+[11.307799] (livox_sdk2) StderrLine: {'line': b'   36 | \x1b[01;36m\x1b[KRAPIDJSON_DIAG_OFF\x1b[m\x1b[K(array - bounds)  // some gcc versions generate wrong warnings\n'}
+[11.307823] (livox_sdk2) StderrLine: {'line': b'      | \x1b[01;36m\x1b[K^~~~~~~~~~~~~~~~~~\x1b[m\x1b[K\n'}
+[11.351271] (livox_sdk2) StderrLine: {'line': b'In file included from \x1b[01m\x1b[K/home/niuniu/DT46_RM_Sentry/src/Livox-SDK2/sdk_core/../3rdparty/rapidjson/stream.h:19\x1b[m\x1b[K,\n'}
+[11.351932] (livox_sdk2) StderrLine: {'line': b'                 from \x1b[01m\x1b[K/home/niuniu/DT46_RM_Sentry/src/Livox-SDK2/sdk_core/../3rdparty/rapidjson/memorystream.h:22\x1b[m\x1b[K,\n'}
+[11.352209] (livox_sdk2) StderrLine: {'line': b'                 from \x1b[01m\x1b[K/home/niuniu/DT46_RM_Sentry/src/Livox-SDK2/sdk_core/../3rdparty/rapidjson/encodedstream.h:22\x1b[m\x1b[K,\n'}
+[11.352437] (livox_sdk2) StderrLine: {'line': b'                 from \x1b[01m\x1b[K/home/niuniu/DT46_RM_Sentry/src/Livox-SDK2/sdk_core/../3rdparty/rapidjson/document.h:26\x1b[m\x1b[K,\n'}
+[11.352766] (livox_sdk2) StderrLine: {'line': b'                 from \x1b[01m\x1b[K/home/niuniu/DT46_RM_Sentry/src/Livox-SDK2/sdk_core/command_handler/parse_lidar_state_info.h:38\x1b[m\x1b[K,\n'}
+[11.352837] (livox_sdk2) StderrLine: {'line': b'                 from \x1b[01m\x1b[K/home/niuniu/DT46_RM_Sentry/src/Livox-SDK2/sdk_core/command_handler/mid360_command_handler.cpp:37\x1b[m\x1b[K:\n'}
+[11.352870] (livox_sdk2) StderrLine: {'line': b'\x1b[01m\x1b[K/home/niuniu/DT46_RM_Sentry/src/Livox-SDK2/sdk_core/../3rdparty/rapidjson/rapidjson.h:542:29:\x1b[m\x1b[K \x1b[01;35m\x1b[Kwarning: \x1b[m\x1b[Kunknown option after \xe2\x80\x98\x1b[01m\x1b[K#pragma GCC diagnostic\x1b[m\x1b[K\xe2\x80\x99 kind [\x1b[01;35m\x1b[K\x1b]8;;https://gcc.gnu.org/onlinedocs/gcc/Warning-Options.html#index-Wpragmas\x07-Wpragmas\x1b]8;;\x07\x1b[m\x1b[K]\n'}
+[11.352903] (livox_sdk2) StderrLine: {'line': b'  542 | #define RAPIDJSON_PRAGMA(x) \x1b[01;35m\x1b[K_Pragma\x1b[m\x1b[K(RAPIDJSON_STRINGIFY(x))\n'}
+[11.352930] (livox_sdk2) StderrLine: {'line': b'      |                             \x1b[01;35m\x1b[K^~~~~~~\x1b[m\x1b[K\n'}
+[11.352956] (livox_sdk2) StderrLine: {'line': b'\x1b[01m\x1b[K/home/niuniu/DT46_RM_Sentry/src/Livox-SDK2/sdk_core/../3rdparty/rapidjson/rapidjson.h:543:34:\x1b[m\x1b[K \x1b[01;36m\x1b[Knote: \x1b[m\x1b[Kin expansion of macro \xe2\x80\x98\x1b[01m\x1b[KRAPIDJSON_PRAGMA\x1b[m\x1b[K\xe2\x80\x99\n'}
+[11.352985] (livox_sdk2) StderrLine: {'line': b'  543 | #define RAPIDJSON_DIAG_PRAGMA(x) \x1b[01;36m\x1b[KRAPIDJSON_PRAGMA\x1b[m\x1b[K(GCC diagnostic x)\n'}
+[11.353012] (livox_sdk2) StderrLine: {'line': b'      |                                  \x1b[01;36m\x1b[K^~~~~~~~~~~~~~~~\x1b[m\x1b[K\n'}
+[11.353044] (livox_sdk2) StderrLine: {'line': b'\x1b[01m\x1b[K/home/niuniu/DT46_RM_Sentry/src/Livox-SDK2/sdk_core/../3rdparty/rapidjson/rapidjson.h:545:3:\x1b[m\x1b[K \x1b[01;36m\x1b[Knote: \x1b[m\x1b[Kin expansion of macro \xe2\x80\x98\x1b[01m\x1b[KRAPIDJSON_DIAG_PRAGMA\x1b[m\x1b[K\xe2\x80\x99\n'}
+[11.353072] (livox_sdk2) StderrLine: {'line': b'  545 |   \x1b[01;36m\x1b[KRAPIDJSON_DIAG_PRAGMA\x1b[m\x1b[K(ignored RAPIDJSON_STRINGIFY(RAPIDJSON_JOIN(-W, x)))\n'}
+[11.353097] (livox_sdk2) StderrLine: {'line': b'      |   \x1b[01;36m\x1b[K^~~~~~~~~~~~~~~~~~~~~\x1b[m\x1b[K\n'}
+[11.353122] (livox_sdk2) StderrLine: {'line': b'\x1b[01m\x1b[K/home/niuniu/DT46_RM_Sentry/src/Livox-SDK2/sdk_core/../3rdparty/rapidjson/internal/dtoa.h:36:1:\x1b[m\x1b[K \x1b[01;36m\x1b[Knote: \x1b[m\x1b[Kin expansion of macro \xe2\x80\x98\x1b[01m\x1b[KRAPIDJSON_DIAG_OFF\x1b[m\x1b[K\xe2\x80\x99\n'}
+[11.353147] (livox_sdk2) StderrLine: {'line': b'   36 | \x1b[01;36m\x1b[KRAPIDJSON_DIAG_OFF\x1b[m\x1b[K(array - bounds)  // some gcc versions generate wrong warnings\n'}
+[11.353173] (livox_sdk2) StderrLine: {'line': b'      | \x1b[01;36m\x1b[K^~~~~~~~~~~~~~~~~~\x1b[m\x1b[K\n'}
+[11.355146] (livox_sdk2) StderrLine: {'line': b'\x1b[01m\x1b[K/home/niuniu/DT46_RM_Sentry/src/Livox-SDK2/sdk_core/../3rdparty/rapidjson/rapidjson.h:542:29:\x1b[m\x1b[K \x1b[01;36m\x1b[Knote: \x1b[m\x1b[Kdid you mean \xe2\x80\x98\x1b[01m\x1b[K-Warray-bounds\x1b[m\x1b[K\xe2\x80\x99?\n'}
+[11.355400] (livox_sdk2) StderrLine: {'line': b'  542 | #define RAPIDJSON_PRAGMA(x) \x1b[01;36m\x1b[K_Pragma\x1b[m\x1b[K(RAPIDJSON_STRINGIFY(x))\n'}
+[11.355614] (livox_sdk2) StderrLine: {'line': b'      |                             \x1b[01;36m\x1b[K^~~~~~~\x1b[m\x1b[K\n'}
+[11.355819] (livox_sdk2) StderrLine: {'line': b'\x1b[01m\x1b[K/home/niuniu/DT46_RM_Sentry/src/Livox-SDK2/sdk_core/../3rdparty/rapidjson/rapidjson.h:543:34:\x1b[m\x1b[K \x1b[01;36m\x1b[Knote: \x1b[m\x1b[Kin expansion of macro \xe2\x80\x98\x1b[01m\x1b[KRAPIDJSON_PRAGMA\x1b[m\x1b[K\xe2\x80\x99\n'}
+[11.356121] (livox_sdk2) StderrLine: {'line': b'  543 | #define RAPIDJSON_DIAG_PRAGMA(x) \x1b[01;36m\x1b[KRAPIDJSON_PRAGMA\x1b[m\x1b[K(GCC diagnostic x)\n'}
+[11.356376] (livox_sdk2) StderrLine: {'line': b'      |                                  \x1b[01;36m\x1b[K^~~~~~~~~~~~~~~~\x1b[m\x1b[K\n'}
+[11.356633] (livox_sdk2) StderrLine: {'line': b'\x1b[01m\x1b[K/home/niuniu/DT46_RM_Sentry/src/Livox-SDK2/sdk_core/../3rdparty/rapidjson/rapidjson.h:545:3:\x1b[m\x1b[K \x1b[01;36m\x1b[Knote: \x1b[m\x1b[Kin expansion of macro \xe2\x80\x98\x1b[01m\x1b[KRAPIDJSON_DIAG_PRAGMA\x1b[m\x1b[K\xe2\x80\x99\n'}
+[11.356852] (livox_sdk2) StderrLine: {'line': b'  545 |   \x1b[01;36m\x1b[KRAPIDJSON_DIAG_PRAGMA\x1b[m\x1b[K(ignored RAPIDJSON_STRINGIFY(RAPIDJSON_JOIN(-W, x)))\n'}
+[11.357070] (livox_sdk2) StderrLine: {'line': b'      |   \x1b[01;36m\x1b[K^~~~~~~~~~~~~~~~~~~~~\x1b[m\x1b[K\n'}
+[11.357397] (livox_sdk2) StderrLine: {'line': b'\x1b[01m\x1b[K/home/niuniu/DT46_RM_Sentry/src/Livox-SDK2/sdk_core/../3rdparty/rapidjson/internal/dtoa.h:36:1:\x1b[m\x1b[K \x1b[01;36m\x1b[Knote: \x1b[m\x1b[Kin expansion of macro \xe2\x80\x98\x1b[01m\x1b[KRAPIDJSON_DIAG_OFF\x1b[m\x1b[K\xe2\x80\x99\n'}
+[11.357437] (livox_sdk2) StderrLine: {'line': b'   36 | \x1b[01;36m\x1b[KRAPIDJSON_DIAG_OFF\x1b[m\x1b[K(array - bounds)  // some gcc versions generate wrong warnings\n'}
+[11.357467] (livox_sdk2) StderrLine: {'line': b'      | \x1b[01;36m\x1b[K^~~~~~~~~~~~~~~~~~\x1b[m\x1b[K\n'}
+[11.366000] (-) TimerEvent: {}
+[11.467058] (-) TimerEvent: {}
+[11.495917] (livox_sdk2) StdoutLine: {'line': b'[ 79%] \x1b[32mBuilding CXX object sdk_core/CMakeFiles/livox_lidar_sdk_shared.dir/command_handler/parse_lidar_state_info.cpp.o\x1b[0m\n'}
+[11.570697] (-) TimerEvent: {}
+[11.671940] (-) TimerEvent: {}
+[11.772825] (-) TimerEvent: {}
+[11.842656] (livox_sdk2) StderrLine: {'line': b'In file included from \x1b[01m\x1b[K/home/niuniu/DT46_RM_Sentry/src/Livox-SDK2/sdk_core/../3rdparty/rapidjson/stream.h:19\x1b[m\x1b[K,\n'}
+[11.843316] (livox_sdk2) StderrLine: {'line': b'                 from \x1b[01m\x1b[K/home/niuniu/DT46_RM_Sentry/src/Livox-SDK2/sdk_core/../3rdparty/rapidjson/memorystream.h:22\x1b[m\x1b[K,\n'}
+[11.843546] (livox_sdk2) StderrLine: {'line': b'                 from \x1b[01m\x1b[K/home/niuniu/DT46_RM_Sentry/src/Livox-SDK2/sdk_core/../3rdparty/rapidjson/encodedstream.h:22\x1b[m\x1b[K,\n'}
+[11.843759] (livox_sdk2) StderrLine: {'line': b'                 from \x1b[01m\x1b[K/home/niuniu/DT46_RM_Sentry/src/Livox-SDK2/sdk_core/../3rdparty/rapidjson/document.h:26\x1b[m\x1b[K,\n'}
+[11.844133] (livox_sdk2) StderrLine: {'line': b'                 from \x1b[01m\x1b[K/home/niuniu/DT46_RM_Sentry/src/Livox-SDK2/sdk_core/command_handler/parse_lidar_state_info.h:38\x1b[m\x1b[K,\n'}
+[11.844361] (livox_sdk2) StderrLine: {'line': b'                 from \x1b[01m\x1b[K/home/niuniu/DT46_RM_Sentry/src/Livox-SDK2/sdk_core/command_handler/parse_lidar_state_info.cpp:2\x1b[m\x1b[K:\n'}
+[11.844573] (livox_sdk2) StderrLine: {'line': b'\x1b[01m\x1b[K/home/niuniu/DT46_RM_Sentry/src/Livox-SDK2/sdk_core/../3rdparty/rapidjson/rapidjson.h:542:29:\x1b[m\x1b[K \x1b[01;35m\x1b[Kwarning: \x1b[m\x1b[Kunknown option after \xe2\x80\x98\x1b[01m\x1b[K#pragma GCC diagnostic\x1b[m\x1b[K\xe2\x80\x99 kind [\x1b[01;35m\x1b[K\x1b]8;;https://gcc.gnu.org/onlinedocs/gcc/Warning-Options.html#index-Wpragmas\x07-Wpragmas\x1b]8;;\x07\x1b[m\x1b[K]\n'}
+[11.844781] (livox_sdk2) StderrLine: {'line': b'  542 | #define RAPIDJSON_PRAGMA(x) \x1b[01;35m\x1b[K_Pragma\x1b[m\x1b[K(RAPIDJSON_STRINGIFY(x))\n'}
+[11.845337] (livox_sdk2) StderrLine: {'line': b'      |                             \x1b[01;35m\x1b[K^~~~~~~\x1b[m\x1b[K\n'}
+[11.845633] (livox_sdk2) StderrLine: {'line': b'\x1b[01m\x1b[K/home/niuniu/DT46_RM_Sentry/src/Livox-SDK2/sdk_core/../3rdparty/rapidjson/rapidjson.h:543:34:\x1b[m\x1b[K \x1b[01;36m\x1b[Knote: \x1b[m\x1b[Kin expansion of macro \xe2\x80\x98\x1b[01m\x1b[KRAPIDJSON_PRAGMA\x1b[m\x1b[K\xe2\x80\x99\n'}
+[11.845941] (livox_sdk2) StderrLine: {'line': b'  543 | #define RAPIDJSON_DIAG_PRAGMA(x) \x1b[01;36m\x1b[KRAPIDJSON_PRAGMA\x1b[m\x1b[K(GCC diagnostic x)\n'}
+[11.846215] (livox_sdk2) StderrLine: {'line': b'      |                                  \x1b[01;36m\x1b[K^~~~~~~~~~~~~~~~\x1b[m\x1b[K\n'}
+[11.846505] (livox_sdk2) StderrLine: {'line': b'\x1b[01m\x1b[K/home/niuniu/DT46_RM_Sentry/src/Livox-SDK2/sdk_core/../3rdparty/rapidjson/rapidjson.h:545:3:\x1b[m\x1b[K \x1b[01;36m\x1b[Knote: \x1b[m\x1b[Kin expansion of macro \xe2\x80\x98\x1b[01m\x1b[KRAPIDJSON_DIAG_PRAGMA\x1b[m\x1b[K\xe2\x80\x99\n'}
+[11.846725] (livox_sdk2) StderrLine: {'line': b'  545 |   \x1b[01;36m\x1b[KRAPIDJSON_DIAG_PRAGMA\x1b[m\x1b[K(ignored RAPIDJSON_STRINGIFY(RAPIDJSON_JOIN(-W, x)))\n'}
+[11.847036] (livox_sdk2) StderrLine: {'line': b'      |   \x1b[01;36m\x1b[K^~~~~~~~~~~~~~~~~~~~~\x1b[m\x1b[K\n'}
+[11.847335] (livox_sdk2) StderrLine: {'line': b'\x1b[01m\x1b[K/home/niuniu/DT46_RM_Sentry/src/Livox-SDK2/sdk_core/../3rdparty/rapidjson/internal/dtoa.h:36:1:\x1b[m\x1b[K \x1b[01;36m\x1b[Knote: \x1b[m\x1b[Kin expansion of macro \xe2\x80\x98\x1b[01m\x1b[KRAPIDJSON_DIAG_OFF\x1b[m\x1b[K\xe2\x80\x99\n'}
+[11.847635] (livox_sdk2) StderrLine: {'line': b'   36 | \x1b[01;36m\x1b[KRAPIDJSON_DIAG_OFF\x1b[m\x1b[K(array - bounds)  // some gcc versions generate wrong warnings\n'}
+[11.847852] (livox_sdk2) StderrLine: {'line': b'      | \x1b[01;36m\x1b[K^~~~~~~~~~~~~~~~~~\x1b[m\x1b[K\n'}
+[11.857750] (livox_sdk2) StderrLine: {'line': b'\x1b[01m\x1b[K/home/niuniu/DT46_RM_Sentry/src/Livox-SDK2/sdk_core/../3rdparty/rapidjson/rapidjson.h:542:29:\x1b[m\x1b[K \x1b[01;36m\x1b[Knote: \x1b[m\x1b[Kdid you mean \xe2\x80\x98\x1b[01m\x1b[K-Warray-bounds\x1b[m\x1b[K\xe2\x80\x99?\n'}
+[11.860901] (livox_sdk2) StderrLine: {'line': b'  542 | #define RAPIDJSON_PRAGMA(x) \x1b[01;36m\x1b[K_Pragma\x1b[m\x1b[K(RAPIDJSON_STRINGIFY(x))\n'}
+[11.861283] (livox_sdk2) StderrLine: {'line': b'      |                             \x1b[01;36m\x1b[K^~~~~~~\x1b[m\x1b[K\n'}
+[11.861599] (livox_sdk2) StderrLine: {'line': b'\x1b[01m\x1b[K/home/niuniu/DT46_RM_Sentry/src/Livox-SDK2/sdk_core/../3rdparty/rapidjson/rapidjson.h:543:34:\x1b[m\x1b[K \x1b[01;36m\x1b[Knote: \x1b[m\x1b[Kin expansion of macro \xe2\x80\x98\x1b[01m\x1b[KRAPIDJSON_PRAGMA\x1b[m\x1b[K\xe2\x80\x99\n'}
+[11.861926] (livox_sdk2) StderrLine: {'line': b'  543 | #define RAPIDJSON_DIAG_PRAGMA(x) \x1b[01;36m\x1b[KRAPIDJSON_PRAGMA\x1b[m\x1b[K(GCC diagnostic x)\n'}
+[11.862150] (livox_sdk2) StderrLine: {'line': b'      |                                  \x1b[01;36m\x1b[K^~~~~~~~~~~~~~~~\x1b[m\x1b[K\n'}
+[11.862421] (livox_sdk2) StderrLine: {'line': b'\x1b[01m\x1b[K/home/niuniu/DT46_RM_Sentry/src/Livox-SDK2/sdk_core/../3rdparty/rapidjson/rapidjson.h:545:3:\x1b[m\x1b[K \x1b[01;36m\x1b[Knote: \x1b[m\x1b[Kin expansion of macro \xe2\x80\x98\x1b[01m\x1b[KRAPIDJSON_DIAG_PRAGMA\x1b[m\x1b[K\xe2\x80\x99\n'}
+[11.862649] (livox_sdk2) StderrLine: {'line': b'  545 |   \x1b[01;36m\x1b[KRAPIDJSON_DIAG_PRAGMA\x1b[m\x1b[K(ignored RAPIDJSON_STRINGIFY(RAPIDJSON_JOIN(-W, x)))\n'}
+[11.862955] (livox_sdk2) StderrLine: {'line': b'      |   \x1b[01;36m\x1b[K^~~~~~~~~~~~~~~~~~~~~\x1b[m\x1b[K\n'}
+[11.863176] (livox_sdk2) StderrLine: {'line': b'\x1b[01m\x1b[K/home/niuniu/DT46_RM_Sentry/src/Livox-SDK2/sdk_core/../3rdparty/rapidjson/internal/dtoa.h:36:1:\x1b[m\x1b[K \x1b[01;36m\x1b[Knote: \x1b[m\x1b[Kin expansion of macro \xe2\x80\x98\x1b[01m\x1b[KRAPIDJSON_DIAG_OFF\x1b[m\x1b[K\xe2\x80\x99\n'}
+[11.863386] (livox_sdk2) StderrLine: {'line': b'   36 | \x1b[01;36m\x1b[KRAPIDJSON_DIAG_OFF\x1b[m\x1b[K(array - bounds)  // some gcc versions generate wrong warnings\n'}
+[11.863592] (livox_sdk2) StderrLine: {'line': b'      | \x1b[01;36m\x1b[K^~~~~~~~~~~~~~~~~~\x1b[m\x1b[K\n'}
+[11.873108] (-) TimerEvent: {}
+[11.973859] (-) TimerEvent: {}
+[12.074854] (-) TimerEvent: {}
+[12.098037] (livox_sdk2) StdoutLine: {'line': b'[ 80%] \x1b[32mBuilding CXX object sdk_core/CMakeFiles/livox_lidar_sdk_shared.dir/debug_point_cloud_handler/debug_point_cloud_manager.cpp.o\x1b[0m\n'}
+[12.175160] (-) TimerEvent: {}
+[12.222088] (livox_sdk2) StdoutLine: {'line': b'[ 81%] \x1b[32mBuilding CXX object sdk_core/CMakeFiles/livox_lidar_sdk_shared.dir/debug_point_cloud_handler/debug_point_cloud_handler.cpp.o\x1b[0m\n'}
+[12.276926] (-) TimerEvent: {}
+[12.377930] (-) TimerEvent: {}
+[12.478593] (-) TimerEvent: {}
+[12.579515] (-) TimerEvent: {}
+[12.656483] (livox_sdk2) StdoutLine: {'line': b'[ 83%] \x1b[32m\x1b[1mLinking CXX static library liblivox_lidar_sdk_static.a\x1b[0m\n'}
+[12.679953] (-) TimerEvent: {}
+[12.781619] (-) TimerEvent: {}
+[12.882284] (-) TimerEvent: {}
+[12.983532] (-) TimerEvent: {}
+[13.053033] (livox_sdk2) StdoutLine: {'line': b'[ 83%] Built target livox_lidar_sdk_static\n'}
+[13.079244] (livox_sdk2) StdoutLine: {'line': b'[ 84%] \x1b[32mBuilding CXX object samples/livox_lidar_quick_start/CMakeFiles/livox_lidar_quick_start.dir/main.cpp.o\x1b[0m\n'}
+[13.080672] (livox_sdk2) StdoutLine: {'line': b'[ 85%] \x1b[32mBuilding CXX object samples/debug_point_cloud/CMakeFiles/debug_point_cloud.dir/main.cpp.o\x1b[0m\n'}
+[13.082477] (livox_sdk2) StdoutLine: {'line': b'[ 86%] \x1b[32mBuilding CXX object samples/multi_lidars_upgrade/CMakeFiles/multi_lidars_upgrade.dir/main.cpp.o\x1b[0m\n'}
+[13.084053] (-) TimerEvent: {}
+[13.090388] (livox_sdk2) StdoutLine: {'line': b'[ 87%] \x1b[32mBuilding CXX object samples/logger/CMakeFiles/logger.dir/main.cpp.o\x1b[0m\n'}
+[13.184173] (-) TimerEvent: {}
+[13.232830] (livox_sdk2) StdoutLine: {'line': b'[ 89%] \x1b[32mBuilding CXX object samples/lidar_cmd_observer/CMakeFiles/lidar_cmd_observer.dir/main.cpp.o\x1b[0m\n'}
+[13.285139] (-) TimerEvent: {}
+[13.294918] (livox_sdk2) StdoutLine: {'line': b'[ 90%] \x1b[32m\x1b[1mLinking CXX executable livox_lidar_quick_start\x1b[0m\n'}
+[13.346992] (livox_sdk2) StdoutLine: {'line': b'[ 91%] \x1b[32m\x1b[1mLinking CXX executable debug_point_cloud\x1b[0m\n'}
+[13.351787] (livox_sdk2) StdoutLine: {'line': b'[ 92%] \x1b[32m\x1b[1mLinking CXX executable logger\x1b[0m\n'}
+[13.366281] (livox_sdk2) StdoutLine: {'line': b'[ 93%] \x1b[32m\x1b[1mLinking CXX executable multi_lidars_upgrade\x1b[0m\n'}
+[13.387835] (-) TimerEvent: {}
+[13.427932] (livox_sdk2) StdoutLine: {'line': b'[ 95%] \x1b[32mBuilding CXX object samples/livox_lidar_rmc_time_sync/CMakeFiles/livox_lidar_rmc_time_sync.dir/main.cpp.o\x1b[0m\n'}
+[13.439283] (livox_sdk2) StdoutLine: {'line': b'[ 96%] \x1b[32m\x1b[1mLinking CXX executable lidar_cmd_observer\x1b[0m\n'}
+[13.488024] (-) TimerEvent: {}
+[13.589177] (-) TimerEvent: {}
+[13.690003] (-) TimerEvent: {}
+[13.735930] (livox_sdk2) StdoutLine: {'line': b'[ 97%] \x1b[32mBuilding CXX object samples/livox_lidar_rmc_time_sync/CMakeFiles/livox_lidar_rmc_time_sync.dir/linux/synchro.cpp.o\x1b[0m\n'}
+[13.791270] (-) TimerEvent: {}
+[13.892157] (-) TimerEvent: {}
+[14.004204] (-) TimerEvent: {}
+[14.056193] (livox_sdk2) StdoutLine: {'line': b'[ 97%] Built target livox_lidar_quick_start\n'}
+[14.064354] (livox_sdk2) StdoutLine: {'line': b'[ 98%] \x1b[32m\x1b[1mLinking CXX executable livox_lidar_rmc_time_sync\x1b[0m\n'}
+[14.065250] (livox_sdk2) StdoutLine: {'line': b'[ 98%] Built target debug_point_cloud\n'}
+[14.101234] (livox_sdk2) StdoutLine: {'line': b'[ 98%] Built target multi_lidars_upgrade\n'}
+[14.104258] (-) TimerEvent: {}
+[14.124151] (livox_sdk2) StdoutLine: {'line': b'[ 98%] Built target logger\n'}
+[14.134197] (livox_sdk2) StdoutLine: {'line': b'[ 98%] Built target lidar_cmd_observer\n'}
+[14.204999] (-) TimerEvent: {}
+[14.305469] (-) TimerEvent: {}
+[14.362403] (livox_sdk2) StdoutLine: {'line': b'[100%] \x1b[32m\x1b[1mLinking CXX shared library liblivox_lidar_sdk_shared.so\x1b[0m\n'}
+[14.406140] (-) TimerEvent: {}
+[14.506806] (-) TimerEvent: {}
+[14.607385] (-) TimerEvent: {}
+[14.617247] (livox_sdk2) StdoutLine: {'line': b'[100%] Built target livox_lidar_rmc_time_sync\n'}
+[14.707570] (-) TimerEvent: {}
+[14.807992] (-) TimerEvent: {}
+[14.908923] (-) TimerEvent: {}
+[15.009810] (-) TimerEvent: {}
+[15.110627] (-) TimerEvent: {}
+[15.211407] (-) TimerEvent: {}
+[15.312434] (-) TimerEvent: {}
+[15.413055] (-) TimerEvent: {}
+[15.490254] (livox_sdk2) StdoutLine: {'line': b'[100%] Built target livox_lidar_sdk_shared\n'}
+[15.513470] (-) TimerEvent: {}
+[15.518139] (livox_sdk2) JobEnded: {'identifier': 'livox_sdk2', 'rc': 'SIGINT'}
+[15.532178] (fast_lio) JobSkipped: {'identifier': 'fast_lio'}
+[15.532279] (-) EventReactorShutdown: {}
