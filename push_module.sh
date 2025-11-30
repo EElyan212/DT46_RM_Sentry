@@ -1,4 +1,4 @@
-#出现任何错误立即退出
-set -e
+#!/bin/bash
+set -e  # 出现任何错误立即退出
 
-git subtree pull --prefix=src/rm_driver/livox_ros_driver livox_ros_driver2 master
+git subtree pull --prefix=src/rm_driver/livox_ros_driver2 livox_ros_driver2 master
