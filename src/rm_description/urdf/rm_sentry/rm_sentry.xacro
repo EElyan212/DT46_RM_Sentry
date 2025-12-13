@@ -1,0 +1,51 @@
+
+    <xacro:macro name="base_link" params="radius length">
+        <link name="base_link">
+            <!-- 部件外观 -->
+            <visual>
+                <!-- 沿着自己几何中心的偏移（xyz）和旋转（roll,pitch,yaw） ，用origin来定义-->
+                <origin xyz="0.0 0.0 0.0" rpy="0.0 0.0 0.0"/>
+                <!-- 几何形状 ，用geometry来定义-->
+                <geometry>
+                    <!-- cylinder（圆柱体），radius(半径)，length(高度) -->
+                    <cylinder radius="${radius}" length="${length}"/>
+                </geometry>
+                <!-- 材质颜色描述 ，用material定义-->
+                <material name="white">
+                    <color rgba="1.0 1.0 1.0 0.5"/>
+                </material>
+
+            </visual>
+        </link>
+    </xacro:macro>
+
+    <!-- 机器人的IMU部件，惯性测量传感器 -->
+    <xacro:macro name="imu_link" params="imu_name xyz">
+        <link name="${imu_name}_link">
+            <!-- 部件外观 -->
+            <visual>
+                <!-- 沿着自己几何中心的偏移（xyz）和旋转（roll,pitch,yaw） ，用origin来定义-->
+                <origin xyz="0.0 0.0 0.0" rpy="0.0 0.0 0.0"/>
+                <!-- 几何形状 ，用geometry来定义-->
+                <geometry>
+                    <!-- cylinder（圆柱体），radius(半径)，length(高度) -->
+                    <box size="0.02 0.02 0.02"/>
+                </geometry>
+                <!-- 材质颜色描述 ，用material定义-->
+                <material name="white">
+                    <color rgba="0.0 0.0 0.0 0.5"/>
+                </material>
+            </visual>
+        </link>
+        <joint name="${imu_name}_joint" type="fixed">
+            <origin xyz="${xyz}" rpy="0.0 0.0 0.0"/>
+            <parent link="base_link"/>
+            <child link="${imu_name}_link"/>
+        </joint>
+    </xacro:macro>
+
+    <xacro:base_link radius='0.25' length='0.45'/>
+    <xacro:imu_link imu_name='imu_up' xyz='0.0 0.0 0.15'/>
+    <xacro:imu_link imu_name='imu_dowm' xyz='0.0 0.0 0.05'/>
+
+</robot>

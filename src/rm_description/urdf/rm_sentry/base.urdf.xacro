@@ -1,0 +1,22 @@
+<?xml version="1.0"?>
+<robot xmlns:xacro="http://www.ros.org/wiki/xacro" >
+    <xacro:macro name="base_xacro" params="radius length">
+        <link name="base_link">
+            <!-- 部件外观 -->
+            <visual>
+                <!-- 沿着自己几何中心的偏移（xyz）和旋转（roll,pitch,yaw） ，用origin来定义-->
+                <origin xyz="0.0 0.0 0.0" rpy="0.0 0.0 0.0"/>
+                <!-- 几何形状 ，用geometry来定义-->
+                <geometry>
+                    <!-- cylinder（圆柱体），radius(半径)，length(高度) -->
+                    <cylinder radius="${radius}" length="${length}"/>
+                </geometry>
+                <!-- 材质颜色描述 ，用material定义-->
+                <material name="white">
+                    <color rgba="1.0 1.0 1.0 0.5"/>
+                </material>
+
+            </visual>
+        </link>
+    </xacro:macro>
+</robot>

@@ -1,0 +1,49 @@
+<?xml version="1.0"?>
+<robot xmlns:xacro="http://www.ros.org/wiki/xacro" >
+    <!-- 雷达 -->
+    <xacro:macro name="laser_xacro" params="xyz">
+        <link name="laser_link">
+            <!-- 部件外观 -->
+            <visual>
+                <!-- 沿着自己几何中心的偏移（xyz）和旋转（roll,pitch,yaw） ，用origin来定义-->
+                <origin xyz="0.0 0.0 0.0" rpy="0.0 0.0 0.0"/>
+                <!-- 几何形状 ，用geometry来定义-->
+                <geometry>
+                    <!-- cylinder（圆柱体），radius(半径)，length(高度) -->
+                    <cylinder radius="0.03" length="0.06"/>
+                </geometry>
+                <!-- 材质颜色描述 ，用material定义-->
+                <material name="black">
+                    <color rgba="0.0 0.0 0.0 1.0"/>
+                </material>
+            </visual>
+        </link>
+        <!-- 雷达支撑杆 -->
+        <link name="laser_cylinder_link">
+            <visual>
+                <origin xyz="0.0 0.0 0.0" rpy="0.0 0.0 0.0"/>
+                <geometry>
+                    <cylinder radius="0.01" length="0.25"/>
+                </geometry>
+                <material name="black">
+                    <color rgba="0.0 0.0 0.0 1.0"/>
+                </material>
+            </visual>
+        </link>
+        <!-- 雷达支撑 joint -->
+        <joint name="laser_cylinder_link_joint" type="fixed">
+            <origin xyz="${xyz}" rpy="0.0 0.0 0.0"/>
+            <!-- <origin xyz="0.0 0.0 0.0" rpy="0.0 0.0 0.0"/> -->
+
+            <parent link="base_link"/>
+            <child link="laser_cylinder_link"/>
+        </joint>
+
+        <!-- 雷达 joint -->
+        <joint name="laser_joint" type="fixed">
+            <origin xyz="0.0 0.0 0.155 " rpy="0.0 0.0 0.0"/>
+            <parent link="laser_cylinder_link"/>
+            <child link="laser_link"/>
+        </joint>
+    </xacro:macro>
+</robot>

@@ -1,0 +1,15 @@
+<?xml version="1.0"?>
+<robot xmlns:xacro="http://www.ros.org/wiki/xacro" name="rm_sentry">
+
+<xacro:include filename="$(find rm_description)/urdf/rm_sentry/base.urdf.xacro" />
+<xacro:include filename="$(find rm_description)/urdf/rm_sentry/sensor/imu.urdf.xacro" />
+<xacro:include filename="$(find rm_description)/urdf/rm_sentry/sensor/camera.urdf.xacro" />
+<xacro:include filename="$(find rm_description)/urdf/rm_sentry/sensor/laser.urdf.xacro" />
+
+
+<xacro:base_xacro radius = "0.25" length = "0.45" />
+<xacro:imu_xacro xyz = "0.0 0.0 0.15" />
+<xacro:laser_xacro xyz = "0.0 0.0 0.35" />
+<!-- <xacro:camera_xacro xyz = "0.125 0.0 0.0" /> -->
+
+</robot>
