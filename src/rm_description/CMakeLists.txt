@@ -12,7 +12,7 @@ find_package(xacro REQUIRED)
 # further dependencies manually.
 # find_package(<dependency> REQUIRED)
 install(
-  DIRECTORY urdf launch config
+  DIRECTORY urdf launch config world
   DESTINATION share/${PROJECT_NAME}
 )
 if(BUILD_TESTING)

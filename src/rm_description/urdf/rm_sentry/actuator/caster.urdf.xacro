@@ -2,42 +2,49 @@
 <robot xmlns:xacro="http://www.ros.org/wiki/xacro" >
     <xacro:include filename="$(find rm_description)/urdf/rm_sentry/common_inertia.xacro" />
     <!-- 机器人的IMU部件，惯性测量传感器 -->
-    <xacro:macro name="imu_xacro" params="xyz">
-        <link name="imu_link">
+    <xacro:macro name="caster_xacro" params="caster_name xyz">
+        <link name="${caster_name}_link">
             <!-- 部件外观 -->
             <visual>
                 <!-- 沿着自己几何中心的偏移（xyz）和旋转（roll,pitch,yaw） ，用origin来定义-->
-                <origin xyz="0.0 0.0 0.0" rpy="0.0 0.0 0.0"/>
+                <origin xyz="0.0 0.0 0.0" rpy="1.57079 0.0 0.0"/>
                 <!-- 几何形状 ，用geometry来定义-->
                 <geometry>
                     <!-- cylinder（圆柱体），radius(半径)，length(高度) -->
-                    <box size="0.02 0.02 0.02"/>
+                    <sphere radius="0.016"/>
                 </geometry>
                 <!-- 材质颜色描述 ，用material定义-->
-                <material name="white">
-                    <color rgba="0.0 0.0 0.0 0.5"/>
+                <material name="yellow">
+                    <color rgba="1.0 1.0 0.0 0.8"/>
                 </material>
             </visual>
-
             <collision>
                 <!-- 沿着自己几何中心的偏移（xyz）和旋转（roll,pitch,yaw） ，用origin来定义-->
-                <origin xyz="0.0 0.0 0.0" rpy="0.0 0.0 0.0"/>
+                <origin xyz="0.0 0.0 0.0" rpy="1.57079 0.0 0.0"/>
                 <!-- 几何形状 ，用geometry来定义-->
                 <geometry>
                     <!-- cylinder（圆柱体），radius(半径)，length(高度) -->
-                    <box size="0.02 0.02 0.02"/>
+                    <sphere radius="0.016"/>
                 </geometry>
                 <!-- 材质颜色描述 ，用material定义-->
-                <material name="white">
-                    <color rgba="0.0 0.0 0.0 0.5"/>
+                <material name="yellow">
+                    <color rgba="1.0 1.0 0.0 0.8"/>
                 </material>
             </collision>
-            <xacro:box_inertia m = "0.02" w = "0.02" h = "0.02" d = "0.02"/>
+            <xacro:sphere_inertia m = "0.05" r = "0.016" />
+
         </link>
-        <joint name="imu_joint" type="fixed">
-            <origin xyz="${xyz}" rpy="0.0 0.0 0.0"/>
+        <joint name="${caster_name}_joint" type="fixed">
+            <origin xyz="${xyz}" rpy = "0.0 0.0 0.0"/>
             <parent link="base_link"/>
-            <child link="imu_link"/>
+            <child link="${caster_name}_link"/>
         </joint>
+        <gazebo reference = "${caster_name}_link">
+            <mu1 value="0.0"/>
+            <mu2 value="0.0"/>
+            <kp value="1000000000.0"/>
+            <kd value="1.0"/>
+            <material>Gazebo/Black</material>
+        </gazebo>
     </xacro:macro>
 </robot>
