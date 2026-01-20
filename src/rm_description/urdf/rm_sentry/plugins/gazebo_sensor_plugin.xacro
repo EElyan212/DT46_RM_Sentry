@@ -16,19 +16,15 @@
                         topic:=livox/lidar
 
                         update_rate:=10
-
                         h_samples:=720
                         h_min:=-3.1415926
                         h_max:= 3.1415926
-
                         v_samples:=16
                         v_min:= -0.907571
                         v_max:= 0.122173
-
                         range_min:=0.12
                         range_max:=25.0
                         range_res:=0.02
-
                         noise_mean:=0.0
                         noise_stddev:=0.01
                     ">
@@ -38,7 +34,7 @@
 
                 <always_on>true</always_on>
                 <!-- <visualize>true</visualize> -->
-                <visualize>true</visualize>
+                <visualize>false</visualize>
 
                 <update_rate>${update_rate}</update_rate>
                 <pose>0 0 0 0 0 0</pose>
