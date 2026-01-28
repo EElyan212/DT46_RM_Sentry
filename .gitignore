@@ -1,0 +1,47 @@
+# ========================
+#   ROS2 Colcon Workspace
+# ========================
+
+# Build artifacts
+build/
+install/
+log/
+
+# colcon metadata
+.colcon/
+
+# catkin/ament logs
+ament_cmake_core/
+ament_cmake_export/
+
+# Python cache
+__pycache__/
+*.pyc
+
+# VSCode configuration
+.vscode/
+
+# CLion / JetBrains
+.idea/
+
+# Backup files
+*.bak
+*.swp
+*.swo
+
+# MacOS
+.DS_Store
+
+# ROS2 packages built inside workspace should NOT be ignored
+# (src/ is always tracked)
+
+# ========================
+# Git subtree and vendor deps
+# ========================
+*.orig
+*.rej
+
+# Ignore ROS message/build artifacts generated inside packages
+**/msg/*.h
+**/srv/*.h
+**/action/*.h
