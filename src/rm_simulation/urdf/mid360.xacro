@@ -1,0 +1,97 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<robot xmlns:xacro="http://ros.org/wiki/xacro">
+    <!-- 定义参数 -->
+    <xacro:property name = "frame_name" value = "laser_link"/>
+    <xacro:property name = "topic" value = "livox/lidar"/>
+    <xacro:property name = "update_rate" value = "10"/>
+    <xacro:property name = "h_samples" value = "720"/>
+    <xacro:property name = "h_min" value = "-3.1415926"/>
+    <xacro:property name = "h_max" value = "3.1415926"/>
+    <xacro:property name = "v_samples" value = "16"/>
+    <xacro:property name = "v_min" value = "-0.907571"/>
+    <xacro:property name = "v_max" value = "0.122173"/>
+    <xacro:property name = "range_min" value = "0.12"/>
+    <xacro:property name = "range_max" value = "25.0"/>
+    <xacro:property name = "range_res" value = "0.02"/>
+    <xacro:property name = "noise_mean" value = "0.0"/>
+    <xacro:property name = "noise_stddev" value = "0.01"/>
+
+    <xacro:macro name="mid360" params="name:='mid360' parent:='base_link' topic:='mid360' *origin">
+        <link name="mid360">
+            <visual>
+                <!-- 沿着自己几何中心的偏移（xyz）和旋转（roll,pitch,yaw） ，用origin来定义-->
+                <origin xyz="0.0 0.0 0.0" rpy="0.0 0.0 0.0"/>
+                <!-- 几何形状 ，用geometry来定义-->
+                <geometry>
+                    <!-- cylinder（圆柱体），radius(半径)，length(高度) -->
+                    <cylinder radius="0.03" length="0.06"/>
+                </geometry>
+                <!-- 材质颜色描述 ，用material定义-->
+                <material name="black">
+                    <color rgba="0.0 0.0 0.0 1.0"/>
+                </material>
+            </visual>
+        </link>
+        <!-- 仿真雷达插件部分 -->
+        <gazebo reference="mid360">
+            <sensor name="mid360" type="ray">
+
+                <always_on>true</always_on>
+                <!-- <visualize>true</visualize> -->
+                <visualize>true</visualize>
+
+                <update_rate>${update_rate}</update_rate>
+                <pose>0 0 0 0 0 0</pose>
+
+                <ray>
+                    <scan>
+
+                    <!-- Horizontal scan (360 deg) -->
+                    <horizontal>
+                        <samples>${h_samples}</samples>
+                        <resolution>1</resolution>
+                        <min_angle>${h_min}</min_angle>
+                        <max_angle>${h_max}</max_angle>
+                    </horizontal>
+
+                    <!-- Vertical scan (3D) -->
+                    <vertical>
+                        <samples>${v_samples}</samples>
+                        <resolution>1</resolution>
+                        <min_angle>${v_min}</min_angle>
+                        <max_angle>${v_max}</max_angle>
+                    </vertical>
+
+                    </scan>
+
+                    <range>
+                        <min>${range_min}</min>
+                        <max>${range_max}</max>
+                        <resolution>${range_res}</resolution>
+                    </range>
+
+                    <noise>
+                        <type>gaussian</type>
+                        <mean>${noise_mean}</mean>
+                        <stddev>${noise_stddev}</stddev>
+                    </noise>
+                </ray>
+
+                <!-- ROS2 bridge -->
+                <plugin name="mid360_ros"
+                        filename="libgazebo_ros_ray_sensor.so">
+                    <ros>
+                        <namespace>/</namespace>
+                        <remapping>~/out:=${topic}</remapping>
+                    </ros>
+
+                    <output_type>sensor_msgs/PointCloud2</output_type>
+                    <frame_name>${frame_name}</frame_name>
+                </plugin>
+
+            </sensor>
+        </gazebo>
+    </xacro:macro>
+</robot>
+
+

@@ -1,0 +1,95 @@
+<?xml version="1.0"?>
+<robot xmlns:xacro="http://www.ros.org/wiki/xacro">
+
+<!-- ========================================================= -->
+<!-- CPU-only 3D LiDAR (MID360-like) using ray sensor           -->
+<!-- Output: sensor_msgs/PointCloud2                           -->
+<!-- Gazebo Classic + ROS2 Humble                               -->
+<!-- ========================================================= -->
+
+    <xacro:macro name="gazebo_sensor_plugin"
+                    params="
+                        parent_link:=laser_link
+                        sensor_name:=mid360
+                        frame_name:=laser_link
+                        namespace:=/
+                        topic:=livox/lidar
+
+                        update_rate:=10
+                        h_samples:=720
+                        h_min:=-3.1415926
+                        h_max:= 3.1415926
+                        v_samples:=16
+                        v_min:= -0.907571
+                        v_max:= 0.122173
+                        range_min:=0.12
+                        range_max:=25.0
+                        range_res:=0.02
+                        noise_mean:=0.0
+                        noise_stddev:=0.01
+                    ">
+
+        <gazebo reference="${parent_link}">
+            <sensor name="${sensor_name}" type="ray">
+
+                <always_on>true</always_on>
+                <!-- <visualize>true</visualize> -->
+                <visualize>false</visualize>
+
+                <update_rate>${update_rate}</update_rate>
+                <pose>0 0 0 0 0 0</pose>
+
+                <ray>
+                    <scan>
+
+                    <!-- Horizontal scan (360 deg) -->
+                    <horizontal>
+                        <samples>${h_samples}</samples>
+                        <resolution>1</resolution>
+                        <min_angle>${h_min}</min_angle>
+                        <max_angle>${h_max}</max_angle>
+                    </horizontal>
+
+                    <!-- Vertical scan (3D) -->
+                    <vertical>
+                        <samples>${v_samples}</samples>
+                        <resolution>1</resolution>
+                        <min_angle>${v_min}</min_angle>
+                        <max_angle>${v_max}</max_angle>
+                    </vertical>
+
+                    </scan>
+
+                    <range>
+                        <min>${range_min}</min>
+                        <max>${range_max}</max>
+                        <resolution>${range_res}</resolution>
+                    </range>
+
+                    <noise>
+                        <type>gaussian</type>
+                        <mean>${noise_mean}</mean>
+                        <stddev>${noise_stddev}</stddev>
+                    </noise>
+                </ray>
+
+                <!-- ROS2 bridge -->
+                <plugin name="${sensor_name}_ros"
+                        filename="libgazebo_ros_ray_sensor.so">
+                    <ros>
+                        <namespace>${namespace}</namespace>
+                        <remapping>~/out:=${topic}</remapping>
+                    </ros>
+
+                    <output_type>sensor_msgs/PointCloud2</output_type>
+                    <frame_name>${frame_name}</frame_name>
+                </plugin>
+
+            </sensor>
+        </gazebo>
+
+    </xacro:macro>
+
+</robot>
+
+

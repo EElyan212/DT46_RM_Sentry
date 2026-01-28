@@ -57,10 +57,13 @@ find_package(sensor_msgs REQUIRED)
 find_package(std_msgs REQUIRED)
 find_package(std_srvs REQUIRED)
 find_package(visualization_msgs REQUIRED)
-find_package(pcl_ros REQUIRED)
+# find_package(pcl_ros REQUIRED)
 find_package(pcl_conversions REQUIRED)
 find_package(livox_ros_driver2 REQUIRED)
 find_package(rosidl_default_generators REQUIRED)
+find_package(tf2 REQUIRED)
+find_package(tf2_ros REQUIRED)
+find_package(tf2_geometry_msgs REQUIRED)
 
 set(dependencies
   rclcpp
@@ -71,7 +74,7 @@ set(dependencies
   std_msgs
   std_srvs
   visualization_msgs
-  pcl_ros
+  # pcl_ros
   pcl_conversions
   livox_ros_driver2
 )
@@ -97,6 +100,9 @@ target_include_directories(fastlio_mapping PUBLIC
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
   $<INSTALL_INTERFACE:include>
   ${PCL_INCLUDE_DIRS}
+  ${tf2_INCLUDE_DIRS}
+  ${tf2_ros_INCLUDE_DIRS}
+  ${tf2_geometry_msgs_INCLUDE_DIRS}
 )
 target_link_libraries(fastlio_mapping ${PCL_LIBRARIES} ${PYTHON_LIBRARIES} Eigen3::Eigen)
 target_include_directories(fastlio_mapping PRIVATE ${PYTHON_INCLUDE_DIRS})
@@ -113,7 +119,11 @@ else()
   target_link_libraries(fastlio_mapping ${cpp_typesupport_target})
 endif()
 
-ament_target_dependencies(fastlio_mapping ${dependencies})
+ament_target_dependencies(fastlio_mapping 
+${dependencies}
+tf2
+tf2_ros
+tf2_geometry_msgs)
 
 # ---------------- Install --------------- #
 install(TARGETS fastlio_mapping
