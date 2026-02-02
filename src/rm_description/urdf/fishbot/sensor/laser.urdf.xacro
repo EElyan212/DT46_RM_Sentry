@@ -9,12 +9,12 @@
             <material>Gazebo/Black</material>
         </gazebo>
 
-
+        <!-- ============雷达支撑杆================ -->
         <link name="laser_cylinder_link">
             <visual>
                 <origin xyz="0 0 0" rpy="0 0 0" />
                 <geometry>
-                    <cylinder length="0.40" radius="0.01" />
+                    <cylinder length="0.05" radius="0.01" />
                 </geometry>
                 <material name="black">
                     <color rgba="0.0 0.0 0.0 0.8" />
@@ -23,7 +23,7 @@
             <collision>
                 <origin xyz="0 0 0" rpy="0 0 0" />
                 <geometry>
-                    <cylinder length="0.40" radius="0.01" />
+                    <cylinder length="0.05" radius="0.01" />
                 </geometry>
                 <material name="black">
                     <color rgba="0.0 0.0 0.0 0.8" />
@@ -39,7 +39,7 @@
             <child link="laser_cylinder_link" />
             <origin xyz="${xyz}" />
         </joint>
-        
+        <!-- ============雷达================ -->
         <link name="laser_link">
             <visual>
                 <origin xyz="0 0 0" rpy="0 0 0" />
@@ -65,7 +65,7 @@
         <joint name="laser_joint" type="fixed">
             <parent link="laser_cylinder_link" />
             <child link="laser_link" />
-            <origin xyz="0 0 0.20" />
+            <origin xyz="0 0 0.025" />
         </joint>
 
     </xacro:macro>

@@ -3,63 +3,44 @@
     <xacro:macro name="gazebo_sensor_plugin">
         <gazebo reference="laser_link">
             <sensor name="laserscan" type="ray">
-
+                <plugin name="laserscan" filename="libgazebo_ros_ray_sensor.so">
+                    <ros>
+                        <namespace>/</namespace>
+                        <remapping>~/out:=scan</remapping>
+                    </ros>
+                    <output_type>sensor_msgs/LaserScan</output_type>
+                    <frame_name>laser_link</frame_name>
+                </plugin>
                 <always_on>true</always_on>
-                <!-- <visualize>true</visualize> -->
                 <visualize>true</visualize>
-
-                <update_rate>10</update_rate>
+                <update_rate>5</update_rate>
                 <pose>0 0 0 0 0 0</pose>
-
+								<!-- 激光传感器配置 -->
                 <ray>
+                    <!-- 设置扫描范围 -->
                     <scan>
-
-                    <!-- Horizontal scan (360 deg) -->
-                    <horizontal>
-                        <samples>720</samples>
-                        <resolution>1</resolution>
-                        <min_angle>-3.1415926</min_angle>
-                        <max_angle>3.1415926</max_angle>
-                    </horizontal>
-
-                    <!-- Vertical scan (3D) -->
-                    <vertical>
-                        <samples>16</samples>
-                        <resolution>1</resolution>
-                        <min_angle>-0.907571</min_angle>
-                        <max_angle>0.122173</max_angle>
-                    </vertical>
-
+                        <horizontal>
+                            <samples>360</samples>
+                            <resolution>1.000000</resolution>
+                            <min_angle>0.000000</min_angle>
+                            <max_angle>6.280000</max_angle>
+                        </horizontal>
                     </scan>
-
+                    <!-- 设置扫描距离 -->
                     <range>
-                        <min>0.12</min>
-                        <max>25.0</max>
-                        <resolution>0.02</resolution>
+                        <min>0.120000</min>
+                        <max>8.0</max>
+                        <resolution>0.015000</resolution>
                     </range>
-
+                    <!-- 设置噪声 -->
                     <noise>
                         <type>gaussian</type>
                         <mean>0.0</mean>
                         <stddev>0.01</stddev>
                     </noise>
                 </ray>
-
-                <!-- ROS2 bridge -->
-                <plugin name="laserscan_ros"
-                        filename="libgazebo_ros_ray_sensor.so">
-                    <ros>
-                        <namespace>/</namespace>
-                        <remapping>~/out:=livox/lidar</remapping>
-                    </ros>
-
-                    <output_type>sensor_msgs/PointCloud2</output_type>
-                    <frame_name>laser_link</frame_name>
-                </plugin>
-
             </sensor>
         </gazebo>
-
 
 
 <gazebo reference="imu_link">
