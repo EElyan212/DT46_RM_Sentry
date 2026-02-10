@@ -7,12 +7,12 @@ from launch_ros.actions import Node
 def generate_launch_description():
     return LaunchDescription([
         DeclareLaunchArgument(
-            name='livox', default_value='livox',
+            name='segmentation', default_value='segmentation',
             description='Namespace for sample topics'
         ),
         Node(
             package='pointcloud_to_laserscan', executable='pointcloud_to_laserscan_node',
-            remappings=[('cloud_in', [LaunchConfiguration(variable_name='livox'), '/lidar']),
+            remappings=[('cloud_in', [LaunchConfiguration(variable_name='segmentation'), '/obstacle']),
                         ('scan',['/scan'])],
             parameters=[{
                 'target_frame': 'laser_link',
