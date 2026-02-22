@@ -1,0 +1,6 @@
+serial_python:
+    ros__parameters:
+        port_name: "/dev/ttyUSB0"
+        baudrate: 115200
+        timeout: 1
+        write_timeout: 1

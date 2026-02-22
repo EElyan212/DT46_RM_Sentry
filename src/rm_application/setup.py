@@ -28,6 +28,7 @@ setup(
             "get_robot_pose = rm_application.get_robot_pose:main",
             "nav_to_pose = rm_application.nav_to_pose:main",
             "waypoint_follower = rm_application.waypoint_follower:main",
+            "serial_node = rm_application.serial:main",
         ],
     },
 )
