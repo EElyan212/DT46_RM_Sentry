@@ -16,6 +16,7 @@ rosidl_generate_interfaces(${PROJECT_NAME}
   "msg/Decision.msg"
   "msg/GimbalControl.msg"
   "msg/Senddata.msg"
+  "msg/OdoMsg.msg"
   DEPENDENCIES std_msgs
 )
 if(BUILD_TESTING)
