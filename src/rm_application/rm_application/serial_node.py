@@ -4,11 +4,13 @@ import threading
 import rclpy
 from rclpy.node import Node
 from geometry_msgs.msg import Twist
-from rm_interface.msg import Decision, Senddata, GimbalControl
+from rm_interfaces.msg import Decision, Senddata, GimbalControl
 from std_msgs.msg import Int32
 import struct
-from geometry_msgs.msg import Vector3Stamped
+from geometry_msgs.msg import Vector3Stamped, Twist
 from .modules.crc import *
+from rclpy.qos import QoSProfile, ReliabilityPolicy, HistoryPolicy, DurabilityPolicy
+
 
 class ColorPrint():
     def __init__(self):
@@ -41,7 +43,7 @@ class SerialNode(Node):
         #创建决策消息发布者
         self.pub_uart_receive_decision = self.create_publisher(Decision, "/nav/decision", 10)
         #串建导航（底盘）消息接收者
-        self.sub_uart_cmd = self.create_subscription(Twist, "/cmd_vel_nav", self.cmd_vel_callback, 10)
+        self.sub_uart_cmd = self.create_subscription(Twist, "/cmd_vel", self.cmd_vel_callback, 10)
         #创建自瞄（云台）消息订阅者
         self.sub_gimbal_control = self.create_subscription(GimbalControl, "/gimbal/control", self.gimbal_control_callback, 10)
         #创建小陀螺模式接收者
@@ -57,8 +59,8 @@ class SerialNode(Node):
             self.serial = serial.Serial(
                 port = self.port_name,
                 baudrate = self.baudrate,
-                timeout = 1,
-                write_timeout = 1,
+                timeout = self.timeout,
+                write_timeout = self.write_timeout,
                 )
             if self.serial.is_open:
                 self.get_logger().info(f"串口已打开: {self.port_name}")
@@ -67,21 +69,45 @@ class SerialNode(Node):
                 self.receive_thread.start()
                 self.timer = self.create_timer(0.01, self.Send)
         except serial.SerialException as e:
-            self.get_logger().error(f"创建串口时出错: {self.device_name} - {str(e)}")
+            self.get_logger().error(f"创建串口时出错: {self.port_name} - {str(e)}")
             raise e    
             
     def get_params(self):
-        self.declare_parameter("port_name", "/dev/ttyUSB0")
-        self.declare_parameter("baudrate", 115200)
-        self.declare_parameter("flow_control", "none")
-        self.declare_parameter("parity", "none")
-        self.declare_parameter("stop_bits", "1")
+        """
+        从 ROS 2 参数服务器声明并获取串口配置参数
+        """
+        # 1. 批量声明参数及其默认值
+        # 这里的默认值仅在 YAML 文件未指定或命令行未提供参数时生效
+        self.declare_parameters(
+            namespace='',
+            parameters=[
+                ('port_name', '/dev/ttyUSB0'),
+                ('baudrate', 115200),
+                ('timeout', 1.0),            # 对应 YAML 中的 timeout
+                ('write_timeout', 1.0),      # 对应 YAML 中的 write_timeout
+                ('flow_control', 'none'),
+                ('parity', 'none'),
+                ('stop_bits', '1')
+            ]
+        )
 
+        # 2. 获取参数值并赋值给实例变量
         self.port_name = self.get_parameter("port_name").value
         self.baudrate = self.get_parameter("baudrate").value
+        self.timeout = self.get_parameter("timeout").value
+        self.write_timeout = self.get_parameter("write_timeout").value
         self.flow_control = self.get_parameter("flow_control").value
         self.parity = self.get_parameter("parity").value
         self.stop_bits = self.get_parameter("stop_bits").value
+
+        # 3. 打印当前生效的配置信息，方便在终端确认 YAML 是否加载成功
+        self.get_logger().info("-" * 30)
+        self.get_logger().info("串口参数配置已加载:")
+        self.get_logger().info(f"  端口号: {self.port_name}")
+        self.get_logger().info(f"  波特率: {self.baudrate}")
+        self.get_logger().info(f"  超时设置: Read={self.timeout}s, Write={self.write_timeout}s")
+        self.get_logger().info(f"  校验/流控: Parity={self.parity}, Flow={self.flow_control}")
+        self.get_logger().info("-" * 30)
     def cmd_vel_callback(self,msg):
         with self.lock:
             self.send_datas.linear_velocity_x = msg.linear.x
@@ -108,9 +134,9 @@ class SerialNode(Node):
         self.get_logger().info("接收数据线程已启动 (CRC16 Mode - 16 Bytes)")
 
         while rclpy.ok():
-        if self.is_reconnecting:
-            time.sleep(0.1)
-            continue
+            if self.is_reconnecting:
+                time.sleep(0.1)
+                continue
             try:
                 # 1. 查找帧头
                 header = self.serial.read(1)
@@ -190,12 +216,11 @@ class SerialNode(Node):
             #帧头，帧尾赋值
             # self.send_datas.header = b'\xA5'
             # self.send_datas.ender  = b'\x2b'
-            header = b'\xA5'
-            ender = b'\x2b'
+            header = 0xA5
+            ender = 0x2b
             #帧头，x线速度，y线速度，小陀螺模式， 云台yaw，云台pitch，开火，帧尾
             data_payload = struct.pack(
-                '<BffiffiB', 
-                
+                '<BffiffiB',
                 header, 
                 linear_velocity_x,
                 linear_velocity_y, 
@@ -211,10 +236,9 @@ class SerialNode(Node):
             packet = data_payload + struct.pack("<H", checksum)
 
             self.serial.write(packet)
-
+            print(header, linear_velocity_x,linear_velocity_y, gimbal_mode,yaw, pitch, can_fire, ender)
         except Exception as e:
             self.get_logger().error(f"发送数据时出错: {str(e)}")
-            self.reopen_port()
 
     def reopen_port(self):
         # 使用锁保护状态标志的修改
@@ -250,7 +274,7 @@ class SerialNode(Node):
 
 def main(args=None):
     rclpy.init(args=args)
-    node = SerialNode("rm_serial_python")
+    node = SerialNode("serial_node")
     try:
         rclpy.spin(node)
     except KeyboardInterrupt:

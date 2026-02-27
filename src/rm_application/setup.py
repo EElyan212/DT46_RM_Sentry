@@ -1,4 +1,6 @@
 from setuptools import find_packages, setup
+import os
+from glob import glob
 
 package_name = 'rm_application'
 
@@ -10,6 +12,8 @@ setup(
         ('share/ament_index/resource_index/packages',
             ['resource/' + package_name]),
         ('share/' + package_name, ['package.xml']),
+        (os.path.join('share', package_name,'launch'), glob('launch/*.launch.py')),
+        (os.path.join('share', package_name,'config'), glob('config/*.yaml')),
     ],
     install_requires=['setuptools'],
     zip_safe=True,
@@ -28,7 +32,7 @@ setup(
             "get_robot_pose = rm_application.get_robot_pose:main",
             "nav_to_pose = rm_application.nav_to_pose:main",
             "waypoint_follower = rm_application.waypoint_follower:main",
-            "serial_node = rm_application.serial:main",
+            "serial_node = rm_application.serial_node:main",
         ],
     },
 )

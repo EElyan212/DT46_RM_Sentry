@@ -18,12 +18,11 @@ ament_cmake_export/
 __pycache__/
 *.pyc
 
-# VSCode configuration
-.vscode/
-
 # CLion / JetBrains
 .idea/
 
+.vscode/
+*.db
 # Backup files
 *.bak
 *.swp
