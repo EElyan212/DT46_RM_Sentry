@@ -1,0 +1,23 @@
+{
+  "configurations": [
+    {
+      "browse": {
+        "databaseFilename": "${workspaceFolder}/.vscode/browse.vc.db",
+        "limitSymbolsToIncludedHeaders": false
+      },
+      "includePath": [
+        "/opt/ros/humble/include/**",
+        "/home/kie-dt46/DT46_RM_Sentry/src/rm_description/include/**",
+        "/home/kie-dt46/DT46_RM_Sentry/src/rm_driver/Livox-SDK2/include/**",
+        "/home/kie-dt46/DT46_RM_Sentry/src/rm_localization/FAST_LIO/include/**",
+        "/usr/include/**"
+      ],
+      "name": "ros2",
+      "intelliSenseMode": "gcc-x64",
+      "compilerPath": "/usr/bin/gcc",
+      "cStandard": "gnu11",
+      "cppStandard": "c++17"
+    }
+  ],
+  "version": 4
+}
