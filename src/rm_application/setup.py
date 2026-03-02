@@ -33,6 +33,7 @@ setup(
             "nav_to_pose = rm_application.nav_to_pose:main",
             "waypoint_follower = rm_application.waypoint_follower:main",
             "serial_node = rm_application.serial_node:main",
+            "mock_serial_sender = rm_application.mock_serial_sender:main",
         ],
     },
 )

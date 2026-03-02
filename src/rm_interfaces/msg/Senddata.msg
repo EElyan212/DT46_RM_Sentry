@@ -6,4 +6,3 @@ int32   gimbal_mode
 float32 yaw
 float32 pitch
 int32   can_fire
-std_msgs/Header ender
