@@ -209,7 +209,7 @@ class SerialNode(Node):
                 serial_odo_msg.vy = vy
                 serial_odo_msg.yaw = yaw
                 self.pub_uart_receive_odo.publish(serial_odo_msg)
-                # print(serial_odo_msg)
+                print(serial_odo_msg)
                 #6.3 发布 Decision 消息
                 serial_decision_msg.header.stamp = self.get_clock().now().to_msg()
                 serial_decision_msg.color = detect_color
@@ -259,8 +259,8 @@ class SerialNode(Node):
                 linear_velocity_x,
                 linear_velocity_y, 
                 gimbal_mode,
-                yaw.2f, 
-                pitch.2f, 
+                yaw, 
+                pitch, 
                 can_fire, 
                 )
 
@@ -269,7 +269,7 @@ class SerialNode(Node):
             packet = data_payload + struct.pack("<H", checksum)
 
             self.serial.write(packet)
-            print(header, linear_velocity_x,linear_velocity_y, gimbal_mode,yaw, pitch, can_fire)
+            # print(header, linear_velocity_x,linear_velocity_y, gimbal_mode,yaw, pitch, can_fire)
         except Exception as e:
             self.get_logger().error(f"发送数据时出错: {str(e)}")
 

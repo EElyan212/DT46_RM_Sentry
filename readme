@@ -1,5 +1,14 @@
 #常用命令
-
+#雷达驱动
+ros2 launch livox_ros_driver2 rviz_MID360_launch.py
+#pointclound2 to laserscan
+ros2 launch pointcloud_to_laserscan pointcloud_to_laserscan_launch.py 
+#重新编译
+cd DT46_RM_Sentry
+colcon build --packages-select rm_interfaces
+si
+cd src/rm_driver/livox_ros_driver2/
+./build.sh humble
 #线上建图
 ros2 launch slam_toolbox online_async_launch.py use_sim_time:=True
 
