@@ -29,7 +29,7 @@ def generate_launch_description():
     )
     # 创建 Launch 配置
     use_sim_time = launch.substitutions.LaunchConfiguration(
-        'use_sim_time', default='true')
+        'use_sim_time', default='Flase')
     map_yaml_path = launch.substitutions.LaunchConfiguration(
         'map', default=os.path.join(rm_navigation2_dir, 'maps', 'room.yaml'))
     nav2_param_path = launch.substitutions.LaunchConfiguration(
@@ -53,14 +53,14 @@ def generate_launch_description():
                 'use_sim_time': use_sim_time,
                 'params_file': nav2_param_path}.items(),
         ),
-        launch.actions.IncludeLaunchDescription(
-            PythonLaunchDescriptionSource(
-                [segmentation_dir]),
-        ),
-        launch.actions.IncludeLaunchDescription(
-            PythonLaunchDescriptionSource(
-                [pointcloud_to_laserscan_dir]),
-        ),
+        # launch.actions.IncludeLaunchDescription(
+        #     PythonLaunchDescriptionSource(
+        #         [segmentation_dir]),
+        # ),
+        # launch.actions.IncludeLaunchDescription(
+        #     PythonLaunchDescriptionSource(
+        #         [pointcloud_to_laserscan_dir]),
+        # ),
         launch_ros.actions.Node(
             package='rviz2',
             executable='rviz2',

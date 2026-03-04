@@ -5,6 +5,7 @@ ros2 launch livox_ros_driver2 rviz_MID360_launch.py
 ros2 launch pointcloud_to_laserscan pointcloud_to_laserscan_launch.py 
 #重新编译
 cd DT46_RM_Sentry
+
 colcon build --packages-select rm_interfaces
 si
 cd src/rm_driver/livox_ros_driver2/
