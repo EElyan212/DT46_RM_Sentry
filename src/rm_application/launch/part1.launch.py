@@ -23,7 +23,7 @@ def generate_launch_description():
         ),
         launch.actions.IncludeLaunchDescription(
             AnyLaunchDescriptionSource(
-                [msg_to_pcd2, '/launch', '/livox_to_pointcloud2.launch.yml']),
+                [msg_to_pcd2, '/launch', '/livox_to_pointcloud2.launch.py']),
         ),
         launch.actions.IncludeLaunchDescription(
             AnyLaunchDescriptionSource(

@@ -6,13 +6,23 @@ from launch_ros.actions import Node
 
 def generate_launch_description():
     return LaunchDescription([
-        DeclareLaunchArgument(
-            name='livox', default_value='livox',
-            description='Namespace for sample topics'
+        # DeclareLaunchArgument(
+        #     name='livox', default_value='/livox',
+        #     description='Namespace for sample topics'
+        # ),
+        Node(
+            package='tf2_ros',
+            executable='static_transform_publisher',
+            name='static_tf_pub_laser',
+            # 显式指定参数名，确保时间戳被正确处理
+            arguments=['--x', '0', '--y', '0', '--z', '0.1', 
+                    '--roll', '0', '--pitch', '0', '--yaw', '0', 
+                    '--frame-id', 'base_link', 
+                    '--child-frame-id', 'livox_frame']
         ),
         Node(
             package='pointcloud_to_laserscan', executable='pointcloud_to_laserscan_node',
-            remappings=[('cloud_in', [LaunchConfiguration(variable_name='livox'), '/lidar/pcd2']),
+            remappings=[('cloud_in', '/livox/lidar/pcd2'),
                         ('scan',['/scan'])],
             parameters=[{
                 'target_frame': 'base_link',
