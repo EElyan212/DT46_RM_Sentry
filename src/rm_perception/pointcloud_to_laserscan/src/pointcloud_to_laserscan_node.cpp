@@ -140,6 +140,7 @@ void PointCloudToLaserScanNode::cloudCallback(
   // build laserscan output
   auto scan_msg = std::make_unique<sensor_msgs::msg::LaserScan>();
   scan_msg->header = cloud_msg->header;
+  scan_msg->header.stamp = this->now();
   if (!target_frame_.empty()) {
     scan_msg->header.frame_id = target_frame_;
   }
