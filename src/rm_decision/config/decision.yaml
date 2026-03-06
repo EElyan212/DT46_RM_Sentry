@@ -1,0 +1,5 @@
+decision_node:
+  ros__parameters:
+    hp_threshold: 150      # 血量阈值
+    center_pose: [2.0, 0.0, 0.0, 1.0] # 满血去中心点 (x, y, z_quat, w_quat)
+    supply_pose: [-1.0, -2.0, 0.0, 1.0] # 残血去补给点

@@ -37,6 +37,7 @@ if(BUILD_TESTING)
 endif()
 
 add_executable(odo src/odo.cpp)
+add_executable(map_clear src/map_clear.cpp)
 
 
 ament_target_dependencies(odo 
@@ -49,10 +50,28 @@ ament_target_dependencies(odo
   std_msgs
   std_srvs
   nav2_msgs
+  
 )
 
+ament_target_dependencies(map_clear 
+  rclcpp 
+  sensor_msgs 
+  laser_geometry 
+  pcl_ros 
+  PCL
+  rm_interfaces
+  std_msgs
+  std_srvs
+  nav2_msgs
+)
 install(TARGETS
   odo
+  DESTINATION lib/${PROJECT_NAME})
+  
+
+
+install(TARGETS
+  map_clear
   DESTINATION lib/${PROJECT_NAME})
   
 install(

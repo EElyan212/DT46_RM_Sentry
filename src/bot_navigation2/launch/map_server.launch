@@ -1,0 +1,9 @@
+<launch>
+  <arg name="map_file"  default=" $(find bot_navigation2)/map/map.yaml"/> <!-- willowgarage_world -->
+  <!--  ****** Maps *****  --> 
+  <node name="map_server" pkg="map_server" type="map_server" 
+    args="$(find bot_navigation2)/map/$(arg map_file).yaml">
+    <param name="frame_id" value="map"/>
+  </node>
+
+</launch>
