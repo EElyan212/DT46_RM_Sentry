@@ -38,6 +38,8 @@ amcl:
     z_rand: 0.5
     z_short: 0.05
     set_initial_pose: true
+    scan_topic: scan
+    reliability: "best_effort"
     initial_pose: 
         x: -0.0119032
         y: -0.00386167
