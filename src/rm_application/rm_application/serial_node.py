@@ -10,6 +10,7 @@ import struct
 from geometry_msgs.msg import Vector3Stamped, Twist
 from .modules.crc import *
 from rclpy.qos import QoSProfile, ReliabilityPolicy, HistoryPolicy, DurabilityPolicy
+from rclpy.qos import qos_profile_sensor_data
 
 
 class ColorPrint():
@@ -45,7 +46,7 @@ class SerialNode(Node):
         #串建导航（底盘）消息接收者
         self.sub_uart_cmd = self.create_subscription(Twist, "/cmd_vel", self.cmd_vel_callback, 10)
         #创建自瞄（云台）消息订阅者
-        self.sub_gimbal_control = self.create_subscription(GimbalControl, "tracker/gimbal_control", self.gimbal_control_callback, 10)
+        self.sub_gimbal_control = self.create_subscription(GimbalControl, "tracker/gimbal_control", self.gimbal_control_callback, qos_profile_sensor_data)
         #创建小陀螺模式接收者
         self.sub_gimbal_mode = self.create_subscription(Int32, "/gimbal_mode", self.gimbal_mode_callback, 10)
         # 创建发布者 2: IMU 数据
@@ -199,7 +200,7 @@ class SerialNode(Node):
                 rpy_msg.header.stamp = self.get_clock().now().to_msg()
                 rpy_msg.header.frame_id = 'imu_link'
                 rpy_msg.vector.x = float(roll)
-                rpy_msg.vector.y = float(-pitch)
+                rpy_msg.vector.y = float(pitch)
                 rpy_msg.vector.z = float(yaw)
 
                 self.pub_uart_receive_imu.publish(rpy_msg)
@@ -238,7 +239,7 @@ class SerialNode(Node):
             with self.lock:
                 linear_velocity_x = self.send_datas.linear_velocity_x
                 linear_velocity_y = self.send_datas.linear_velocity_y
-                # gimbal_mode = self.send_datas.gimbal_mode
+                # gimbal_mode = self.self.send_datas.gimbal_mode
                 yaw = self.send_datas.yaw
                 pitch = self.send_datas.pitch
                 can_fire = self.send_datas.can_fire
@@ -250,9 +251,9 @@ class SerialNode(Node):
             #帧头，帧尾赋值
             # self.send_datas.header = b'\xA5'
             # self.send_datas.ender  = b'\x2b'
-            header = self.serial_receive_header
+            header = self.serial_send_header
 
-            #帧头，x线速度，y线速度，小陀螺模式， 云台yaw，云台pitch，开火，帧尾
+            #帧头，x线速度，y线速度，小陀螺模式， 云台yaw，云台pitc，开火，帧尾
             data_payload = struct.pack(
                 '<Bffiffi',
                 header, 
@@ -269,7 +270,7 @@ class SerialNode(Node):
             packet = data_payload + struct.pack("<H", checksum)
 
             self.serial.write(packet)
-            print(header, linear_velocity_x,linear_velocity_y, gimbal_mode,yaw, pitch, can_fire)
+            # print(header, linear_velocity_x,linear_velocity_y, gimbal_mode, round(yaw, 2), round(pitch, 2), can_fire)
         except Exception as e:
             self.get_logger().error(f"发送数据时出错: {str(e)}")
 
@@ -305,17 +306,31 @@ class SerialNode(Node):
         with self.serial_lock:
             self.is_reconnecting = False
 
+# def main(args=None):
+#     rclpy.init(args=args)
+#     node = SerialNode("serial_node")
+#     try:
+#         rclpy.spin(node)
+#     except KeyboardInterrupt:
+#         pass
+#     finally:
+#         node.destroy_node()
+#         rclpy.shutdown()
 def main(args=None):
     rclpy.init(args=args)
-    node = SerialNode("serial_node")
+    node = SerialNode("serial_node") # 假设您的类名
     try:
         rclpy.spin(node)
     except KeyboardInterrupt:
         pass
+    except Exception as e:
+        print(f"Node terminated due to error: {e}")
     finally:
+        # 确保先销毁节点，停止所有定时器和回调
         node.destroy_node()
-        rclpy.shutdown()
-
+        # 检查是否已经 shutdown，避免重复调用
+        if rclpy.ok():
+            rclpy.shutdown()
 if __name__ == "__main__":
     main()
     

@@ -23,8 +23,17 @@ ros2 run nav2_map_server map_saver_cli -f room
 ros2 run rm_navigation2 map_clear
 
 #导航
-ros2 launch rm_navigation2 navigation2.launch.py 
-
+ros2 launch rm_navigation2 navigation2.launch.py
+ 
 #总（雷达启动 点云转换 里程计）
-ros2 launch rm_application part1.launch.py 
+ros2 launch rm_application part1.launch.py rviz:=false
+
+#串口
+ros2 launch rm_application serial_node.launch.py
+
+#动态调参
+ros2 run rqt_reconfigure rqt_reconfigure
+
+#decision
+ ros2 run rm_application rm_decision --ros-args --params-file src/rm_application/config/decision_params.yaml
 
