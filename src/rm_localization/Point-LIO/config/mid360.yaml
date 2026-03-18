@@ -39,7 +39,7 @@
         mapping:
             imu_en: True                                   # 是否启用 IMU 辅助
             extrinsic_est_en: False                        # 是否在线估计外参（剧烈运动建议设为 False，使用预标定值）
-            imu_time_inte: 0.005                           # IMU 采样时间间隔（1 / IMU频率）
+            imu_time_inte: 0.003                           # IMU 采样时间间隔（1 / IMU频率）
             lidar_time_inte: 0.1                           # LiDAR 采样时间间隔（1 / LiDAR频率）
             satu_acc: 3.0                                  # 加速度计饱和阈值（不带单位，根据传感器量程微调）
             satu_gyro: 35.0                                # 陀螺仪饱和阈值

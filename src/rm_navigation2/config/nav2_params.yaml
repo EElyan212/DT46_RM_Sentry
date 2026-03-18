@@ -52,9 +52,9 @@ amcl:
     
     # --- 初始位姿设置 ---
     set_initial_pose: true        # 是否根据下方参数设置启动时的初始位姿
-    x: -0.0119032                 # 初始位置 X (米)
-    y: -0.00386167                # 初始位置 Y (米)
-    yaw: -0.0354927               # 初始朝向 Yaw (弧度)
+    x: 10.15                 # 初始位置 X (米)
+    y: -3.84                # 初始位置 Y (米)
+    yaw: 0.00               # 初始朝向 Yaw (弧度)
 
     # --- 束跳过 (Beam Skip) 功能 (用于应对动态障碍物) ---
     do_beamskip: false            # 是否开启跳过与地图不匹配激光束的功能
@@ -169,23 +169,23 @@ controller_server:
       debug_trajectory_details: True  # 是否启用轨迹调试，输出轨迹计算的详细信息
 
       # 速度限制
-      min_vel_x: -0.35  # x轴的最小线速度（米/秒）
-      min_vel_y: -0.35 # y轴的最小线速度（米/秒）
-      max_vel_x: 0.35  # x轴的最大线速度（米/秒）
-      max_vel_y: 0.35  # y轴的最大线速度（米/秒）
+      min_vel_x: -0.55  # x轴的最小线速度（米/秒）
+      min_vel_y: -0.55 # y轴的最小线速度（米/秒）
+      max_vel_x: 0.55  # x轴的最大线速度（米/秒）
+      max_vel_y: 0.55  # y轴的最大线速度（米/秒）
       max_vel_theta: 0.0  # 禁用角速度（全向机器人只依赖于线速度）
 
       min_speed_xy: 0.0  # 最小线速度（米/秒）
-      max_speed_xy: 0.5  # 最大线速度（米/秒）
+      max_speed_xy: 0.55  # 最大线速度（米/秒）
       min_speed_theta: 0.0  # 最小角速度（弧度/秒）
 
       # 加速度和减速度限制
-      acc_lim_x: 30.0  # x轴的加速度限制（米/秒²）
-      acc_lim_y: 30.0 # y轴的加速度限制（米/秒²）
+      acc_lim_x: 50.0  # x轴的加速度限制（米/秒²）
+      acc_lim_y: 50.0 # y轴的加速度限制（米/秒²）
       acc_lim_theta: 0.0  # 对全向机器人，禁用角速度的加速度
 
-      decel_lim_x: -30.0  # x轴的减速度限制（米/秒²）
-      decel_lim_y: -30.0  # y轴的减速度限制（米/秒²）
+      decel_lim_x: -50.0  # x轴的减速度限制（米/秒²）
+      decel_lim_y: -50.0  # y轴的减速度限制（米/秒²）
       decel_lim_theta: 0.0  # 对全向机器人，禁用角速度的减速度
 
       # 速度采样点数
@@ -248,7 +248,7 @@ local_costmap:
       width: 5  # 局部代价地图的宽度，单位为米
       height: 5  # 局部代价地图的高度，单位为米
       resolution: 0.05  # 局部代价地图的分辨率，单位为米，表示每个网格的大小
-      robot_radius: 0.3  # 机器人半径，单位为米，用于在代价地图中考虑机器人的尺寸
+      robot_radius: 0.25  # 机器人半径，单位为米，用于在代价地图中考虑机器人的尺寸
       plugins: ["voxel_layer", "inflation_layer"]  # 局部代价地图中使用的插件列表
 
       # InflationLayer插件，用z于扩展障碍物的影响区域

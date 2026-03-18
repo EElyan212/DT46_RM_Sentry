@@ -30,7 +30,7 @@ def generate_launch_description():
             ],
             parameters=[{
                 'target_frame': 'base_link',
-                'transform_tolerance': 2.0,
+                'transform_tolerance': 0.01,
                 'use_reliability_qos': True,   # 很多 Humble 版本认这个
                 'qos_reliability': 'best_effort',
                 'reliability': 'best_effort',
@@ -39,9 +39,9 @@ def generate_launch_description():
                 'angle_min': -3.14159,  # -M_PI/2
                 'angle_max': 3.14159,  # M_PI/2
                 'angle_increment': 0.0043,  # M_PI/360.0
-                'scan_time': 0.3333,
+                'scan_time': 0.1,
                 'range_min': 0.6,
-                'range_max': 10.0,
+                'range_max': 5.0,
                 'use_inf': True,
                 'inf_epsilon': 1.0
             }],
