@@ -1,7 +1,7 @@
 decision_node:
   ros__parameters:
     center: [4.86, -2.39]
-    home: [-0.233, 0.833]
+    home: [10.3, -4.97]
     defence_left: [5.7, -1.98]
     defence_right: [4.07, -1.96]
     defence_mid: [5.07, -1.32]
