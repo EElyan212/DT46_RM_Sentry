@@ -10,7 +10,7 @@ import os
 def generate_launch_description():
     # Declare the RViz argument
     rviz_arg = DeclareLaunchArgument(
-        'rviz', default_value='true',
+        'rviz', default_value='false',
         description='Flag to launch RViz.')
 
     # Node parameters, including those from the YAML configuration file

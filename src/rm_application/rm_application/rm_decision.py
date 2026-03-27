@@ -40,17 +40,17 @@ class DecisionNode(Node):
         self.declare_parameters(
             namespace='',
             parameters=[
-                ('center', [0.0, 0.0]),
-                ('home', [0.0, 0.0]),
-                ('defence_left', [0.0, 0.0]),          
-                ('defence_right', [0.0, 0.0]), 
-                ('defence_mid', [0.0, 0.0]),
-                ('defence_mid_left', [0.0, 0.0]),
-                ('defence_mid_right', [0.0, 0.0]),    
-                ('attack', [0.0, 0.0]),
-                ('to_center_param1', [0.0, 0.0]),
-                ('to_center_param2', [0.0, 0.0]),
-                ('to_center_param3', [0.0, 0.0]),
+                ('center', [4.86, -2.39]),
+                ('home', [-0.233, 0.833]),
+                ('defence_left', [5.7, -1.98]),          
+                ('defence_right', [4.07, -1.96]), 
+                ('defence_mid', [5.07, -1.32]),
+                ('defence_mid_left', [4.66, -0.92]),
+                ('defence_mid_right', [4.66, -3.02]),    
+                ('attack', [4.85, -3.38]),
+                ('to_center_param1', [10.04, -2.03]),
+                ('to_center_param2', [9.53, 0.42]),
+                ('to_center_param3', [4.45, 0.20]),
                 ('hp_limit', 150),
                 ('hp_up', 380),
 
@@ -163,7 +163,7 @@ class DecisionNode(Node):
             self.decision_flag = new_flag
             self.navigator.cancelTask() # 切换时立即中断当前动作
         self.pub_gimbal_mode.publish(Int32(data=gimbal_mode))
-        self.get_logger().info(f"gimbal_mode: {gimbal_mode}")
+        # self.get_logger().info(f"gimbal_mode: {gimbal_mode}")
     def timer_callback(self):
     # 如果导航正在进行，且不是因为状态切换被 cancel，则不重复指令
         if not self.navigator.isTaskComplete():

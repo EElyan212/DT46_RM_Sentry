@@ -39,6 +39,8 @@ class SerialNode(Node):
             depth=50,
             durability=DurabilityPolicy.VOLATILE,
         )
+        # 你打印频率这么高找死是吧，写多个东西不行？
+        self.sb_swj = 0
         #获取参数
         self.get_params()
         #创建决策消息发布者
@@ -48,7 +50,7 @@ class SerialNode(Node):
         #创建自瞄（云台）消息订阅者
         self.sub_gimbal_control = self.create_subscription(GimbalControl, "tracker/gimbal_control", self.gimbal_control_callback, qos_profile_sensor_data)
         #创建小陀螺模式接收者
-        self.sub_gimbal_mode = self.create_subscription(Int32, "/gimbal_mode", self.gimbal_mode_callback, 10)
+        self.sub_gimbal_mode = self.create_subscription(Int32, "/gimbal_mode", self.gimbal_mode_callback, 1)
         # 创建发布者 2: IMU 数据
         self.pub_uart_receive_imu = self.create_publisher(Vector3Stamped, '/imu/rpy', qos)
         #创建发布者 3: odo 数据
@@ -94,7 +96,8 @@ class SerialNode(Node):
                 ('parity', 'none'),
                 ('stop_bits', '1'),
                 ('serial_receive_header', 0xA5),
-                ('serial_send_header', 0x5A)
+                ('serial_send_header', 0x5A),
+                ('pub_rpy', False)
             ]
         )
 
@@ -108,6 +111,7 @@ class SerialNode(Node):
         self.stop_bits = self.get_parameter("stop_bits").value
         self.serial_receive_header = self.get_parameter("serial_receive_header").value
         self.serial_send_header = self.get_parameter("serial_send_header").value
+        self.pub_rpy = self.get_parameter("pub_rpy").value
 
         # 3. 打印当前生效的配置信息，方便在终端确认 YAML 是否加载成功
         self.get_logger().info("-" * 30)
@@ -144,7 +148,7 @@ class SerialNode(Node):
         # vx(4)+vy(4)
         # self_sentry_hp(2)+self_hero_hp(2)+self_infantry_hp(2)+remain_time(2)+remain_bullet(2)+match_progress(1)+occupation(1)
         # CRC(2)
-        packet_length = 36
+        packet_length = 40
 
         self.get_logger().info("接收数据线程已启动 (CRC16 Mode - 16 Bytes)")
         self.serial.reset_input_buffer()
@@ -192,18 +196,19 @@ class SerialNode(Node):
                 # print("通过校验")
                 # 5. 数据解包 (35字节)
                 # <BBfff: Header(1), Color(1), Roll(4), Pitch(4), Yaw(4)
-                _, detect_color, roll, pitch, yaw,vx, vy, self_sentry_hp, self_hero_hp, self_infantry_hp, remain_time, remain_bullet, match_progress, occupation = struct.unpack("<BBfffffHHHHHBB", data_payload)
+                _, detect_color, roll, pitch, yaw,vx, vy, self_sentry_hp, self_hero_hp, self_infantry_hp, remain_time, remain_bullet, match_progress, occupation, bullet_speed = struct.unpack("<BBfffffHHHHHBBf", data_payload)
                 # print("获取数据成功")
                 #6.发布消息
                 #6.1 发布 IMU 消息
-                rpy_msg = Vector3Stamped()
-                rpy_msg.header.stamp = self.get_clock().now().to_msg()
-                rpy_msg.header.frame_id = 'imu_link'
-                rpy_msg.vector.x = float(roll)
-                rpy_msg.vector.y = float(pitch)
-                rpy_msg.vector.z = float(yaw)
+                if self.pub_rpy:
+                    rpy_msg = Vector3Stamped()
+                    rpy_msg.header.stamp = self.get_clock().now().to_msg()
+                    rpy_msg.header.frame_id = 'imu_link'
+                    rpy_msg.vector.x = float(roll)
+                    rpy_msg.vector.y = float(pitch)
+                    rpy_msg.vector.z = float(yaw)
 
-                self.pub_uart_receive_imu.publish(rpy_msg)
+                    self.pub_uart_receive_imu.publish(rpy_msg)
 
                 #6.2 发布odo消息
                 serial_odo_msg.vx = vx
@@ -221,10 +226,18 @@ class SerialNode(Node):
                 serial_decision_msg.remain_bullet = remain_bullet
                 serial_decision_msg.match_progress = match_progress
                 serial_decision_msg.occupation = occupation
-
+                serial_decision_msg.yaw = self.send_datas.yaw
+                serial_decision_msg.can_fire = self.send_datas.can_fire
+                serial_decision_msg.bullet_speed = bullet_speed
                 self.pub_uart_receive_decision.publish(serial_decision_msg)
 
+                # 不打印了，你echo吧
+                # self.sb_swj += 1
+                # if self.sb_swj % 100 == 0:
                 # print(serial_decision_msg)
+                #     self.sb_swj = 0
+                # 使用 debug 级别，正常运行时不会在终端显示
+                # self.get_logger().debug(str(serial_decision_msg))
                 
             except (serial.SerialException, struct.error, ValueError) as e:
                 self.get_logger().error(f"接收数据异常: {str(e)}")
@@ -243,7 +256,7 @@ class SerialNode(Node):
                 yaw = self.send_datas.yaw
                 pitch = self.send_datas.pitch
                 can_fire = self.send_datas.can_fire
-                gimbal_mode = 1
+                gimbal_mode = self.send_datas.gimbal_mode
                 # yaw = 0
                 # pitch = 0
                 # can_fire = 0
@@ -270,7 +283,7 @@ class SerialNode(Node):
             packet = data_payload + struct.pack("<H", checksum)
 
             self.serial.write(packet)
-            # print(header, linear_velocity_x,linear_velocity_y, gimbal_mode, round(yaw, 2), round(pitch, 2), can_fire)
+            # print(linear_velocity_x,linear_velocity_y)
         except Exception as e:
             self.get_logger().error(f"发送数据时出错: {str(e)}")
 

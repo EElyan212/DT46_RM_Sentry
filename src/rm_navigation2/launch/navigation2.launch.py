@@ -45,12 +45,12 @@ def generate_launch_description():
             name='rviz2',
             arguments=['-d', rviz_config_dir],
             parameters=[{'use_sim_time': use_sim_time}],
-            output='screen'),
+            output='log'),
 
         launch_ros.actions.Node(
             package='rm_navigation2',
             executable='map_clear',
             name='map_clear_node',
             parameters=[{'use_sim_time': use_sim_time}],
-            output='screen'),
+            output='log'),
     ])

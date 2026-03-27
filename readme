@@ -17,7 +17,7 @@ ros2 launch slam_toolbox online_async_launch.py use_sim_time:=True
 ros2 run teleop_twist_keyboard teleop_twist_keyboard
 
 #保存地图到当前目录
-ros2 run nav2_map_server map_saver_cli -f room
+ros2 run nav2_map_server map_saver_cli -f roomer
 
 #代价地图清理
 ros2 run rm_navigation2 map_clear
