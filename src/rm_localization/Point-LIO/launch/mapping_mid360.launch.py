@@ -8,46 +8,48 @@ import os
 
 
 def generate_launch_description():
-    # Declare the RViz argument
+    # 声明 RViz 参数
     rviz_arg = DeclareLaunchArgument(
-        'rviz', default_value='false',
+        'rviz', default_value='True',
         description='Flag to launch RViz.')
 
-    # Node parameters, including those from the YAML configuration file
+    # 获取 YAML 配置文件路径
+    config_path = PathJoinSubstitution([
+        FindPackageShare('point_lio'),
+        'config', 'mid360.yaml'
+    ])
+
+    # 节点参数：回归原生 Point-LIO 逻辑
     laser_mapping_params = [
-        PathJoinSubstitution([
-            FindPackageShare('point_lio'),
-            'config', 'mid360.yaml'
-        ]),
+        config_path,
         {
-            'use_imu_as_input': False,  # Change to True to use IMU as input of Point-LIO
-            'prop_at_freq_of_imu': True,
-            'check_satu': True,
-            'init_map_size': 10,
-            'point_filter_num': 3,  # Options: 1, 3
-            'space_down_sample': True,
-            'filter_size_surf': 0.5,  # Options: 0.5, 0.3, 0.2, 0.15, 0.1
-            'filter_size_map': 0.5,  # Options: 0.5, 0.3, 0.15, 0.1
-            'cube_side_length': 1000.0,  # Option: 1000
-            'runtime_pos_log_enable': False,  # Option: True
+            # --- 回归官方默认设置 ---
+            'use_imu_as_input': True,          
+            'prop_at_freq_of_imu': True,       
+            'publish.tf_send_en': True,        # 必须由节点发送 TF
+            'publish.path_en': True,
+            
+            # --- 移除 common.map_frame 和 common.body_frame 覆盖 ---
+            # 让代码使用 .cpp 里默认的 camera_init 和 body
         }
     ]
 
-    # Node definition for laserMapping with Point-LIO
+    # Point-LIO 主节点定义
     laser_mapping_node = Node(
         package='point_lio',
         executable='pointlio_mapping',
         name='laserMapping',
         output='screen',
         parameters=laser_mapping_params,
+        # --- 移除 remappings ---
+        # 此时先不强制映射为 /odom，先看原生话题 /aft_mapped_to_init 是否稳定
         env={
             **os.environ,  
             "LD_PRELOAD": "/usr/lib/x86_64-linux-gnu/libusb-1.0.so.0"
         }
-        # prefix='gdb -ex run --args'
     )
 
-    # Conditional RViz node launch
+    # RViz 节点定义（使用你恢复后的官方原始 rviz 配置文件）
     rviz_node = Node(
         package='rviz2',
         executable='rviz2',
@@ -60,7 +62,7 @@ def generate_launch_description():
         prefix='nice'
     )
 
-    # Assemble the launch description
+    # 组装 Launch 描述
     ld = LaunchDescription([
         rviz_arg,
         laser_mapping_node,

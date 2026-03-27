@@ -40,7 +40,7 @@ Visualization Manager:
           Value: true
         base_link:
           Value: true
-        odom:
+        camera_init:
           Value: true
         camera_link:
           Value: true
@@ -66,8 +66,8 @@ Visualization Manager:
       Show Axes: true
       Show Names: false
       Tree:
-        odom:
-          base_link:
+        camera_init:
+          aft_mapped:
             {}
       Update Interval: 0
       Value: true
@@ -243,7 +243,7 @@ Visualization Manager:
   Enabled: true
   Global Options:
     Background Color: 0; 0; 0
-    Fixed Frame: odom
+    Fixed Frame: camera_init
     Frame Rate: 30
   Name: root
   Tools:

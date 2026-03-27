@@ -1,7 +1,7 @@
 /**:
     ros__parameters:
         # --- 系统核心控制 ---
-        use_imu_as_input: True                             # 设置为 True 时，将 IMU 动力学模型作为状态预测的输入（Point-LIO 核心特性）
+        use_imu_as_input: False                             # 设置为 True 时，将 IMU 动力学模型作为状态预测的输入（Point-LIO 核心特性）
         prop_at_freq_of_imu: True                          # 是否按照 IMU 的高频率进行状态递推/发布
         check_satu: True                                   # 是否检查 IMU 是否达到量程饱和（如剧烈运动导致的截断）
         init_map_size: 10                                  # 初始地图窗口大小
@@ -21,6 +21,10 @@
             cut_frame: False                               # 是否将一个大的 LiDAR 帧切割成多个子帧处理（降低延迟）
             cut_frame_time_interval: 0.1                   # 切割时间间隔，应为 LiDAR 频率倒数的整数倍
             time_diff_lidar_to_imu: 0.0                    # LiDAR 与 IMU 之间的时间偏移校准值（硬件同步良好则设为0）
+        # 强行让 Point-LIO 输出 RViz 配置文件需要的名字
+
+            map_frame: "odom"          # 对应你配置里的 Fixed Frame
+            body_frame: "base_link"    # 对应你配置里的机器人本体
 
         # --- 先验点云配置 ---
         prior_pcd:
@@ -37,7 +41,7 @@
 
         # --- 算法映射/建图相关参数 ---
         mapping:
-            imu_en: True                                   # 是否启用 IMU 辅助
+            imu_en: False                                   # 是否启用 IMU 辅助
             extrinsic_est_en: False                        # 是否在线估计外参（剧烈运动建议设为 False，使用预标定值）
             imu_time_inte: 0.003                           # IMU 采样时间间隔（1 / IMU频率）
             lidar_time_inte: 0.1                           # LiDAR 采样时间间隔（1 / LiDAR频率）

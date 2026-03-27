@@ -1,88 +1,47 @@
 cmake_minimum_required(VERSION 3.5)
 project(pointcloud_to_laserscan)
 
-# 1. 查找基础构建工具
 find_package(ament_cmake_auto REQUIRED)
-
-# 2. 显式查找所有必要的 ROS 2 依赖包
 find_package(rclcpp REQUIRED)
 find_package(sensor_msgs REQUIRED)
 find_package(message_filters REQUIRED)
 find_package(tf2_ros REQUIRED)
-find_package(tf2_sensor_msgs REQUIRED)   # 新增
-find_package(laser_geometry REQUIRED)    # 新增
+find_package(tf2_sensor_msgs REQUIRED)
+find_package(laser_geometry REQUIRED)
 find_package(pcl_conversions REQUIRED)
 find_package(pcl_ros REQUIRED)
-
-# 3. 显式查找 PCL
 find_package(PCL REQUIRED COMPONENTS common filters)
 
-# 4. 自动同步 package.xml 依赖
+# 自动同步依赖
 ament_auto_find_build_dependencies()
 
-# --- 5. LaserScan To PointCloud 库 ---
-add_library(laserscan_to_pointcloud SHARED
-  src/laserscan_to_pointcloud_node.cpp
-)
+# --- 直接编译可执行文件 ---
+# 不再创建 library，直接把源文件塞进 executable
+add_executable(pointcloud_to_laserscan_node src/pointcloud_to_laserscan_node.cpp)
 
-ament_target_dependencies(laserscan_to_pointcloud
-  rclcpp
-  sensor_msgs
-  message_filters
-  tf2_ros
-  laser_geometry   # 解决 laser_geometry.hpp 缺失
-  pcl_conversions
+ament_target_dependencies(pointcloud_to_laserscan_node
+  rclcpp 
+  sensor_msgs 
+  message_filters 
+  tf2_ros 
+  tf2_sensor_msgs 
+  pcl_conversions 
   pcl_ros
 )
 
-target_include_directories(laserscan_to_pointcloud PUBLIC 
+target_include_directories(pointcloud_to_laserscan_node PUBLIC 
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
   ${PCL_INCLUDE_DIRS}
 )
-target_link_libraries(laserscan_to_pointcloud ${PCL_LIBRARIES})
 
-rclcpp_components_register_node(laserscan_to_pointcloud
-  PLUGIN "pointcloud_to_laserscan::LaserScanToPointCloudNode"
-  EXECUTABLE laserscan_to_pointcloud_node
-)
+target_link_libraries(pointcloud_to_laserscan_node ${PCL_LIBRARIES})
 
-# --- 6. PointCloud To LaserScan 库 ---
-add_library(pointcloud_to_laserscan SHARED
-  src/pointcloud_to_laserscan_node.cpp
+# --- 安装配置 ---
+install(TARGETS pointcloud_to_laserscan_node
+  DESTINATION lib/${PROJECT_NAME}
 )
 
-ament_target_dependencies(pointcloud_to_laserscan
-  rclcpp
-  sensor_msgs
-  message_filters
-  tf2_ros
-  tf2_sensor_msgs  # 解决 tf2_sensor_msgs.hpp 缺失
-  pcl_conversions
-  pcl_ros
-)
+# 安装 launch 和 config (如果有的话)
+install(DIRECTORY launch DESTINATION share/${PROJECT_NAME})
 
-target_include_directories(pointcloud_to_laserscan PUBLIC 
-  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
-  ${PCL_INCLUDE_DIRS}
-)
-target_link_libraries(pointcloud_to_laserscan ${PCL_LIBRARIES})
-
-rclcpp_components_register_node(pointcloud_to_laserscan
-  PLUGIN "pointcloud_to_laserscan::PointCloudToLaserScanNode"
-  EXECUTABLE pointcloud_to_laserscan_node
-)
-
-# --- 7. Dummy PointCloud Publisher ---
-add_executable(dummy_pointcloud_publisher
-  src/dummy_pointcloud_publisher.cpp
-)
-ament_target_dependencies(dummy_pointcloud_publisher rclcpp sensor_msgs)
-target_include_directories(dummy_pointcloud_publisher PRIVATE 
-  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
-)
-
-# --- 8. 打包 ---
-ament_auto_package(
-  USE_SCOPED_HEADER_INSTALL_DIR
-  INSTALL_TO_SHARE launch 
-)
+ament_auto_package()
