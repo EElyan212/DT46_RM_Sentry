@@ -42,22 +42,22 @@ def generate_launch_description():
         parameters=livox_ros2_params
         )
 
-    # livox_rviz = Node(
-    #         package='rviz2',
-    #         executable='rviz2',
-    #         output='screen',
-    #         arguments=['--display-config', rviz_config_path]
-    #     )
+    livox_rviz = Node(
+            package='rviz2',
+            executable='rviz2',
+            output='screen',
+            arguments=['--display-config', rviz_config_path]
+        )
 
     return LaunchDescription([
         livox_driver,
-        # livox_rviz,
-        # launch.actions.RegisterEventHandler(
-        #     event_handler=launch.event_handlers.OnProcessExit(
-        #         target_action=livox_rviz,
-        #         on_exit=[
-        #             launch.actions.EmitEvent(event=launch.events.Shutdown()),
-        #         ]
-        #     )
-        # )
+        livox_rviz,
+        launch.actions.RegisterEventHandler(
+            event_handler=launch.event_handlers.OnProcessExit(
+                target_action=livox_rviz,
+                on_exit=[
+                    launch.actions.EmitEvent(event=launch.events.Shutdown()),
+                ]
+            )
+        )
     ])

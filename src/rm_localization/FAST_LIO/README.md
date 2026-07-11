@@ -81,7 +81,7 @@ You can also use the one I modified [livox_ros_driver2](https://github.com/Erics
 
 *Remarks:*
 - Since the FAST-LIO must support Livox serials LiDAR firstly, so the **livox_ros_driver** must be installed and **sourced** before run any FAST-LIO launch file.
-- How to source? The easiest way is add the line ``` source $Licox_ros_driver_dir$/devel/setup.bash ``` to the end of file ``` ~/.bashrc ```, where ``` $Licox_ros_driver_dir$ ``` is the directory of the livox ros driver workspace (should be the ``` ws_livox ``` directory if you completely followed the livox official document).
+- How to source? The easiest way is add the line ``` source $Livox_ros_driver_dir$/devel/setup.bash ``` to the end of file ``` ~/.bashrc ```, where ``` $Livox_ros_driver_dir$ ``` is the directory of the livox ros driver workspace (should be the ``` ws_livox ``` directory if you completely followed the livox official document).
 
 
 ## 2. Build
@@ -89,7 +89,7 @@ Clone the repository and colcon build:
 
 ```bash
     cd <ros2_ws>/src # cd into a ros2 workspace folder
-    git clone https://github.com/Ericsii/FAST_LIO.git --recursive
+    git clone https://github.com/Ericsii/FAST_LIO_ROS2.git --recursive
     cd ..
     rosdep install --from-paths src --ignore-src -y
     colcon build --symlink-install
@@ -141,7 +141,11 @@ Edit ``` config/avia.yaml ``` to set the below parameters:
 
 ### 3.4 PCD file save
 
-Set ``` pcd_save_enable ``` in launchfile to ``` 1 ```. All the scans (in global frame) will be accumulated and saved to the file ``` FAST_LIO/PCD/scans.pcd ``` after the FAST-LIO is terminated. ```pcl_viewer scans.pcd``` can visualize the point clouds.
+1. Enable `pcd_save.pcd_save_en` in the config file and set the `map_file_path` to the path where the map will be saved.
+2. Launch the fastlio2 according to README.
+3. Open RQt and switch to `Plugins->Services->Service Caller`. Trigger the service `/map_save`, then the pcd map file will be generated
+
+```pcl_viewer scans.pcd``` can visualize the point clouds.
 
 *Tips for pcl_viewer:*
 - change what to visualize/color by pressing keyboard 1,2,3,4,5 when pcl_viewer is running. 

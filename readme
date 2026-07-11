@@ -2,7 +2,7 @@
 #雷达驱动
 ros2 launch livox_ros_driver2 rviz_MID360_launch.py
 #pointclound2 to laserscan
-ros2 launch pointcloud_to_laserscan pointcloud_to_laserscan_launch.py 
+ros2 launch pointcloud_to_laserscan pointcloud_to_laserscan_launch.py
 #重新编译
 cd DT46_RM_Sentry
 
@@ -24,7 +24,7 @@ ros2 run rm_navigation2 map_clear
 
 #导航
 ros2 launch rm_navigation2 navigation2.launch.py
- 
+
 #总（雷达启动 点云转换 里程计）
 ros2 launch rm_application part1.launch.py rviz:=false
 
