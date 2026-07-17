@@ -1,7 +1,8 @@
 serial_node:
     ros__parameters:
-        port_name: "/dev/ttyPortMCU"
+        # port_name: "/dev/ttyPortMCU"
         # port_name: "/tmp/ttyV1"
+        port_name: "/dev/ttyACM0"
         baudrate: 115200
         timeout: 1.0
         write_timeout: 1.0

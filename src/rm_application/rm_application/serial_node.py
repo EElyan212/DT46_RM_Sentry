@@ -71,14 +71,14 @@ class SerialNode(Node):
                 )
             if self.serial.is_open:
                 self.get_logger().info(f"串口已打开: {self.port_name}")
-                self.receive_thread = threading.Thread(target=self.receive_data,daemon=True)  
-                # self.serial.setDaemon(True) 
+                self.receive_thread = threading.Thread(target=self.receive_data,daemon=True)
+                # self.serial.setDaemon(True)
                 self.receive_thread.start()
                 self.timer = self.create_timer(0.01, self.Send)
         except serial.SerialException as e:
             self.get_logger().error(f"创建串口时出错: {self.port_name} - {str(e)}")
-            raise e    
-            
+            raise e
+
     def get_params(self):
         """
         从 ROS 2 参数服务器声明并获取串口配置参数
@@ -88,7 +88,7 @@ class SerialNode(Node):
         self.declare_parameters(
             namespace='',
             parameters=[
-                ('port_name', '/dev/ttyUSB0'),
+                ('port_name', '/dev/ttyACM0'),
                 ('baudrate', 115200),
                 ('timeout', 1.0),            # 对应 YAML 中的 timeout
                 ('write_timeout', 1.0),      # 对应 YAML 中的 write_timeout
@@ -142,7 +142,7 @@ class SerialNode(Node):
         serial_decision_msg.color = 10
 
         # [确认配置]
-        # 总长 36 = 
+        # 总长 36 =
         # Header(1)
         # Color(1)+Roll(4)+Pitch(4)+Yaw(4)
         # vx(4)+vy(4)
@@ -159,7 +159,7 @@ class SerialNode(Node):
                 # print(header)
                 if not header or header[0] != self.serial_receive_header:
                     continue
-                
+
                 # print("帧头已找到")
                 # 2. 读取剩余数据 (40字节)
                 remaining_data = self.serial.read(packet_length - 1)
@@ -179,7 +179,7 @@ class SerialNode(Node):
 
                 # 解析收到的校验值 (小端序 unsigned short)
                 received_crc = struct.unpack('<H', checksum_bytes)[0]
-                
+
 
                 # 计算本地数据的 CRC16
                 # 注意：确保 get_crc16_check_sum 算法与下位机一致 (通常是 CRC-CCITT)
@@ -215,7 +215,7 @@ class SerialNode(Node):
                 serial_odo_msg.vy = vy
                 serial_odo_msg.yaw = yaw
                 self.pub_uart_receive_odo.publish(serial_odo_msg)
-                # print(serial_odo_msg)
+
                 #6.3 发布 Decision 消息
                 serial_decision_msg.header.stamp = self.get_clock().now().to_msg()
                 serial_decision_msg.color = detect_color
@@ -231,19 +231,12 @@ class SerialNode(Node):
                 serial_decision_msg.bullet_speed = bullet_speed
                 self.pub_uart_receive_decision.publish(serial_decision_msg)
 
-                # 不打印了，你echo吧
-                # self.sb_swj += 1
-                # if self.sb_swj % 100 == 0:
-                # print(serial_decision_msg)
-                #     self.sb_swj = 0
-                # 使用 debug 级别，正常运行时不会在终端显示
-                # self.get_logger().debug(str(serial_decision_msg))
-                
+
             except (serial.SerialException, struct.error, ValueError) as e:
                 self.get_logger().error(f"接收数据异常: {str(e)}")
                 self.reopen_port()
 
-    
+
     def Send(self):
         if self.is_reconnecting:
             return  # 如果正在重连，跳过本次发送
@@ -269,13 +262,13 @@ class SerialNode(Node):
             #帧头，x线速度，y线速度，小陀螺模式， 云台yaw，云台pitc，开火，帧尾
             data_payload = struct.pack(
                 '<Bffiffi',
-                header, 
+                header,
                 linear_velocity_x,
-                linear_velocity_y, 
+                linear_velocity_y,
                 gimbal_mode,
-                yaw, 
-                pitch, 
-                can_fire, 
+                yaw,
+                pitch,
+                can_fire,
                 )
 
             checksum = get_crc16_check_sum(data_payload)
@@ -284,6 +277,7 @@ class SerialNode(Node):
 
             self.serial.write(packet)
             # print(linear_velocity_x,linear_velocity_y)
+            print(packet)
         except Exception as e:
             self.get_logger().error(f"发送数据时出错: {str(e)}")
 
@@ -295,12 +289,12 @@ class SerialNode(Node):
             self.is_reconnecting = True
 
         self.get_logger().warn("正在重连串口...")
-        
+
         while rclpy.ok():
             try:
                 if self.serial and self.serial.is_open:
                     self.serial.close()
-                
+
                 # 重新实例化串口对象，处理底层设备节点变更
                 self.serial = serial.Serial(
                     port=self.port_name,
@@ -310,7 +304,7 @@ class SerialNode(Node):
                 )
                 self.get_logger().info("串口重连成功")
                 break  # 重连成功，跳出循环
-                
+
             except serial.SerialException as e:
                 self.get_logger().error(f"串口重连失败，1秒后重试: {str(e)}")
                 time.sleep(1)
@@ -346,4 +340,3 @@ def main(args=None):
             rclpy.shutdown()
 if __name__ == "__main__":
     main()
-    

@@ -1,6 +1,7 @@
 #常用命令
 #雷达驱动
 ros2 launch livox_ros_driver2 rviz_MID360_launch.py
+ros2 launch livox_ros_driver2 msg_MID360_launch.py
 #pointclound2 to laserscan
 ros2 launch pointcloud_to_laserscan pointcloud_to_laserscan_launch.py
 #重新编译
@@ -37,3 +38,5 @@ ros2 run rqt_reconfigure rqt_reconfigure
 #decision
  ros2 run rm_application rm_decision --ros-args --params-file src/rm_application/config/decision_params.yaml
 
+#清空 Fast-DDS 残留的共享内存文件
+rm -rf /dev/shm/fastrtps*
