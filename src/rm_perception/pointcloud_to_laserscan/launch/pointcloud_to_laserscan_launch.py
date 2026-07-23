@@ -11,16 +11,30 @@ def generate_launch_description():
             description='Namespace for sample topics'
         ),
 
-        # ================== 新增的静态 TF 广播节点 ==================
+        # ================== 静态 TF 广播 ==================
+        # 参数顺序: x, y, z, yaw, pitch, roll, 父, 子
+        #
+        # livox_frame → base_footprint（URDF 反向）
         Node(
             package='tf2_ros',
             executable='static_transform_publisher',
-            name='static_tf_base_to_livox_frame',
-            # 参数顺序: x, y, z, roll, pitch, yaw, 父坐标系, 子坐标系
+            name='static_tf_livox_to_base',
             arguments=[
+                '0.0', '0.37', '-0.15',
+                '0.0', '0.0', '1.571',
+                'livox_frame', 'base_footprint'
+            ],
+            output='screen'
+        ),
+        # odom → livox_odom（只平移，旋转已由 Point-LIO IMU 初始化处理）
+        Node(
+            package='tf2_ros',
+            executable='static_transform_publisher',
+            name='static_tf_odom_to_livox_odom',
+            arguments=[
+                '0.0', '0.15', '0.37',
                 '0.0', '0.0', '0.0',
-                '0.0', '0.0', '0.0',
-                'base_footprint', 'livox_frame'
+                'odom', 'livox_odom'
             ],
             output='screen'
         ),

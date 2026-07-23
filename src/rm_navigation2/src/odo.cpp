@@ -32,7 +32,7 @@ public:
         geometry_msgs::msg::TransformStamped transform;
             transform.header.stamp=this->get_clock()->now();
             transform.header.frame_id = "odom";
-            transform.child_frame_id = "base_link";
+            transform.child_frame_id = "base_footprint";
             transform.transform.translation.x=x;
             transform.transform.translation.y=y;
             transform.transform.translation.z=0.0;
