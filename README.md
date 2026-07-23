@@ -2,6 +2,7 @@
 #雷达驱动
 ros2 launch livox_ros_driver2 rviz_MID360_launch.py
 ros2 launch livox_ros_driver2 msg_MID360_launch.py
+ros2 launch point_lio mapping_mid360.launch.py
 #pointclound2 to laserscan
 ros2 launch pointcloud_to_laserscan pointcloud_to_laserscan_launch.py
 #重新编译

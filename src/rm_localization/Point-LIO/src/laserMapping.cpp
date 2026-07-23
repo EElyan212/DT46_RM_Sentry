@@ -569,7 +569,7 @@ void publish_init_kdtree(const rclcpp::Publisher<sensor_msgs::msg::PointCloud2>:
     pcl::toROSMsg(*laserCloudInit, laserCloudmsg);
 
     laserCloudmsg.header.stamp = get_ros_time(lidar_end_time);
-    laserCloudmsg.header.frame_id = "odom";
+    laserCloudmsg.header.frame_id = "livox_odom";
     pubLaserCloudFullRes->publish(laserCloudmsg);
 }
 
@@ -577,7 +577,7 @@ PointCloudXYZI::Ptr pcl_wait_pub(new PointCloudXYZI(500000, 1));
 PointCloudXYZI::Ptr pcl_wait_save(new PointCloudXYZI());
 
 /**
- * @brief 发布当前帧变换到世界坐标系（`odom`）下的全量注册点云，并控制 PCD 文件本地固化写盘
+ * @brief 发布当前帧变换到世界坐标系（`livox_odom`）下的全量注册点云，并控制 PCD 文件本地固化写盘
  */
 void publish_frame_world(const rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr &pubLaserCloudFullRes) {
     if (scan_pub_en) {
@@ -596,7 +596,7 @@ void publish_frame_world(const rclcpp::Publisher<sensor_msgs::msg::PointCloud2>:
         pcl::toROSMsg(*laserCloudWorld, laserCloudmsg);
 
         laserCloudmsg.header.stamp = get_ros_time(lidar_end_time);
-        laserCloudmsg.header.frame_id = "odom";
+        laserCloudmsg.header.frame_id = "livox_odom";
         pubLaserCloudFullRes->publish(laserCloudmsg);
         publish_count -= PUBFRAME_PERIOD;
     }
@@ -645,7 +645,7 @@ void publish_frame_body(const rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::
     sensor_msgs::msg::PointCloud2 laserCloudmsg;
     pcl::toROSMsg(*laserCloudIMUBody, laserCloudmsg);
     laserCloudmsg.header.stamp = get_ros_time(lidar_end_time);
-    laserCloudmsg.header.frame_id = "base_footprint";
+    laserCloudmsg.header.frame_id = "livox_frame";
     pubLaserCloudFull_body->publish(laserCloudmsg);
     publish_count -= PUBFRAME_PERIOD;
 }
@@ -679,8 +679,8 @@ void set_posestamp(T &out) {
  */
 void publish_odometry(const rclcpp::Publisher<nav_msgs::msg::Odometry>::SharedPtr &pubOdomAftMapped,
                       std::shared_ptr<tf2_ros::TransformBroadcaster> &tf_br) {
-    odomAftMapped.header.frame_id = "odom";
-    odomAftMapped.child_frame_id = "base_footprint";
+    odomAftMapped.header.frame_id = "livox_odom";
+    odomAftMapped.child_frame_id = "livox_frame";
     if (publish_odometry_without_downsample) {
         odomAftMapped.header.stamp = get_ros_time(time_current);
     } else {
@@ -691,8 +691,8 @@ void publish_odometry(const rclcpp::Publisher<nav_msgs::msg::Odometry>::SharedPt
     pubOdomAftMapped->publish(odomAftMapped);
 
     geometry_msgs::msg::TransformStamped transform;
-    transform.header.frame_id = "odom";
-    transform.child_frame_id = "base_footprint";
+    transform.header.frame_id = "livox_odom";
+    transform.child_frame_id = "livox_frame";
     transform.transform.translation.x = odomAftMapped.pose.pose.position.x;
     transform.transform.translation.y = odomAftMapped.pose.pose.position.y;
     transform.transform.translation.z = odomAftMapped.pose.pose.position.z;
@@ -710,7 +710,7 @@ void publish_odometry(const rclcpp::Publisher<nav_msgs::msg::Odometry>::SharedPt
 void publish_path(const rclcpp::Publisher<nav_msgs::msg::Path>::SharedPtr &pubPath) {
     set_posestamp(msg_body_pose.pose);
     msg_body_pose.header.stamp = get_ros_time(lidar_end_time);
-    msg_body_pose.header.frame_id = "odom";
+    msg_body_pose.header.frame_id = "livox_odom";
     static int jjj = 0;
     jjj++;
     {
@@ -729,7 +729,7 @@ int main(int argc, char **argv) {
     cout << "lidar_type: " << lidar_type << endl;
 
     path.header.stamp = get_ros_time(lidar_end_time);
-    path.header.frame_id = "odom";
+    path.header.frame_id = "livox_odom";
 
     /*** 各种计数与全局平均耗时统计标量初始化 ***/
     int frame_num = 0;

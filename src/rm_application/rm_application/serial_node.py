@@ -231,7 +231,7 @@ class SerialNode(Node):
                 serial_decision_msg.bullet_speed = bullet_speed
                 self.pub_uart_receive_decision.publish(serial_decision_msg)
 
-
+ 
             except (serial.SerialException, struct.error, ValueError) as e:
                 self.get_logger().error(f"接收数据异常: {str(e)}")
                 self.reopen_port()
