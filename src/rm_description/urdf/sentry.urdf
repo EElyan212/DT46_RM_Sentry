@@ -1,0 +1,231 @@
+<?xml version="1.0" ?>
+<!-- Generated using onshape-to-robot -->
+<!-- Onshape https://cad.onshape.com/documents/be6f6668384a7c322284fa37/w/70a8de88a5fe65e3dfa6f16d/e/c49365e92846c43250251d29 -->
+<robot name="sentry">
+  <!-- 虚拟的 base_footprint，代表机器人在地面的投影 -->
+  <link name="base_footprint"/>
+
+  <!-- 将 base_footprint 作为父节点，连接到现有的底盘 classis -->
+  <joint name="base_footprint_joint" type="fixed">
+    <parent link="base_footprint"/>
+    <child link="classis"/>
+    <!-- 【重要】修改这里的 Z 值：
+         如果 classis 坐标系的原点距离地面是 5 厘米，这里就写 0.05。
+         X 和 Y 保持为 0，因为投影通常就在正下方。 -->
+    <origin xyz="0 0 0.05" rpy="0 0 0"/>
+  </joint>
+  <!-- Link classis -->
+  <link name="classis">
+    <inertial>
+      <origin xyz="-0.0638692 0.011237 0.0503085" rpy="0 0 0"/>
+      <mass value="55.5534"/>
+      <inertia ixx="0.680996" ixy="0.00610949" ixz="0.00207458" iyy="0.680996" iyz="-0.00207458" izz="1.2496"/>
+    </inertial>
+    <!-- Part wheel1 -->
+    <visual>
+      <origin xyz="-0.21032 -0.139739 0.011815" rpy="0 0 -0.785398"/>
+      <geometry>
+        <mesh filename="package://assets/wheel1.stl"/>
+      </geometry>
+      <material name="wheel1_material">
+        <color rgba="0.901961 0.901961 0.901961 1"/>
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="-0.21032 -0.139739 0.011815" rpy="0 0 -0.785398"/>
+      <geometry>
+        <mesh filename="package://assets/wheel1.stl"/>
+      </geometry>
+    </collision>
+    <!-- Part wheel1_2 -->
+    <visual>
+      <origin xyz="0.0871063 0.157688 0.011815" rpy="-3.14159 -0 -0.785398"/>
+      <geometry>
+        <mesh filename="package://assets/wheel1.stl"/>
+      </geometry>
+      <material name="wheel1_2_material">
+        <color rgba="0.901961 0.901961 0.901961 1"/>
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="0.0871063 0.157688 0.011815" rpy="-3.14159 -0 -0.785398"/>
+      <geometry>
+        <mesh filename="package://assets/wheel1.stl"/>
+      </geometry>
+    </collision>
+    <!-- Part wheel1_3 -->
+    <visual>
+      <origin xyz="0.0871063 -0.139739 0.011815" rpy="-0 0 0.785398"/>
+      <geometry>
+        <mesh filename="package://assets/wheel1.stl"/>
+      </geometry>
+      <material name="wheel1_3_material">
+        <color rgba="0.901961 0.901961 0.901961 1"/>
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="0.0871063 -0.139739 0.011815" rpy="-0 0 0.785398"/>
+      <geometry>
+        <mesh filename="package://assets/wheel1.stl"/>
+      </geometry>
+    </collision>
+    <!-- Part classis -->
+    <visual>
+      <origin xyz="-0.0616068 0.0239746 -0.013185" rpy="0 -0 0"/>
+      <geometry>
+        <mesh filename="package://assets/classis.stl"/>
+      </geometry>
+      <material name="classis_material">
+        <color rgba="0.243137 0.231373 0.2 1"/>
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="-0.0616068 0.0239746 -0.013185" rpy="0 -0 0"/>
+      <geometry>
+        <mesh filename="package://assets/classis.stl"/>
+      </geometry>
+    </collision>
+    <!-- Part wheel1_4 -->
+    <visual>
+      <origin xyz="-0.21032 0.157688 0.011815" rpy="3.14159 0 0.785398"/>
+      <geometry>
+        <mesh filename="package://assets/wheel1.stl"/>
+      </geometry>
+      <material name="wheel1_4_material">
+        <color rgba="0.901961 0.901961 0.901961 1"/>
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="-0.21032 0.157688 0.011815" rpy="3.14159 0 0.785398"/>
+      <geometry>
+        <mesh filename="package://assets/wheel1.stl"/>
+      </geometry>
+    </collision>
+  </link>
+  <!-- Link gimbal -->
+  <link name="gimbal">
+    <inertial>
+      <origin xyz="0 -0.0053915 -0.0375237" rpy="0 0 0"/>
+      <mass value="2.78333"/>
+      <inertia ixx="0.0231339" ixy="-0" ixz="0" iyy="0.0135069" iyz="-0.00206301" izz="0.0180887"/>
+    </inertial>
+    <!-- Part gimbal -->
+    <visual>
+      <origin xyz="-0.08 0.095 0.005" rpy="3.14159 -0 -0"/>
+      <geometry>
+        <mesh filename="package://assets/gimbal.stl"/>
+      </geometry>
+      <material name="gimbal_material">
+        <color rgba="0.439216 0.47451 0.501961 1"/>
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="-0.08 0.095 0.005" rpy="3.14159 -0 -0"/>
+      <geometry>
+        <mesh filename="package://assets/gimbal.stl"/>
+      </geometry>
+    </collision>
+  </link>
+  <!-- Frame livox_frame (dummy link + fixed joint) -->
+  <link name="livox_frame">
+    <origin xyz="0 0 0" rpy="0 -0 0"/>
+    <inertial>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <mass value="1e-9"/>
+      <inertia ixx="0" ixy="0" ixz="0" iyy="0" iyz="0" izz="0"/>
+    </inertial>
+  </link>
+  <joint name="livox_frame_frame" type="fixed">
+    <origin xyz="0 0.150917 0.17494" rpy="-1.5708 0 0"/>
+    <parent link="gimbal"/>
+    <child link="livox_frame"/>
+    <axis xyz="0 0 0"/>
+  </joint>
+  <!-- Link muzzle -->
+  <link name="muzzle">
+    <inertial>
+      <origin xyz="0.0331814 0.0274197 -0.105" rpy="0 0 0"/>
+      <mass value="4.68591"/>
+      <inertia ixx="0.0129234" ixy="8.071e-05" ixz="-5.23e-10" iyy="0.019742" iyz="2.1e-10" izz="0.0130363"/>
+    </inertial>
+    <!-- Part muzzle -->
+    <visual>
+      <origin xyz="-0.105 -0.0387176 -0.13" rpy="-1.5708 0 0"/>
+      <geometry>
+        <mesh filename="package://assets/muzzle.stl"/>
+      </geometry>
+      <material name="muzzle_material">
+        <color rgba="0.384314 0.356863 0.262745 1"/>
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="-0.105 -0.0387176 -0.13" rpy="-1.5708 0 0"/>
+      <geometry>
+        <mesh filename="package://assets/muzzle.stl"/>
+      </geometry>
+    </collision>
+  </link>
+  <!-- Link camera -->
+  <link name="camera">
+    <inertial>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <mass value="1e-09"/>
+      <inertia ixx="1e-09" ixy="0" ixz="0" iyy="1e-09" iyz="0" izz="1e-09"/>
+    </inertial>
+    <!-- Part camera -->
+    <visual>
+      <origin xyz="-0 -0 -0.025" rpy="-0 0 -0"/>
+      <geometry>
+        <mesh filename="package://assets/camera.stl"/>
+      </geometry>
+      <material name="camera_material">
+        <color rgba="0.615686 0.811765 0.929412 1"/>
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="-0 -0 -0.025" rpy="-0 0 -0"/>
+      <geometry>
+        <mesh filename="package://assets/camera.stl"/>
+      </geometry>
+    </collision>
+  </link>
+  <!-- Frame imu_up (dummy link + fixed joint) -->
+  <link name="imu_up">
+    <origin xyz="0 0 0" rpy="0 -0 0"/>
+    <inertial>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <mass value="1e-9"/>
+      <inertia ixx="0" ixy="0" ixz="0" iyy="0" iyz="0" izz="0"/>
+    </inertial>
+  </link>
+  <joint name="imu_up_frame" type="fixed">
+    <origin xyz="0 -0 -0.0525" rpy="-0 -0 -0"/>
+    <parent link="camera"/>
+    <child link="imu_up"/>
+    <axis xyz="0 0 0"/>
+  </joint>
+  <!-- Joint from muzzle to camera -->
+  <joint name="camera" type="revolute">
+    <origin xyz="0.0325532 0.105 0.07 " rpy="0 0 0"/>
+    <parent link="muzzle"/>
+    <child link="camera"/>
+    <axis xyz="0 0 1"/>
+    <limit effort="10" velocity="10" lower="0" upper="0"/>
+  </joint>
+  <!-- Joint from gimbal to muzzle -->
+  <joint name="gimbal_pitch" type="revolute">
+    <origin xyz="0 -0.105 0.175" rpy="0 0.00152726 -0"/>
+    <parent link="gimbal"/>
+    <child link="muzzle"/>
+    <axis xyz="0 1 0"/>
+    <limit effort="10" velocity="10" lower="-3.141592653589793" upper="3.141592653589793"/>
+  </joint>
+  <!-- Joint from classis to gimbal -->
+  <joint name="gimbal_yaw" type="revolute">
+    <origin xyz="0 0 0.131815" rpy="0 0 0"/>
+    <parent link="classis"/>
+    <child link="gimbal"/>
+    <axis xyz="0 0 1"/>
+    <limit effort="10" velocity="10" lower="-3.141592653589793" upper="3.141592653589793"/>
+  </joint>
+</robot>
