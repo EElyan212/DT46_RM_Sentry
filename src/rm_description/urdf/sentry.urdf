@@ -5,14 +5,11 @@
   <!-- 虚拟的 base_footprint，代表机器人在地面的投影 -->
   <link name="base_footprint"/>
 
-  <!-- 将 base_footprint 作为父节点，连接到现有的底盘 classis -->
+  <!-- base_footprint 挂在底盘 classis 下方 -->
   <joint name="base_footprint_joint" type="fixed">
-    <parent link="base_footprint"/>
-    <child link="classis"/>
-    <!-- 【重要】修改这里的 Z 值：
-         如果 classis 坐标系的原点距离地面是 5 厘米，这里就写 0.05。
-         X 和 Y 保持为 0，因为投影通常就在正下方。 -->
-    <origin xyz="0 0 0.05" rpy="0 0 0"/>
+    <parent link="classis"/>
+    <child link="base_footprint"/>
+    <origin xyz="0 0 -0.05" rpy="0 0 0"/>
   </joint>
   <!-- Link classis -->
   <link name="classis">
@@ -126,7 +123,7 @@
       </geometry>
     </collision>
   </link>
-  <!-- Frame livox_frame (dummy link + fixed joint) -->
+  <!-- Frame livox_frame (dummy link + fixed joint) 现在作为整棵 TF 树的基坐标系 -->
   <link name="livox_frame">
     <origin xyz="0 0 0" rpy="0 -0 0"/>
     <inertial>
@@ -136,9 +133,9 @@
     </inertial>
   </link>
   <joint name="livox_frame_frame" type="fixed">
-    <origin xyz="0 0.150917 0.17494" rpy="-1.5708 0 0"/>
-    <parent link="gimbal"/>
-    <child link="livox_frame"/>
+    <origin xyz="0 0.17494 -0.150917" rpy="1.5708 0 0"/>
+    <parent link="livox_frame"/>
+    <child link="gimbal"/>
     <axis xyz="0 0 0"/>
   </joint>
   <!-- Link muzzle -->
@@ -220,11 +217,11 @@
     <axis xyz="0 1 0"/>
     <limit effort="10" velocity="10" lower="-3.141592653589793" upper="3.141592653589793"/>
   </joint>
-  <!-- Joint from classis to gimbal -->
+  <!-- Joint from gimbal to classis（因 livox_frame 为基坐标系而反向） -->
   <joint name="gimbal_yaw" type="revolute">
-    <origin xyz="0 0 0.131815" rpy="0 0 0"/>
-    <parent link="classis"/>
-    <child link="gimbal"/>
+    <origin xyz="0 0 -0.131815" rpy="0 0 0"/>
+    <parent link="gimbal"/>
+    <child link="classis"/>
     <axis xyz="0 0 1"/>
     <limit effort="10" velocity="10" lower="-3.141592653589793" upper="3.141592653589793"/>
   </joint>
