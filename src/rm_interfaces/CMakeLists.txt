@@ -17,6 +17,7 @@ rosidl_generate_interfaces(${PROJECT_NAME}
   "msg/GimbalControl.msg"
   "msg/Senddata.msg"
   "msg/OdoMsg.msg"
+  "srv/Stalkerdata.srv"
   DEPENDENCIES std_msgs
 )
 if(BUILD_TESTING)

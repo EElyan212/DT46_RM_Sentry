@@ -2,14 +2,32 @@
 <!-- Generated using onshape-to-robot -->
 <!-- Onshape https://cad.onshape.com/documents/be6f6668384a7c322284fa37/w/70a8de88a5fe65e3dfa6f16d/e/c49365e92846c43250251d29 -->
 <robot name="sentry">
+  <!-- Frame livox_frame (dummy link) 作为整棵 TF 树的基坐标系 -->
+  <link name="livox_frame">
+    <origin xyz="0 0 0" rpy="0 -0 0"/>
+    <inertial>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <mass value="1e-9"/>
+      <inertia ixx="0" ixy="0" ixz="0" iyy="0" iyz="0" izz="0"/>
+    </inertial>
+  </link>
+
   <!-- 虚拟的 base_footprint，代表机器人在地面的投影 -->
   <link name="base_footprint"/>
 
-  <!-- base_footprint 挂在底盘 classis 下方 -->
-  <joint name="base_footprint_joint" type="fixed">
-    <parent link="classis"/>
+  <!-- livox_frame -> base_footprint（保留原雷达安装外参与底盘关系） -->
+  <joint name="livox_frame_joint" type="fixed">
+    <origin xyz="0 0.356755 -0.150917" rpy="1.5708 0 0"/>
+    <parent link="livox_frame"/>
     <child link="base_footprint"/>
-    <origin xyz="0 0 -0.05" rpy="0 0 0"/>
+    <axis xyz="0 0 0"/>
+  </joint>
+
+  <!-- base_footprint 作为父节点，连接到底盘 classis（classis 原点离地 5cm） -->
+  <joint name="base_footprint_joint" type="fixed">
+    <parent link="base_footprint"/>
+    <child link="classis"/>
+    <origin xyz="0 0 0.05" rpy="0 0 0"/>
   </joint>
   <!-- Link classis -->
   <link name="classis">
@@ -123,21 +141,6 @@
       </geometry>
     </collision>
   </link>
-  <!-- Frame livox_frame (dummy link + fixed joint) 现在作为整棵 TF 树的基坐标系 -->
-  <link name="livox_frame">
-    <origin xyz="0 0 0" rpy="0 -0 0"/>
-    <inertial>
-      <origin xyz="0 0 0" rpy="0 0 0"/>
-      <mass value="1e-9"/>
-      <inertia ixx="0" ixy="0" ixz="0" iyy="0" iyz="0" izz="0"/>
-    </inertial>
-  </link>
-  <joint name="livox_frame_frame" type="fixed">
-    <origin xyz="0 0.17494 -0.150917" rpy="1.5708 0 0"/>
-    <parent link="livox_frame"/>
-    <child link="gimbal"/>
-    <axis xyz="0 0 0"/>
-  </joint>
   <!-- Link muzzle -->
   <link name="muzzle">
     <inertial>
@@ -195,33 +198,32 @@
       <inertia ixx="0" ixy="0" ixz="0" iyy="0" iyz="0" izz="0"/>
     </inertial>
   </link>
-  <joint name="imu_up_frame" type="fixed">
-    <origin xyz="0 -0 -0.0525" rpy="-0 -0 -0"/>
-    <parent link="camera"/>
+  <!-- classis -> imu_up（与 gimbal、muzzle、camera 并列） -->
+  <joint name="imu_up_joint" type="fixed">
+    <origin xyz="0.0326601 0 0.3242652" rpy="0 0.00152726 0"/>
+    <parent link="classis"/>
     <child link="imu_up"/>
     <axis xyz="0 0 0"/>
   </joint>
-  <!-- Joint from muzzle to camera -->
-  <joint name="camera" type="revolute">
-    <origin xyz="0.0325532 0.105 0.07 " rpy="0 0 0"/>
-    <parent link="muzzle"/>
+  <!-- classis -> camera（与 gimbal、muzzle、imu_up 并列） -->
+  <joint name="camera_joint" type="fixed">
+    <origin xyz="0.0326601 0 0.3767652" rpy="0 0.00152726 0"/>
+    <parent link="classis"/>
     <child link="camera"/>
-    <axis xyz="0 0 1"/>
-    <limit effort="10" velocity="10" lower="0" upper="0"/>
+    <axis xyz="0 0 0"/>
   </joint>
-  <!-- Joint from gimbal to muzzle -->
-  <joint name="gimbal_pitch" type="revolute">
-    <origin xyz="0 -0.105 0.175" rpy="0 0.00152726 -0"/>
-    <parent link="gimbal"/>
+  <!-- classis -> muzzle（与 gimbal、camera、imu_up 并列） -->
+  <joint name="muzzle_joint" type="fixed">
+    <origin xyz="0 -0.105 0.306815" rpy="0 0.00152726 0"/>
+    <parent link="classis"/>
     <child link="muzzle"/>
-    <axis xyz="0 1 0"/>
-    <limit effort="10" velocity="10" lower="-3.141592653589793" upper="3.141592653589793"/>
+    <axis xyz="0 0 0"/>
   </joint>
-  <!-- Joint from gimbal to classis（因 livox_frame 为基坐标系而反向） -->
+  <!-- Joint from classis to gimbal（classis 作为其余坐标系的父坐标系，各子坐标系并列） -->
   <joint name="gimbal_yaw" type="revolute">
-    <origin xyz="0 0 -0.131815" rpy="0 0 0"/>
-    <parent link="gimbal"/>
-    <child link="classis"/>
+    <origin xyz="0 0 0.131815" rpy="0 0 0"/>
+    <parent link="classis"/>
+    <child link="gimbal"/>
     <axis xyz="0 0 1"/>
     <limit effort="10" velocity="10" lower="-3.141592653589793" upper="3.141592653589793"/>
   </joint>
