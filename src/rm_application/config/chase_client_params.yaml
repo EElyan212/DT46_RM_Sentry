@@ -1,0 +1,4 @@
+chase_client:
+    ros__parameters:
+        offset_distance: 1.5      # 距敌人的偏移距离（米）
+        chase_rate: 0.5            # 追击刷新频率（Hz），每2秒刷新一次目标点
