@@ -20,10 +20,16 @@
   <exec_depend>std_msgs</exec_depend>
   <build_export_depend>std_msgs</build_export_depend>
 
+  <build_depend>geometry_msgs</build_depend>
+  <exec_depend>geometry_msgs</exec_depend>
+  <build_export_depend>geometry_msgs</build_export_depend>
+
+  <build_depend>action_msgs</build_depend>
+  <exec_depend>action_msgs</exec_depend>
+  <build_export_depend>action_msgs</build_export_depend>
+
   <export>
     <build_type>ament_cmake</build_type>
   </export>
-
-  <member_of_group>rosidl_interface_packages</member_of_group> <!-- 添加这一行 -->
 
 </package>

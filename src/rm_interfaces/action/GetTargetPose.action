@@ -1,0 +1,12 @@
+# Goal
+float32 offset_distance    # 距敌人的偏移距离（米），0 表示使用默认值
+---
+# Result
+geometry_msgs/PoseStamped target_pose    # 计算后的导航目标点
+bool success                              # 是否成功获取
+string message                            # 状态描述
+---
+# Feedback
+float32 enemy_x         # 当前敌人 x
+float32 enemy_y         # 当前敌人 y
+bool enemy_tracked      # 敌人是否被跟踪

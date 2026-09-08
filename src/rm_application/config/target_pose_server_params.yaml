@@ -1,0 +1,3 @@
+target_pose_server:
+    ros__parameters:
+        default_offset_distance: 1.5   # 默认偏移距离（米），Goal 中 offset=0 时使用

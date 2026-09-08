@@ -1,0 +1,10 @@
+# Goal
+float32 offset_distance    # 距敌人的偏移距离（米），<=0 时使用默认值
+---
+# Result
+bool success               # 是否成功完成追击
+string message             # 状态描述
+---
+# Feedback
+bool chasing               # 是否正在追击中
+string status              # 当前状态描述
