@@ -245,7 +245,7 @@ local_costmap:
       robot_base_frame: base_footprint  # 机器人本体坐标系，通常为"base_footprint"
       use_sim_time: False  # 是否使用仿真时间，通常在仿真环境中为True。设置为False表示使用系统时间
       rolling_window: true  # 是否启用滚动窗口模式，表示局部地图是一个不断更新的窗口
-      width: 5  # 局部代价地图的宽度，单位为米
+      width: 10  # 局部代价地图的宽度，单位为米
       height: 5  # 局部代价地图的高度，单位为米
       resolution: 0.05  # 局部代价地图的分辨率，单位为米，表示每个网格的大小
       robot_radius: 0.25  # 机器人半径，单位为米，用于在代价地图中考虑机器人的尺寸
