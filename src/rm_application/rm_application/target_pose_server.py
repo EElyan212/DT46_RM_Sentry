@@ -1,9 +1,10 @@
 """
-target_pose_server.py — 导航方追击目标点计算节点
+target_pose_server.py — 导航方追击目标点计算节点（解耦版）
 
 功能：
-  订阅视觉方发布的 /tracker/enemy_pose（相机坐标系 PoseStamped），
-  通过 tf2 查询 map→enemy 获取 map 系坐标，提供 Action 服务。
+  直接订阅视觉方 /tracker/enemy_datas（EnemyCenter, BEST_EFFORT），以 msg.tracked
+  为准判定视觉锁定；只要锁定即由后台线程自主计算目标点并缓存，
+  通过 GetTargetPose Action 将缓存结果返回给调用方（chase_client / 行为树）。
 
 目标点计算：
   优先调用 Nav2 全局规划器（ComputePathToPose）规划 机器人→敌人 路径，
@@ -12,23 +13,26 @@ target_pose_server.py — 导航方追击目标点计算节点
   规划失败/服务未就绪/路径过短时按规则回退（直线偏移 / clamp 路径起点）。
 
 通信链路：
-  rm_tf_broadcaster ── /tracker/enemy_pose (PoseStamped) ──► 本节点
-  tf2 树: map→odom→base_footprint→...→enemy
+  视觉方 ── /tracker/enemy_datas (EnemyCenter) ──► 本节点（tracked 判定 + 后台计算）
+  tf2 树: map→odom→base_footprint→...→enemy（rm_tf_broadcaster 发布 enemy 系 TF）
   本节点 ── ComputePathToPose ──► Nav2 planner_server
-  调用方 ── GetTargetPose Action ──► 本节点 ──► 返回 PoseStamped
+  调用方 ── GetTargetPose Action ──► 本节点 ──► 返回缓存结果（Result 含 has_target）
 """
 
 import math
 import time
+import threading
 import rclpy
 from rclpy.node import Node
 from rclpy.time import Time, Duration
 from rclpy.executors import MultiThreadedExecutor
 from rclpy.callback_groups import ReentrantCallbackGroup
+from rclpy.qos import QoSProfile, ReliabilityPolicy, HistoryPolicy, DurabilityPolicy
 
 # Action 相关
 from rclpy.action import ActionServer, ActionClient
 from rm_interfaces.action import GetTargetPose
+from rm_interfaces.msg import EnemyCenter
 from nav2_msgs.action import ComputePathToPose
 from action_msgs.msg import GoalStatus
 
@@ -65,6 +69,18 @@ class TargetPoseServer(Node):
         self.declare_parameter('planner_timeout', 0.5)
         self.planner_timeout = float(self.get_parameter('planner_timeout').value)
 
+        # 后台计算频率（Hz）：视觉锁定时自主计算目标点
+        self.declare_parameter('compute_rate', 5.0)
+        self.compute_rate = float(self.get_parameter('compute_rate').value)
+
+        # 敌人数据超时（秒）：超过未收到 enemy_datas 视为丢失
+        self.declare_parameter('tracked_timeout', 0.5)
+        self.tracked_timeout = float(self.get_parameter('tracked_timeout').value)
+
+        # Action Goal 到达后等待后台缓存刷新的上限（秒）
+        self.declare_parameter('fresh_wait', 0.3)
+        self.fresh_wait = float(self.get_parameter('fresh_wait').value)
+
         # ==================== TF 监听器 ====================
         # 用于查询 map→enemy 和 map→base_footprint
         self.tf_buffer = Buffer()
@@ -84,19 +100,39 @@ class TargetPoseServer(Node):
         self._plan_fail_until = 0.0
         self.plan_fail_backoff = 0.5
 
-        # ==================== 订阅敌人位姿 ====================
-        # /tracker/enemy_pose：相机坐标系 PoseStamped，用于超时判断 tracked 状态
-        self.sub_enemy_pose = self.create_subscription(
-            PoseStamped,
-            '/tracker/enemy_pose',
-            self.enemy_pose_callback,
-            10  # DEFAULT QoS
+        # ==================== 订阅敌人数据（视觉锁定判定）====================
+        # /tracker/enemy_datas：以 msg.tracked 为准，QoS 与视觉方 BEST_EFFORT 匹配
+        enemy_qos = QoSProfile(
+            reliability=ReliabilityPolicy.BEST_EFFORT,
+            history=HistoryPolicy.KEEP_LAST,
+            depth=10,
+            durability=DurabilityPolicy.VOLATILE,
         )
+        self.sub_enemy_datas = self.create_subscription(
+            EnemyCenter,
+            '/tracker/enemy_datas',
+            self.enemy_data_callback,
+            enemy_qos
+        )
+        self._enemy_tracked = False
+        self._enemy_data_timestamp = None
 
-        # ==================== 存储最新数据 ====================
-        self.enemy_pose = None
-        self.enemy_pose_timestamp = None
-        self.enemy_pose_timeout = 0.5  # 超时阈值（秒），超过未收到视为丢失
+        # ==================== 目标点缓存（后台写，Action 读）====================
+        self._active_offset = float(self.default_offset_distance)
+        self._cache_lock = threading.Lock()
+        self._cache = {
+            'pose': None,            # PoseStamped 或 None
+            'has_target': False,     # 是否算出有效目标点
+            'message': '尚未计算',    # 最近一次计算的状态描述
+            'stamp': 0.0,            # 缓存更新时刻（monotonic）
+            'enemy_x': 0.0,          # 敌人 map 坐标（最近一次计算时）
+            'enemy_y': 0.0,
+        }
+
+        # ==================== 后台计算线程 ====================
+        self._compute_stop = threading.Event()
+        self._compute_thread = threading.Thread(
+            target=self._compute_loop, daemon=True, name='target_compute')
 
         # ==================== Action Server ====================
         self.action_callback_group = ReentrantCallbackGroup()
@@ -108,25 +144,73 @@ class TargetPoseServer(Node):
             callback_group=self.action_callback_group
         )
 
-        self.get_logger().info('target_pose_server 已启动')
+        self._compute_thread.start()
+
+        self.get_logger().info('target_pose_server 已启动（解耦版：后台自主计算）')
         self.get_logger().info(f'默认偏移距离: {self.default_offset_distance}m')
         self.get_logger().info(
             f'路径偏移模式: {"开" if self.use_path_offset else "关"}，'
             f'敌人重规划阈值: {self.enemy_replan_threshold}m，'
-            f'规划器: {self.planner_action_name}'
+            f'规划器: {self.planner_action_name}，'
+            f'计算频率: {self.compute_rate}Hz，'
+            f'数据超时: {self.tracked_timeout}s'
         )
 
-    def enemy_pose_callback(self, msg: PoseStamped):
-        """存储最新的敌人位姿（相机坐标系，视觉方已转换好）"""
-        self.enemy_pose = msg
-        self.enemy_pose_timestamp = self.get_clock().now()
+    # ==================== 视觉锁定判定 ====================
+
+    def enemy_data_callback(self, msg: EnemyCenter):
+        """存储视觉锁定状态（msg.tracked）与消息时间戳"""
+        self._enemy_tracked = msg.tracked
+        self._enemy_data_timestamp = self.get_clock().now()
 
     def is_enemy_tracked(self):
-        """通过消息超时判断敌人是否被跟踪（rm_tf_broadcaster 不发布时即为丢失）"""
-        if self.enemy_pose is None or self.enemy_pose_timestamp is None:
+        """视觉锁定且消息未超时才算被跟踪"""
+        if not self._enemy_tracked or self._enemy_data_timestamp is None:
             return False
-        elapsed = (self.get_clock().now() - self.enemy_pose_timestamp).nanoseconds / 1e9
-        return elapsed < self.enemy_pose_timeout
+        elapsed = (self.get_clock().now() - self._enemy_data_timestamp).nanoseconds / 1e9
+        return elapsed < self.tracked_timeout
+
+    # ==================== 后台计算线程 ====================
+
+    def _compute_loop(self):
+        """
+        后台线程：只要视觉锁定就按 compute_rate 计算目标点并写入缓存；
+        未锁定时把缓存置为 has_target=False。Action Goal 只读缓存。
+        """
+        interval = 1.0 / max(self.compute_rate, 0.1)
+        while not self._compute_stop.is_set():
+            if self.is_enemy_tracked():
+                offset = self._active_offset
+                pose, success, message = self.compute_target_pose(offset)
+                enemy_x, enemy_y = self._cache_enemy_pose()
+                with self._cache_lock:
+                    self._cache['pose'] = pose
+                    self._cache['has_target'] = success
+                    self._cache['message'] = message
+                    self._cache['enemy_x'] = enemy_x
+                    self._cache['enemy_y'] = enemy_y
+                    self._cache['stamp'] = time.monotonic()
+            else:
+                with self._cache_lock:
+                    self._cache['pose'] = None
+                    self._cache['has_target'] = False
+                    self._cache['message'] = '敌人未被跟踪或数据超时'
+                    self._cache['enemy_x'] = 0.0
+                    self._cache['enemy_y'] = 0.0
+                    self._cache['stamp'] = time.monotonic()
+            self._compute_stop.wait(timeout=interval)
+
+    def _cache_enemy_pose(self):
+        """TF 查询敌人 map 坐标（供 Feedback 用），失败返回 (0, 0)"""
+        try:
+            transform = self.tf_buffer.lookup_transform(
+                'map', 'enemy', Time(), Duration(seconds=0.1))
+            return (transform.transform.translation.x,
+                    transform.transform.translation.y)
+        except Exception:
+            return 0.0, 0.0
+
+    # ==================== TF 查询 ====================
 
     def get_robot_pose(self):
         """
@@ -356,71 +440,71 @@ class TargetPoseServer(Node):
         pose.pose.orientation = Quaternion(x=0.0, y=0.0, z=0.0, w=1.0)
         return pose
 
+    # ==================== Action Server ====================
+
     def execute_callback(self, goal_handle):
         """
-        Action Goal 处理回调。
+        Action Goal 处理回调（解耦后为纯读缓存）：
 
-        流程：
-          1. 确定偏移距离（Goal 指定 或 使用默认值）
-          2. 尝试计算目标点，带有限次重试（应对瞬态 TF 失败）
-          3. 成功返回结果，失败返回错误
+          1. Goal.offset > 0 → 更新活动 offset（后台随之使用）
+          2. 等待后台缓存刷新（最多 fresh_wait 秒）
+          3. 发布 Feedback（enemy_x/y、enemy_tracked、has_target、target_pose）
+          4. 返回 Result（success == has_target）
         """
         offset_distance = goal_handle.request.offset_distance
-        if offset_distance <= 0.0:
-            offset_distance = self.default_offset_distance
+        if offset_distance > 0.0 and abs(offset_distance - self._active_offset) > 1e-6:
+            self.get_logger().info(
+                f'更新活动 offset: {self._active_offset:.2f} → {offset_distance:.2f}m')
+            self._active_offset = float(offset_distance)
 
-        self.get_logger().info(f'收到 Goal: offset={offset_distance:.2f}m')
-
-        max_retries = 50  # 最多重试 50 次（约 5 秒），匹配 client 超时
-        for retry in range(max_retries):
+        # 等待后台缓存刷新（目标是拿到 ≥ 本次 Goal 到达时刻 的数据）
+        goal_arrival = time.monotonic()
+        deadline = goal_arrival + self.fresh_wait
+        while time.monotonic() < deadline:
             if goal_handle.is_cancel_requested:
                 goal_handle.canceled()
                 self.get_logger().info('Goal 已被取消')
                 return GetTargetPose.Result()
+            with self._cache_lock:
+                if self._cache['stamp'] >= goal_arrival:
+                    break
+            time.sleep(0.02)
 
-            # 检查是否被跟踪
-            if not self.is_enemy_tracked():
-                feedback = GetTargetPose.Feedback()
-                feedback.enemy_x = 0.0
-                feedback.enemy_y = 0.0
-                feedback.enemy_tracked = False
-                goal_handle.publish_feedback(feedback)
-                time.sleep(0.1)
-                continue
+        # 读取缓存快照
+        with self._cache_lock:
+            pose = self._cache['pose']
+            has_target = self._cache['has_target']
+            message = self._cache['message']
+            enemy_x = self._cache['enemy_x']
+            enemy_y = self._cache['enemy_y']
 
-            # 发布 Feedback（有跟踪数据时）
-            feedback = GetTargetPose.Feedback()
-            try:
-                transform = self.tf_buffer.lookup_transform(
-                    'map', 'enemy', Time(), Duration(seconds=0.1))
-                feedback.enemy_x = transform.transform.translation.x
-                feedback.enemy_y = transform.transform.translation.y
-                feedback.enemy_tracked = True
-            except Exception:
-                feedback.enemy_x = 0.0
-                feedback.enemy_y = 0.0
-                feedback.enemy_tracked = False
-            goal_handle.publish_feedback(feedback)
+        tracked = self.is_enemy_tracked()
 
-            # 计算目标点
-            pose, success, message = self.compute_target_pose(offset_distance)
+        # 发布 Feedback（完整状态）
+        feedback = GetTargetPose.Feedback()
+        feedback.enemy_x = float(enemy_x)
+        feedback.enemy_y = float(enemy_y)
+        feedback.enemy_tracked = tracked
+        feedback.has_target = bool(has_target)
+        if pose is not None:
+            feedback.target_pose = pose
+        goal_handle.publish_feedback(feedback)
 
-            if success:
-                goal_handle.succeed()
-                result = GetTargetPose.Result()
-                result.target_pose = pose
-                result.success = True
-                result.message = message
-                self.get_logger().info(f'返回结果: {message}')
-                return result
+        # 返回 Result
+        result = GetTargetPose.Result()
+        result.success = bool(has_target)
+        result.has_target = bool(has_target)
+        result.message = message
+        if pose is not None:
+            result.target_pose = pose
 
-            # 计算失败，短暂等待后重试（可能是瞬态 TF 失败）
-            time.sleep(0.1)
-
-        # 重试耗尽，返回失败
-        self.get_logger().warn(f'重试超过 {max_retries} 次，无法计算目标点')
-        goal_handle.abort()
-        return GetTargetPose.Result()
+        if has_target:
+            goal_handle.succeed()
+            self.get_logger().info(f'返回结果: {message}')
+        else:
+            goal_handle.abort()
+            self.get_logger().warn(f'无目标点: {message}')
+        return result
 
 
 def main(args=None):
@@ -433,6 +517,7 @@ def main(args=None):
     except KeyboardInterrupt:
         pass
     finally:
+        node._compute_stop.set()
         executor.shutdown()
         node.destroy_node()
         try:

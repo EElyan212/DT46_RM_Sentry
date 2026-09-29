@@ -1,7 +1,10 @@
 target_pose_server:
     ros__parameters:
-        default_offset_distance: 1.5   # 默认偏移距离（米），Goal 中 offset=0 时使用
+        default_offset_distance: 0.5   # 默认偏移距离（米），Goal 中 offset<=0 时使用
         use_path_offset: true          # true=沿全局路径回退偏移；false=旧直线偏移
-        enemy_replan_threshold: 0.3    # 敌人移动超过该距离（米）才重新全局规划
+        enemy_replan_threshold: 0.1    # 敌人移动超过该距离（米）才重新全局规划
         planner_action_name: /compute_path_to_pose  # Nav2 全局规划器 action
         planner_timeout: 0.5           # 单次全局规划超时（秒）
+        compute_rate: 5.0              # 后台自主计算频率（Hz），视觉锁定时生效
+        tracked_timeout: 0.5           # enemy_datas 消息超时（秒），超过视为丢失
+        fresh_wait: 0.3                # Goal 到达后等待后台缓存刷新的上限（秒）
