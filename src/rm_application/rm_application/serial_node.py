@@ -4,7 +4,7 @@ import threading
 import rclpy
 from rclpy.node import Node
 from geometry_msgs.msg import Twist
-from rm_interfaces.msg import Decision, Senddata, GimbalControl, OdoMsg
+from rm_interfaces.msg import Decision, Senddata, GimbalControl, OdoMsg, SerialDebug
 from std_msgs.msg import Int32
 import struct
 from geometry_msgs.msg import Vector3Stamped, Twist
@@ -55,6 +55,8 @@ class SerialNode(Node):
         self.pub_uart_receive_imu = self.create_publisher(Vector3Stamped, '/imu/rpy', qos)
         #创建发布者 3: odo 数据
         self.pub_uart_receive_odo = self.create_publisher(OdoMsg, '/nav/odo', 10)
+        # 测试用：整帧解包结果 + CRC 状态
+        self.pub_serial_debug = self.create_publisher(SerialDebug, '/serial/debug', 10)
 
         self.color = ColorPrint()
 
@@ -97,7 +99,8 @@ class SerialNode(Node):
                 ('stop_bits', '1'),
                 ('serial_receive_header', 0xA5),
                 ('serial_send_header', 0x5A),
-                ('pub_rpy', False)
+                ('pub_rpy', False),
+                ('pub_serial_debug', False)
             ]
         )
 
@@ -112,6 +115,7 @@ class SerialNode(Node):
         self.serial_receive_header = self.get_parameter("serial_receive_header").value
         self.serial_send_header = self.get_parameter("serial_send_header").value
         self.pub_rpy = self.get_parameter("pub_rpy").value
+        self.pub_serial_debug = self.get_parameter("pub_serial_debug").value
 
         # 3. 打印当前生效的配置信息，方便在终端确认 YAML 是否加载成功
         self.get_logger().info("-" * 30)
@@ -138,19 +142,22 @@ class SerialNode(Node):
     def receive_data(self):
         serial_decision_msg = Decision()
         serial_odo_msg = OdoMsg()
+        serial_debug_msg = SerialDebug()
         serial_decision_msg.header.frame_id = 'serial_receive_frame'
         serial_decision_msg.color = 10
 
-        # [确认配置]
-        # 总长 36 =
-        # Header(1)
-        # Color(1)+Roll(4)+Pitch(4)+Yaw(4)
-        # vx(4)+vy(4)
-        # self_sentry_hp(2)+self_hero_hp(2)+self_infantry_hp(2)+remain_time(2)+remain_bullet(2)+match_progress(1)+occupation(1)
-        # CRC(2)
-        packet_length = 40
+        # [53 字节固定长帧, 小端, float=IEEE-754]
+        #  0 sof(1)   1 detect_color(1)  2 reserved(1)
+        #  3 roll(4)  7 pitch(4) 11 yaw(4) 15 vx(4) 19 vy(4)
+        # 23 self_sentry_hp(2) 25 self_hero_hp(2) 27 self_infantry_hp(2)
+        # 29 remain_time(2) 31 remain_bullet(2) 33 match_progress(1) 34 occupation(1)
+        # 35 bullet_speed(4)
+        # 39 armor_id(1) 40 armor_reason(1) 41 armor_hit_cnt(1) 42 armor_hit_seq(1)
+        # 43 armor_angle_chassis(4) 47 armor_angle_world(4)
+        # 51 crc16(2)  CRC-16/MODBUS, 覆盖 [0..50], 低字节在前
+        packet_length = 53
 
-        self.get_logger().info("接收数据线程已启动 (CRC16 Mode - 16 Bytes)")
+        self.get_logger().info("接收数据线程已启动 (53B 帧, CRC-16/MODBUS)")
         self.serial.reset_input_buffer()
         while rclpy.ok():
             try:
@@ -161,7 +168,7 @@ class SerialNode(Node):
                     continue
 
                 # print("帧头已找到")
-                # 2. 读取剩余数据 (40字节)
+                # 2. 读取剩余数据 (52字节)
                 remaining_data = self.serial.read(packet_length - 1)
                 # print(len(remaining_data))
                 if len(remaining_data) != packet_length - 1:
@@ -171,19 +178,16 @@ class SerialNode(Node):
                 # 3. 组合完整包
                 full_packet = header + remaining_data
                 # print(full_packet)
-                # 4. CRC16 校验逻辑
-                # 数据载荷：前14字节 (Header ~ Yaw)
+                # 4. CRC16 校验：载荷 = 前 51 字节 (0..50)
                 data_payload = full_packet[:-2]
                 # 校验位：最后2字节
                 checksum_bytes = full_packet[-2:]
 
-                # 解析收到的校验值 (小端序 unsigned short)
+                # 解析收到的校验值 (低字节在前)
                 received_crc = struct.unpack('<H', checksum_bytes)[0]
 
-
-                # 计算本地数据的 CRC16
-                # 注意：确保 get_crc16_check_sum 算法与下位机一致 (通常是 CRC-CCITT)
-                calculated_crc = get_crc16_check_sum(data_payload)
+                # 计算本地 CRC-16/MODBUS
+                calculated_crc = crc16_modbus(data_payload)
                 # print(received_crc)
                 # print(calculated_crc)
                 if calculated_crc != received_crc:
@@ -194,9 +198,8 @@ class SerialNode(Node):
                     # self.serial.reset_input_buffer()
                     continue
                 # print("通过校验")
-                # 5. 数据解包 (35字节)
-                # <BBfff: Header(1), Color(1), Roll(4), Pitch(4), Yaw(4)
-                _, detect_color, roll, pitch, yaw,vx, vy, self_sentry_hp, self_hero_hp, self_infantry_hp, remain_time, remain_bullet, match_progress, occupation, bullet_speed = struct.unpack("<BBfffffHHHHHBBf", data_payload)
+                # 5. 数据解包 (51字节)
+                sof, detect_color, reserved, roll, pitch, yaw, vx, vy, self_sentry_hp, self_hero_hp, self_infantry_hp, remain_time, remain_bullet, match_progress, occupation, bullet_speed, armor_id, armor_reason, armor_hit_cnt, armor_hit_seq, armor_angle_chassis, armor_angle_world = struct.unpack("<BBBfffffHHHHHBBfBBBBff", data_payload)
                 # print("获取数据成功")
                 #6.发布消息
                 #6.1 发布 IMU 消息
@@ -230,6 +233,36 @@ class SerialNode(Node):
                 serial_decision_msg.can_fire = self.send_datas.can_fire
                 serial_decision_msg.bullet_speed = bullet_speed
                 self.pub_uart_receive_decision.publish(serial_decision_msg)
+
+                # 6.4 测试用：整帧解包结果 + CRC 状态
+                if self.pub_serial_debug:
+                    serial_debug_msg.header.stamp = self.get_clock().now().to_msg()
+                    serial_debug_msg.sof = sof
+                    serial_debug_msg.detect_color = detect_color
+                    serial_debug_msg.reserved = reserved
+                    serial_debug_msg.roll = roll
+                    serial_debug_msg.pitch = pitch
+                    serial_debug_msg.yaw = yaw
+                    serial_debug_msg.vx = vx
+                    serial_debug_msg.vy = vy
+                    serial_debug_msg.self_sentry_hp = self_sentry_hp
+                    serial_debug_msg.self_hero_hp = self_hero_hp
+                    serial_debug_msg.self_infantry_hp = self_infantry_hp
+                    serial_debug_msg.remain_time = remain_time
+                    serial_debug_msg.remain_bullet = remain_bullet
+                    serial_debug_msg.match_progress = match_progress
+                    serial_debug_msg.occupation = occupation
+                    serial_debug_msg.bullet_speed = bullet_speed
+                    serial_debug_msg.armor_id = armor_id
+                    serial_debug_msg.armor_reason = armor_reason
+                    serial_debug_msg.armor_hit_cnt = armor_hit_cnt
+                    serial_debug_msg.armor_hit_seq = armor_hit_seq
+                    serial_debug_msg.armor_angle_chassis = armor_angle_chassis
+                    serial_debug_msg.armor_angle_world = armor_angle_world
+                    serial_debug_msg.crc_received = received_crc
+                    serial_debug_msg.crc_calculated = calculated_crc
+                    serial_debug_msg.crc_ok = (calculated_crc == received_crc)
+                    self.pub_serial_debug.publish(serial_debug_msg)
 
  
             except (serial.SerialException, struct.error, ValueError) as e:
