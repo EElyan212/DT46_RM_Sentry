@@ -56,7 +56,7 @@ class SerialNode(Node):
         #创建发布者 3: odo 数据
         self.pub_uart_receive_odo = self.create_publisher(OdoMsg, '/nav/odo', 10)
         # 测试用：整帧解包结果 + CRC 状态
-        self.pub_serial_debug = self.create_publisher(SerialDebug, '/serial/debug', 10)
+        self.pub_serial_debug_pub = self.create_publisher(SerialDebug, '/serial/debug', 10)
 
         self.color = ColorPrint()
 
@@ -159,12 +159,20 @@ class SerialNode(Node):
 
         self.get_logger().info("接收数据线程已启动 (53B 帧, CRC-16/MODBUS)")
         self.serial.reset_input_buffer()
+        rx_idle = 0
         while rclpy.ok():
             try:
                 # 1. 查找帧头
                 header = self.serial.read(1)
-                # print(header)
-                if not header or header[0] != self.serial_receive_header:
+                if not header:
+                    rx_idle += 1
+                    if self.pub_serial_debug and rx_idle % 10 == 0:
+                        print("[RX] 无数据 (读超时, 下位机可能未发送)", flush=True)
+                    continue
+                rx_idle = 0
+                if self.pub_serial_debug:
+                    print(f"[RX] 原始字节: {header.hex()}", flush=True)
+                if header[0] != self.serial_receive_header:
                     continue
 
                 # print("帧头已找到")
@@ -191,11 +199,9 @@ class SerialNode(Node):
                 # print(received_crc)
                 # print(calculated_crc)
                 if calculated_crc != received_crc:
-                    # print(received_crc)
-                    # print(calculated_crc)
-                    # print("校验失败")
-
-                    # self.serial.reset_input_buffer()
+                    if self.pub_serial_debug:
+                        print(f"[RX] CRC 校验失败: recv=0x{received_crc:04X} calc=0x{calculated_crc:04X} "
+                              f"frame={full_packet.hex()}", flush=True)
                     continue
                 # print("通过校验")
                 # 5. 数据解包 (51字节)
@@ -235,7 +241,7 @@ class SerialNode(Node):
                 self.pub_uart_receive_decision.publish(serial_decision_msg)
 
                 # 6.4 测试用：整帧解包结果 + CRC 状态
-                if self.pub_serial_debug:
+                if self.pub_serial_debug :
                     serial_debug_msg.header.stamp = self.get_clock().now().to_msg()
                     serial_debug_msg.sof = sof
                     serial_debug_msg.detect_color = detect_color
@@ -262,9 +268,9 @@ class SerialNode(Node):
                     serial_debug_msg.crc_received = received_crc
                     serial_debug_msg.crc_calculated = calculated_crc
                     serial_debug_msg.crc_ok = (calculated_crc == received_crc)
-                    self.pub_serial_debug.publish(serial_debug_msg)
+                    self.pub_serial_debug_pub.publish(serial_debug_msg)
 
- 
+
             except (serial.SerialException, struct.error, ValueError) as e:
                 self.get_logger().error(f"接收数据异常: {str(e)}")
                 self.reopen_port()
@@ -310,7 +316,7 @@ class SerialNode(Node):
 
             self.serial.write(packet)
             # print(linear_velocity_x,linear_velocity_y)
-            print(packet)
+            # print(packet)
         except Exception as e:
             self.get_logger().error(f"发送数据时出错: {str(e)}")
 
