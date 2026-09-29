@@ -4,9 +4,12 @@ float32 offset_distance    # 距敌人的偏移距离（米），0 表示使用�
 # Result
 geometry_msgs/PoseStamped target_pose    # 计算后的导航目标点
 bool success                              # 是否成功获取
+bool has_target                           # 当前是否有有效目标点（有目标点时 target_pose 有效）
 string message                            # 状态描述
 ---
 # Feedback
 float32 enemy_x         # 当前敌人 x
 float32 enemy_y         # 当前敌人 y
-bool enemy_tracked      # 敌人是否被跟踪
+bool enemy_tracked      # 敌人是否被视觉锁定（输入状态）
+bool has_target         # 当前是否算出有效目标点（输出状态）
+geometry_msgs/PoseStamped target_pose     # 最新目标点（has_target=false 时无效）
