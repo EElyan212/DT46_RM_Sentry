@@ -41,3 +41,5 @@ ros2 run rqt_reconfigure rqt_reconfigure
 
 #清空 Fast-DDS 残留的共享内存文件
 rm -rf /dev/shm/fastrtps*
+
+ros2 launch rm_description urdf2tf.launch.py
