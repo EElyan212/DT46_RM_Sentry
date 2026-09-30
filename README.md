@@ -1,45 +1,46 @@
-#常用命令
-#雷达驱动
+# 常用命令
+# 雷达驱动
 ros2 launch livox_ros_driver2 rviz_MID360_launch.py
 ros2 launch livox_ros_driver2 msg_MID360_launch.py
 ros2 launch point_lio mapping_mid360.launch.py
 #pointclound2 to laserscan
 ros2 launch pointcloud_to_laserscan pointcloud_to_laserscan_launch.py
-#重新编译
+# 重新编译
 cd DT46_RM_Sentry
 
 colcon build --packages-select rm_interfaces
 si
 cd src/rm_driver/livox_ros_driver2/
 ./build.sh humble
-#线上建图
+# 线上建图
 ros2 launch slam_toolbox online_async_launch.py use_sim_time:=True
 
-#键盘控制节点
+# 键盘控制节点
 ros2 run teleop_twist_keyboard teleop_twist_keyboard
 
-#保存地图到当前目录
+# 存地图到当前目录
 ros2 run nav2_map_server map_saver_cli -f roomer
 
-#代价地图清理
+# 代价地图清理
 ros2 run rm_navigation2 map_clear
 
-#导航
+# 导航
 ros2 launch rm_navigation2 navigation2.launch.py
 
-#总（雷达启动 点云转换 里程计）
+# 总（雷达启动 点云转换 里程计）
 ros2 launch rm_application part1.launch.py rviz:=false
 
-#串口
+# 串口
 ros2 launch rm_application serial_node.launch.py
 
-#动态调参
+# 动态调参
 ros2 run rqt_reconfigure rqt_reconfigure
 
-#decision
- ros2 run rm_application rm_decision --ros-args --params-file src/rm_application/config/decision_params.yaml
+# decision
+ros2 run rm_application rm_decision --ros-args --params-file src/rm_application/config/decision_params.yaml
 
-#清空 Fast-DDS 残留的共享内存文件
+# 清空 Fast-DDS 残留的共享内存文件
 rm -rf /dev/shm/fastrtps*
 
+# 启动urdf
 ros2 launch rm_description urdf2tf.launch.py

@@ -4,7 +4,7 @@ import threading
 import rclpy
 from rclpy.node import Node
 from geometry_msgs.msg import Twist
-from rm_interfaces.msg import Decision, Senddata, GimbalControl, OdoMsg, SerialDebug
+from rm_interfaces.msg import Decision, Senddata, GimbalControl, OdoMsg, SerialDebug, ArmorHit
 from std_msgs.msg import Int32
 import struct
 from geometry_msgs.msg import Vector3Stamped, Twist
@@ -55,6 +55,8 @@ class SerialNode(Node):
         self.pub_uart_receive_imu = self.create_publisher(Vector3Stamped, '/imu/rpy', qos)
         #创建发布者 3: odo 数据
         self.pub_uart_receive_odo = self.create_publisher(OdoMsg, '/nav/odo', 10)
+        # 创建发布者 4：受击反馈 数据
+        self.pub_armor_hit = self.create_publisher(ArmorHit, '/armor/hit', 10)
         # 测试用：整帧解包结果 + CRC 状态
         self.pub_serial_debug_pub = self.create_publisher(SerialDebug, '/serial/debug', 10)
 
@@ -142,9 +144,12 @@ class SerialNode(Node):
     def receive_data(self):
         serial_decision_msg = Decision()
         serial_odo_msg = OdoMsg()
+        serial_hit_msg = ArmorHit()
+        last_armor_hit_seq = None
         serial_debug_msg = SerialDebug()
         serial_decision_msg.header.frame_id = 'serial_receive_frame'
         serial_decision_msg.color = 10
+        
 
         # [53 字节固定长帧, 小端, float=IEEE-754]
         #  0 sof(1)   1 detect_color(1)  2 reserved(1)
@@ -240,8 +245,23 @@ class SerialNode(Node):
                 serial_decision_msg.bullet_speed = bullet_speed
                 self.pub_uart_receive_decision.publish(serial_decision_msg)
 
-                # 6.4 测试用：整帧解包结果 + CRC 状态
-                if self.pub_serial_debug :
+                # 6.4 受击事件(仅在受击时发送，即armor_hit_seq 变化时发布一次)
+                if last_armor_hit_seq is None:
+                    last_armor_hit_seq = armor_hit_seq      # 首帧只记录，不误报
+                elif armor_hit_seq != last_armor_hit_seq:
+                    last_armor_hit_seq = armor_hit_seq
+                    serial_hit_msg.header.stamp = self.get_clock().now().to_msg()
+                    serial_hit_msg.header.frame_id = 'serial_receive_frame'
+                    serial_hit_msg.armor_id = armor_id
+                    serial_hit_msg.armor_reason = armor_reason
+                    serial_hit_msg.armor_hit_cnt = armor_hit_cnt
+                    serial_hit_msg.armor_hit_seq = armor_hit_seq
+                    serial_hit_msg.armor_angle_chassis = armor_angle_chassis
+                    serial_hit_msg.armor_angle_world = armor_angle_world
+                    self.pub_armor_hit.publish(serial_hit_msg)
+
+                # 6.5 测试用：整帧解包结果 + CRC 状态
+                if self.pub_serial_debug:
                     serial_debug_msg.header.stamp = self.get_clock().now().to_msg()
                     serial_debug_msg.sof = sof
                     serial_debug_msg.detect_color = detect_color
