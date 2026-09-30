@@ -158,13 +158,21 @@ def test_need_resupply():
 
 
 def test_can_chase():
-    distance = [None]
-    inside_control_zone = [False]
+    enemy_position = [None]
+    robot_position = [(2.0, 0.0)]
+    control_zone = [{
+        "enabled": True,
+        "x_min": -1.0,
+        "x_max": 1.0,
+        "y_min": -1.0,
+        "y_max": 1.0,
+    }]
     chasing = [False]
     condition = CanChase(
         "是否需要追击",
-        lambda: distance[0],
-        lambda: inside_control_zone[0],
+        lambda: enemy_position[0],
+        lambda: robot_position[0],
+        lambda: control_zone[0],
         lambda: chasing[0],
         2.0,
     )
@@ -173,39 +181,52 @@ def test_can_chase():
     assert condition.tick() == Status.FAILURE
 
     # 在攻击范围内及边界上时不追击。
-    distance[0] = 1.9
+    robot_position[0] = (0.0, 0.0)
+    enemy_position[0] = (1.9, 0.0)
     assert condition.tick() == Status.FAILURE
-    distance[0] = 2.0
+    enemy_position[0] = (2.0, 0.0)
     assert condition.tick() == Status.FAILURE
 
     # 尚未开始追击且不在控制区内时，不能发起追击。
-    distance[0] = 2.1
+    robot_position[0] = (2.0, 0.0)
+    enemy_position[0] = (5.0, 0.0)
     assert condition.tick() == Status.FAILURE
 
     # 进入控制区后，可以发起追击。
-    inside_control_zone[0] = True
+    robot_position[0] = (0.0, 0.0)
+    enemy_position[0] = (3.0, 0.0)
     assert condition.tick() == Status.SUCCESS
 
     # 追击开始后，允许离开控制区继续追。
-    inside_control_zone[0] = False
+    robot_position[0] = (2.0, 0.0)
+    enemy_position[0] = (5.0, 0.0)
     chasing[0] = True
     assert condition.tick() == Status.SUCCESS
 
     # 重新进入攻击范围或丢失目标后停止。
-    distance[0] = 1.9
+    enemy_position[0] = (3.9, 0.0)
     assert condition.tick() == Status.FAILURE
-    distance[0] = None
+    enemy_position[0] = None
     assert condition.tick() == Status.FAILURE
 
     print("追击条件测试通过\n")
 
 
 def test_can_chase_interrupt():
-    distance = [2.1]
+    enemy_position = [(3.0, 0.0)]
+    robot_position = [(0.0, 0.0)]
+    control_zone = {
+        "enabled": True,
+        "x_min": -1.0,
+        "x_max": 1.0,
+        "y_min": -1.0,
+        "y_max": 1.0,
+    }
     condition = CanChase(
         "是否需要追击",
-        lambda: distance[0],
-        lambda: True,
+        lambda: enemy_position[0],
+        lambda: robot_position[0],
+        lambda: control_zone,
         lambda: False,
         2.0,
     )
@@ -216,7 +237,7 @@ def test_can_chase_interrupt():
     assert chase.halt_count == 0
 
     # 追击中进入攻击范围，Sequence 应停止追击动作。
-    distance[0] = 2.0
+    enemy_position[0] = (2.0, 0.0)
     assert sequence.tick() == Status.FAILURE
     assert chase.halt_count == 1
 
@@ -254,8 +275,15 @@ def test_go_resupply():
 
 
 def test_chase_enemy():
-    distance = [3.0]
-    inside_control_zone = [True]
+    enemy_position = [(3.0, 0.0)]
+    robot_position = [(0.0, 0.0)]
+    control_zone = {
+        "enabled": True,
+        "x_min": -1.0,
+        "x_max": 1.0,
+        "y_min": -1.0,
+        "y_max": 1.0,
+    }
     chase_result = [None]
     calls = {"start": 0, "stop": 0}
 
@@ -274,8 +302,9 @@ def test_chase_enemy():
     )
     condition = CanChase(
         "是否需要追击",
-        lambda: distance[0],
-        lambda: inside_control_zone[0],
+        lambda: enemy_position[0],
+        lambda: robot_position[0],
+        lambda: control_zone,
         lambda: action.running,
         2.0,
     )
@@ -287,23 +316,25 @@ def test_chase_enemy():
     assert calls["start"] == 1
 
     # 已经开始追击后，离开控制区仍继续运行。
-    inside_control_zone[0] = False
+    robot_position[0] = (2.0, 0.0)
+    enemy_position[0] = (5.0, 0.0)
     assert sequence.tick() == Status.RUNNING
     assert calls["start"] == 1
 
     # 进入攻击范围后，条件失效并停止追击。
-    distance[0] = 2.0
+    enemy_position[0] = (4.0, 0.0)
     assert sequence.tick() == Status.FAILURE
     assert calls["stop"] == 1
     assert action.running is False
 
     # 停止后仍在控制区外，不能立即重新启动。
-    distance[0] = 3.0
+    enemy_position[0] = (5.0, 0.0)
     assert sequence.tick() == Status.FAILURE
     assert calls["start"] == 1
 
     # 返回控制区后可以重新启动，并能接收完成结果。
-    inside_control_zone[0] = True
+    robot_position[0] = (0.0, 0.0)
+    enemy_position[0] = (3.0, 0.0)
     chase_result[0] = True
     assert sequence.tick() == Status.SUCCESS
     assert calls["start"] == 2
@@ -373,8 +404,15 @@ class FakeBehaviorNode:
 
     def __init__(self):
         self.hp = 400
-        self.target_distance = None
-        self.inside_control_zone = False
+        self.enemy_position = None
+        self.robot_position = (0.0, 0.0)
+        self.control_zone = {
+            "enabled": True,
+            "x_min": -1.0,
+            "x_max": 1.0,
+            "y_min": -1.0,
+            "y_max": 1.0,
+        }
         self.match_progress = 3
         self.chase_result = None
 
@@ -395,14 +433,17 @@ class FakeBehaviorNode:
     def get_hp(self):
         return self.hp
 
-    def get_target_distance(self):
-        return self.target_distance
+    def get_enemy_position(self):
+        return self.enemy_position
+
+    def get_robot_position(self):
+        return self.robot_position
+
+    def get_control_zone(self):
+        return self.control_zone
 
     def get_match_progress(self):
         return self.match_progress
-
-    def is_inside_control_zone(self):
-        return self.inside_control_zone
 
     def start_resupply(self):
         self.calls["start_resupply"] += 1
@@ -449,15 +490,16 @@ def test_behavior_tree_builder():
     assert node.calls["start_spin"] == 1
 
     # 到达控制区后出现远目标：追击抢占占点，小陀螺不重复开启。
-    node.inside_control_zone = True
-    node.target_distance = 3.0
+    node.robot_position = (0.0, 0.0)
+    node.enemy_position = (3.0, 0.0)
     assert tree.tick() == Status.RUNNING
     assert node.calls["start_chase"] == 1
     assert node.calls["stop_navigation"] == 1
     assert node.calls["start_spin"] == 1
 
     # 离开控制区后，已经开始的追击可以继续。
-    node.inside_control_zone = False
+    node.robot_position = (2.0, 0.0)
+    node.enemy_position = (5.0, 0.0)
     assert tree.tick() == Status.RUNNING
     assert node.calls["start_chase"] == 1
 
@@ -469,7 +511,8 @@ def test_behavior_tree_builder():
     assert node.calls["start_chase"] == 1
 
     # 返回控制区后可以再次开始追击。
-    node.inside_control_zone = True
+    node.robot_position = (0.0, 0.0)
+    node.enemy_position = (3.0, 0.0)
     node.chase_result = None
     assert tree.tick() == Status.RUNNING
     assert node.calls["start_chase"] == 2
@@ -482,7 +525,7 @@ def test_behavior_tree_builder():
 
     # 血量恢复且目标丢失：停止补给导航并重新占点。
     node.hp = 380
-    node.target_distance = None
+    node.enemy_position = None
     assert tree.tick() == Status.RUNNING
     assert node.calls["stop_navigation"] == 3
     assert node.calls["start_occupy"] == 3
