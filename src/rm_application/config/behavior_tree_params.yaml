@@ -1,0 +1,22 @@
+behavior_tree_node:
+  ros__parameters:
+    # 调试阶段先关闭控制区限制，边界确定后再开启
+    control_zone_enabled: false
+
+    # 控制区在 map 坐标系下的矩形边界，单位：米
+    # 当前数值仅占位
+    control_zone_x_min: 0.0
+    control_zone_x_max: 0.0
+    control_zone_y_min: 0.0
+    control_zone_y_max: 0.0
+
+    # 回补给血量阈值
+    hp_limit: 150
+    hp_up: 380
+
+    # 自瞄攻击范围，单位：米
+    attack_range: 10.0
+  
+    # 占点目标和补给点，使用 map 坐标，单位：米
+    center: [4.86, -2.39]
+    home: [-0.233, 0.833]
