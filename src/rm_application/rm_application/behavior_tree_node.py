@@ -15,6 +15,7 @@ from rm_interfaces.msg import Decision, EnemyCenter
 from geometry_msgs.msg import PoseStamped
 from nav2_simple_commander.robot_navigator import BasicNavigator
 from std_msgs.msg import Int32
+from rm_application.behavior_tree.builder import BehaviorTreeBuilder
 
 class BehaviorTreeNode(Node):
     def __init__(self):
@@ -125,6 +126,15 @@ class BehaviorTreeNode(Node):
             enemy_qos,               # 消息传输配置
         )
 
+        # 使用当前 ROS 节点提供的数据和通信方法构建行为树
+        self.behavior_tree = BehaviorTreeBuilder(self).build()
+
+        # 每 0.1 秒运行一次行为树，即 10 Hz
+        self.behavior_tree_timer = self.create_timer(
+            0.1,
+            self.tick_behavior_tree,
+        )
+
     def decision_callback(self, msg):
         # 每次收到新消息，都保存最新的一份
         self.latest_decision = msg
@@ -132,6 +142,10 @@ class BehaviorTreeNode(Node):
     def enemy_callback(self, msg):
         # 保存最新收到的敌人数据
         self.latest_enemy = msg
+
+    def tick_behavior_tree(self):
+        # 每次 tick 都会重新检查优先级和当前条件
+        self.behavior_tree.tick()
     
     def create_navigation_pose(self, position):
         # 创建 map 坐标系下的导航目标
@@ -175,6 +189,21 @@ class BehaviorTreeNode(Node):
     def stop_navigation(self):
         # 行为切换时，取消当前占点或回补给导航
         self.navigator.cancelTask()
+
+    def start_spin(self):
+        # 1 表示开启小陀螺
+        self.gimbal_mode_publisher.publish(
+            Int32(data=1)
+        )
+        self.get_logger().info("已开启小陀螺")
+        return True
+
+    def stop_spin(self):
+        # 0 表示关闭小陀螺
+        self.gimbal_mode_publisher.publish(
+            Int32(data=0)
+        )
+        self.get_logger().info("已关闭小陀螺")    
 
     def start_chase(self):
         # 追击服务尚未启动时，暂时不能开始追击
@@ -344,3 +373,36 @@ class BehaviorTreeNode(Node):
             "y_max": self.control_zone_y_max,
         }
     
+def main(args=None):
+    rclpy.init(args=args)
+
+    node = BehaviorTreeNode()
+
+    try:
+        # 等待 Nav2 启动完成后再运行行为树
+        node.navigator.waitUntilNav2Active()
+        node.get_logger().info(
+            "Nav2 已就绪，行为树开始运行"
+        )
+
+        # 处理订阅、Action 回调和行为树定时器
+        rclpy.spin(node)
+
+    except KeyboardInterrupt:
+        node.get_logger().info("行为树节点正在关闭")
+
+    finally:
+        # 停止正在运行的追击、导航和小陀螺
+        node.behavior_tree.halt()
+
+        # 销毁 BehaviorTreeNode 内部使用的 Nav2 节点
+        node.navigator.destroy_node()
+
+        node.destroy_node()
+
+        if rclpy.ok():
+            rclpy.shutdown()
+
+
+if __name__ == "__main__":
+    main()
