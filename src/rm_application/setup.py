@@ -37,6 +37,7 @@ setup(
             "rm_decision = rm_application.rm_decision:main",
             "target_pose_server = rm_application.target_pose_server:main",
             "chase_client = rm_application.chase_client:main",
+            "behavior_tree_node = rm_application.behavior_tree_node:main",
             "test_chase = rm_application.test_chase:main",
             "mock_rm_tf_broadcaster = rm_application.mock_rm_tf_broadcaster:main",
 
