@@ -422,10 +422,11 @@ class FakeBehaviorNode:
 
         self.calls = {
             "start_resupply": 0,
-            "stop_navigation": 0,
+            "stop_resupply": 0,
             "start_chase": 0,
             "stop_chase": 0,
             "start_occupy": 0,
+            "stop_occupy": 0,
             "start_spin": 0,
             "stop_spin": 0,
         }
@@ -449,8 +450,8 @@ class FakeBehaviorNode:
         self.calls["start_resupply"] += 1
         return True
 
-    def stop_navigation(self):
-        self.calls["stop_navigation"] += 1
+    def stop_resupply(self):
+        self.calls["stop_resupply"] += 1
 
     def start_chase(self):
         self.calls["start_chase"] += 1
@@ -465,6 +466,9 @@ class FakeBehaviorNode:
     def start_occupy(self):
         self.calls["start_occupy"] += 1
         return True
+
+    def stop_occupy(self):
+        self.calls["stop_occupy"] += 1
 
     def start_spin(self):
         self.calls["start_spin"] += 1
@@ -494,7 +498,7 @@ def test_behavior_tree_builder():
     node.enemy_position = (3.0, 0.0)
     assert tree.tick() == Status.RUNNING
     assert node.calls["start_chase"] == 1
-    assert node.calls["stop_navigation"] == 1
+    assert node.calls["stop_occupy"] == 1
     assert node.calls["start_spin"] == 1
 
     # 离开控制区后，已经开始的追击可以继续。
@@ -527,13 +531,13 @@ def test_behavior_tree_builder():
     node.hp = 380
     node.enemy_position = None
     assert tree.tick() == Status.RUNNING
-    assert node.calls["stop_navigation"] == 3
+    assert node.calls["stop_resupply"] == 1
     assert node.calls["start_occupy"] == 3
 
     # 比赛结束：停止占点导航和小陀螺。
     node.match_progress = 3
     assert tree.tick() == Status.FAILURE
-    assert node.calls["stop_navigation"] == 4
+    assert node.calls["stop_occupy"] == 3
     assert node.calls["stop_spin"] == 1
 
     print("行为树组装与优先级测试通过\n")
