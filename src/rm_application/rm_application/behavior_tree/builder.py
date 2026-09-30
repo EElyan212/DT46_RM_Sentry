@@ -73,7 +73,7 @@ class BehaviorTreeBuilder:
                 GoResupply(
                     "前往补给区",
                     self.node.start_resupply,
-                    self.node.stop_navigation,
+                    self.node.stop_resupply,
                 ),
             ],
         )
@@ -110,7 +110,7 @@ class BehaviorTreeBuilder:
         return OccupyZone(
             "占领控制区",
             self.node.start_occupy,
-            self.node.stop_navigation,
+            self.node.stop_occupy,
         )
 
     def _build_spin_behavior(self):

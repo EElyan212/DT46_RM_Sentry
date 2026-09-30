@@ -77,6 +77,9 @@ class BehaviorTreeNode(Node):
         self.navigator = BasicNavigator(
             node_name="behavior_tree_navigator"
         )
+
+        # 记录当前 Nav2 导航属于哪个行为
+        self.navigation_owner = None
         
         # 调用现有追击功能提供的 /tracker/chase Action
         self.chase_action_client = ActionClient(
@@ -169,11 +172,13 @@ class BehaviorTreeNode(Node):
         )
 
         # 向 Nav2 发送占点目标
-        self.navigator.goToPose(target_pose)
+        if not self.navigator.goToPose(target_pose):
+            return False
 
-        # 告诉 OccupyZone：目标已经成功发送
+        # 当前导航任务属于占点
+        self.navigation_owner = "occupy"
         return True
-    
+
     def start_resupply(self):
         # 把补给点坐标包装成 Nav2 目标消息
         target_pose = self.create_navigation_pose(
@@ -181,14 +186,28 @@ class BehaviorTreeNode(Node):
         )
 
         # 向 Nav2 发送补给目标
-        self.navigator.goToPose(target_pose)
+        if not self.navigator.goToPose(target_pose):
+            return False
 
-        # 告诉 GoResupply：目标已经成功发送
+        # 当前导航任务属于回补给
+        self.navigation_owner = "resupply"
         return True
 
-    def stop_navigation(self):
-        # 行为切换时，取消当前占点或回补给导航
+    def stop_navigation(self, owner):
+        # 只允许当前导航的所属行为取消它
+        if self.navigation_owner != owner:
+            return
+
         self.navigator.cancelTask()
+        self.navigation_owner = None
+
+    def stop_occupy(self):
+        # 只取消属于占点的导航
+        self.stop_navigation("occupy")
+
+    def stop_resupply(self):
+        # 只取消属于回补给的导航
+        self.stop_navigation("resupply")
 
     def start_spin(self):
         # 1 表示开启小陀螺

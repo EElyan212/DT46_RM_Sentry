@@ -17,7 +17,6 @@ def generate_launch_description():
         launch_ros.actions.Node(
             package="rm_application",
             executable="behavior_tree_node",
-            name="behavior_tree_node",
             output="screen",
             parameters=[behavior_tree_config],
         ),
