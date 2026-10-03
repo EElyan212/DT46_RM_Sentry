@@ -1,5 +1,5 @@
 from rclpy.node import Node
-from rm_interfaces.msg import Decision 
+from rm_interfaces.msg import Decision
 from geometry_msgs.msg import PoseStamped
 from nav2_simple_commander.robot_navigator import BasicNavigator
 import rclpy
@@ -53,9 +53,12 @@ class DecisionNode(Node):
                 ('to_center_param3', [4.45, 0.20]),
                 ('hp_limit', 150),
                 ('hp_up', 380),
-
             ]
         )
+        self.hp_limit = self.get_parameter("hp_limit").value
+        self.hp_up = self.get_parameter("hp_up").value
+        self.get_logger().info("导航点参数已读取并转换为 PoseStamped 对象")
+
         self.to_center_poses = []
         self.defences = []
         self.defences_behind = []
@@ -112,6 +115,7 @@ class DecisionNode(Node):
 
     def vision_callback(self, msg):
         pass
+
     def send_goal(self, pose_or_waypoints, is_waypoint=False):
         """统一发送目标的辅助函数，实时更新时间戳"""
         now = self.get_clock().now().to_msg()
@@ -168,7 +172,7 @@ class DecisionNode(Node):
     # 如果导航正在进行，且不是因为状态切换被 cancel，则不重复指令
         if not self.navigator.isTaskComplete():
             return
-        
+
         match self.decision_flag:
             case "OCCUPY_BEGIN":
                 self.get_logger().info("开始抢点")

@@ -20,6 +20,9 @@ rosidl_generate_interfaces(${PROJECT_NAME}
   "msg/Senddata.msg"
   "msg/OdoMsg.msg"
   "msg/EnemyCenter.msg"
+
+  "msg/SerialDebug.msg"
+  "msg/ArmorHit.msg"
   "action/GetTargetPose.action"
   "action/Chase.action"
   DEPENDENCIES std_msgs geometry_msgs action_msgs

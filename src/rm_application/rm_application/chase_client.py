@@ -23,9 +23,8 @@ from rclpy.node import Node
 from rclpy.time import Duration
 from rclpy.executors import MultiThreadedExecutor
 from rclpy.callback_groups import ReentrantCallbackGroup
-
 # Action 相关
-from rclpy.action import ActionServer, ActionClient
+from rclpy.action import ActionServer, ActionClient, CancelResponse
 from rm_interfaces.action import Chase, GetTargetPose
 
 # 消息类型
@@ -70,9 +69,10 @@ class ChaseClient(Node):
         self.action_server = ActionServer(
             self,
             Chase,
-            '/tracker/chase',
+            "/tracker/chase",
             self.execute_callback,
-            callback_group=self.action_callback_group
+            cancel_callback=self.cancel_callback,
+            callback_group=self.action_callback_group,
         )
 
         # ==================== GetTargetPose Action Client ====================
@@ -101,6 +101,13 @@ class ChaseClient(Node):
         self.get_logger().info(f'偏移距离: {self.offset_distance}m')
         self.get_logger().info(f'追击频率: {self.chase_rate}Hz')
         self.get_logger().info(f'敌人数据超时: {self.enemy_pose_timeout}s')
+
+
+    def cancel_callback(self, _goal_handle):
+        # 允许行为树中断当前追击
+        self.get_logger().info("收到停止追击请求")
+        return CancelResponse.ACCEPT
+
 
     def enemy_callback(self, msg: EnemyCenter):
         """存储最新的敌人跟踪状态"""
@@ -209,9 +216,19 @@ class ChaseClient(Node):
             while rclpy.ok():
                 # 检查取消请求
                 if goal_handle.is_cancel_requested:
-                    self.get_logger().info('Chase Goal 已被取消')
+
+
+                    # 停止追击创建的 Nav2 导航任务
+                    self.navigator.cancelTask()
+
+                    result = Chase.Result()
+                    result.success = False
+                    result.message = "追击已取消"
+
+                    self.get_logger().info(result.message)
                     goal_handle.canceled()
-                    return Chase.Result()
+                    return result
+
 
                 # 检查 tracked 状态
                 if not self.is_enemy_tracked():
