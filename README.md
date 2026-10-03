@@ -20,7 +20,7 @@ ros2 launch slam_toolbox online_async_launch.py use_sim_time:=True
 ros2 run teleop_twist_keyboard teleop_twist_keyboard
 
 #保存地图到当前目录
-ros2 run nav2_map_server map_saver_cli -f roomer
+ros2 run nav2_map_server map_saver_cli -f room_19
 
 #代价地图清理
 ros2 run rm_navigation2 map_clear
@@ -42,3 +42,7 @@ ros2 run rqt_reconfigure rqt_reconfigure
 
 #清空 Fast-DDS 残留的共享内存文件
 rm -rf /dev/shm/fastrtps*
+
+#
+export XDG_SESSION_TYPE=x11
+uv run pointcloud-map-gui

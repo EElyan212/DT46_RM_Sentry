@@ -231,7 +231,7 @@ class SerialNode(Node):
                 serial_decision_msg.bullet_speed = bullet_speed
                 self.pub_uart_receive_decision.publish(serial_decision_msg)
 
- 
+
             except (serial.SerialException, struct.error, ValueError) as e:
                 self.get_logger().error(f"接收数据异常: {str(e)}")
                 self.reopen_port()
@@ -264,6 +264,7 @@ class SerialNode(Node):
                 '<Bffiffi',
                 header,
                 linear_velocity_x,
+                # 0.0,
                 linear_velocity_y,
                 gimbal_mode,
                 yaw,
@@ -277,7 +278,7 @@ class SerialNode(Node):
 
             self.serial.write(packet)
             # print(linear_velocity_x,linear_velocity_y)
-            print(packet)
+            # print(packet)
         except Exception as e:
             self.get_logger().error(f"发送数据时出错: {str(e)}")
 

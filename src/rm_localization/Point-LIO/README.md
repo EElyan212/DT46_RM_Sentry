@@ -17,7 +17,7 @@ ROS2 version of Point-LIO
 2. high odometry output frequency, 4k-8kHz.
 3. robust to IMU saturation and severe vibration, and other aggressive motions (75 rad/s in our test).
 4. no motion distortion.
-5. computationally efficient, robust, versatile on public datasets with general motions. 
+5. computationally efficient, robust, versatile on public datasets with general motions.
 6. As an odometry, Point-LIO could be used in various autonomous tasks, such as trajectory planning, control, and perception, especially in cases involving very fast ego-motions (e.g., in the presence of severe vibration and high angular or linear velocity) or requiring high-rate odometry output and mapping (e.g., for high-rate feedback control and perception).
 
 **Important notes:**
@@ -156,7 +156,7 @@ Step C: Run LiDAR's ros driver or play rosbag.
 Set ``` pcd_save_enable ``` in launchfile to ``` 1 ```. All the scans (in global frame) will be accumulated and saved to the file ``` Point-LIO/PCD/scans.pcd ``` after the Point-LIO is terminated. ```pcl_viewer scans.pcd``` can visualize the point clouds.
 
 *Tips for pcl_viewer:*
-- change what to visualize/color by pressing keyboard 1,2,3,4,5 when pcl_viewer is running. 
+- change what to visualize/color by pressing keyboard 1,2,3,4,5 when pcl_viewer is running.
 ```
     1 is all random
     2 is X values
@@ -167,7 +167,7 @@ Set ``` pcd_save_enable ``` in launchfile to ``` 1 ```. All the scans (in global
 
 # **6. Examples**
 
-The example datasets could be downloaded through [onedrive](https://connecthkuhk-my.sharepoint.com/:f:/g/personal/hdj65822_connect_hku_hk/EmRJYy4ZfAlMiIJ786ogCPoBcGQ2BAchuXjE5oJQjrQu0Q?e=igu44W). Pay attention that if you want to test on racing_drone.bag, [0.0, 9.810, 0.0] should be input in 'mapping/gravity_init' in avia.yaml, and set the 'start_in_aggressive_motion' as true in the yaml. Because this bag start from a high speed motion. And for PULSAR.bag, we change the measuring range of the gyroscope of the built-in IMU to 17.5 rad/s. Therefore, when you test on this bag, please change 'satu_gyro' to 17.5 in avia.yaml.
+The example datasets could be downloaded through [onedrive](https://connecthkuhk-my.sharepoint.com/:f:/g/personal/hdj65822_connect_hku_hk/EmRJYy4ZfAlMiIJ786ogCPoBcGQ2BAchuXjE5oJQjrQu0Q?e=igu44W). Pay attention that if you want to test on racing_drone.bag, [0.0, 9.810, 0.0] should be input in 'mapping/gravity_init' in avia.yaml, and set the 'start_in_aggressive_motion' as true in the yaml. Because this bag start from a high speed motion. And for PULSAR.bag, we change the measuring range of the gyroscope of the built-in IMU to 17.5 rad/s. therefore, when you test on this bag, please change 'satu_gyro' to 17.5 in avia.yaml.
 
 ## **6.1. Example-1: SLAM on datasets with aggressive motions where IMU is saturated**
 <div align="center">

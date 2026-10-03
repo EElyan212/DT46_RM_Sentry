@@ -45,7 +45,7 @@ def generate_launch_description():
         ),
         launch.actions.IncludeLaunchDescription(
             AnyLaunchDescriptionSource(
-                [nav2, '/launch', '/navigation2.launch.py']),
+                [nav2, '/launch', '/online_async_launch.py']),
         ),
 
     ])

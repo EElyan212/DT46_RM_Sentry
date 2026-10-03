@@ -29,13 +29,13 @@ def generate_launch_description():
             parameters=[{
                 'target_frame': 'base_footprint',
                 'transform_tolerance': 0.1,
-                'min_height': 0.06,
+                'min_height': 0.10,
                 'max_height': 0.25,
                 'angle_min': -3.14159,  # -M_PI/2
                 'angle_max': 3.14159,  # M_PI/2
                 'angle_increment': 0.0043,  # M_PI/360.0
                 'scan_time': 0.3333,
-                'range_min': 0.5,
+                'range_min': 0.60,
                 'range_max': 5.0,
                 'use_inf': True,
                 'inf_epsilon': 1.0,
