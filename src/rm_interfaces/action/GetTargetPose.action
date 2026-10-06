@@ -14,3 +14,4 @@ bool enemy_tracked      # 敌人是否被视觉锁定（输入状态）
 bool has_target         # 当前是否算出有效目标点（输出状态）
 geometry_msgs/PoseStamped target_pose     # 最新目标点（has_target=false 时无效）
 
+

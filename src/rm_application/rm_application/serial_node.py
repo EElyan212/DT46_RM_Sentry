@@ -92,7 +92,7 @@ class SerialNode(Node):
         self.declare_parameters(
             namespace='',
             parameters=[
-                ('port_name', '/dev/ttyACM0'),
+                ('port_name', '/dev/ttyPortMCU'),
                 ('baudrate', 115200),
                 ('timeout', 1.0),            # 对应 YAML 中的 timeout
                 ('write_timeout', 1.0),      # 对应 YAML 中的 write_timeout
@@ -180,7 +180,7 @@ class SerialNode(Node):
                 if header[0] != self.serial_receive_header:
                     continue
 
-                # print("帧头已找到")
+                print("帧头已找到")
                 # 2. 读取剩余数据 (52字节)
                 remaining_data = self.serial.read(packet_length - 1)
                 # print(len(remaining_data))
@@ -339,7 +339,7 @@ class SerialNode(Node):
 
             self.serial.write(packet)
             # print(linear_velocity_x,linear_velocity_y)
-            # print(packet)
+            print(packet)
         except Exception as e:
             self.get_logger().error(f"发送数据时出错: {str(e)}")
 

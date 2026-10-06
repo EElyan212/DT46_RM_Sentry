@@ -50,3 +50,4 @@ uv run pointcloud-map-gui
 # 启动urdf
 ros2 launch rm_description urdf2tf.launch.py
 
+ros2 run rm_application serial_node --ros-args --params-file

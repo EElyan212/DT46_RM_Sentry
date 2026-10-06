@@ -16,7 +16,7 @@ behavior_tree_node:
 
     # 自瞄攻击范围，单位：米
     attack_range: 10.0
-  
+
     # 占点目标和补给点，使用 map 坐标，单位：米
-    center: [4.86, -2.39]
-    home: [-0.233, 0.833]
+    center: [1.63, 1.78]
+    home: [-0.841, -1.47]
