@@ -243,6 +243,7 @@ class SerialNode(Node):
                 serial_decision_msg.yaw = self.send_datas.yaw
                 serial_decision_msg.can_fire = self.send_datas.can_fire
                 serial_decision_msg.bullet_speed = bullet_speed
+                #使用模拟裁判系统消息进行测试时需要将self.pub_uart_receive_decision.publish(serial_decision_msg)注释掉
                 self.pub_uart_receive_decision.publish(serial_decision_msg)
 
 
