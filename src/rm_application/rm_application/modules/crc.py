@@ -104,3 +104,17 @@ def append_crc16_check_sum(message: bytearray) -> None:
     message[-2] = crc & 0xff
     # 填入高字节
     message[-1] = (crc >> 8) & 0xff
+
+
+# CRC-16/MODBUS（53 字节接收帧使用）
+def crc16_modbus(message: bytes, crc_init: int = 0xFFFF) -> int:
+    """
+    CRC-16/MODBUS：多项式 0xA001（反射），初始值 0xFFFF。
+    下位机协议要求覆盖接收帧 [0..50]，校验值低字节在前。
+    """
+    crc = crc_init
+    for byte in message:
+        crc ^= byte
+        for _ in range(8):
+            crc = (crc >> 1) ^ 0xA001 if crc & 1 else crc >> 1
+    return crc

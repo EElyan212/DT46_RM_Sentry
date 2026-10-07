@@ -1,0 +1,29 @@
+# 串口接收帧调试消息（仅测试用）
+# 字段与下位机 53 字节固定长帧偏移一一对应
+std_msgs/Header header
+
+uint8 sof
+uint8 detect_color
+uint8 reserved
+float32 roll
+float32 pitch
+float32 yaw
+float32 vx
+float32 vy
+uint16 self_sentry_hp
+uint16 self_hero_hp
+uint16 self_infantry_hp
+uint16 remain_time
+uint16 remain_bullet
+uint8 match_progress
+uint8 occupation
+float32 bullet_speed
+uint8 armor_id
+uint8 armor_reason
+uint8 armor_hit_cnt
+uint8 armor_hit_seq
+float32 armor_angle_chassis
+float32 armor_angle_world
+uint16 crc_received
+uint16 crc_calculated
+bool crc_ok
