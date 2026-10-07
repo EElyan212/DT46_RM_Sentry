@@ -4,14 +4,7 @@ import threading
 import rclpy
 from rclpy.node import Node
 from geometry_msgs.msg import Twist
-from rm_interfaces.msg import (
-    ArmorHit,
-    Decision,
-    GimbalControl,
-    OdoMsg,
-    Senddata,
-    SerialDebug,
-)
+from rm_interfaces.msg import Decision, Senddata, GimbalControl, OdoMsg, SerialDebug, ArmorHit
 from std_msgs.msg import Int32
 import struct
 from geometry_msgs.msg import Vector3Stamped, Twist
@@ -62,6 +55,7 @@ class SerialNode(Node):
         self.pub_uart_receive_imu = self.create_publisher(Vector3Stamped, '/imu/rpy', qos)
         #创建发布者 3: odo 数据
         self.pub_uart_receive_odo = self.create_publisher(OdoMsg, '/nav/odo', 10)
+
         # 每次新受击发布一条事件消息
         self.pub_armor_hit = self.create_publisher(ArmorHit, '/armor/hit', 10)
         # 可选的整帧解包调试消息
@@ -70,6 +64,7 @@ class SerialNode(Node):
             '/serial/debug',
             10,
         )
+
 
         self.color = ColorPrint()
 
@@ -156,6 +151,7 @@ class SerialNode(Node):
         serial_decision_msg = Decision()
         serial_odo_msg = OdoMsg()
         serial_hit_msg = ArmorHit()
+
         serial_debug_msg = SerialDebug()
         last_armor_hit_seq = None
         serial_decision_msg.header.frame_id = 'serial_receive_frame'
@@ -169,15 +165,27 @@ class SerialNode(Node):
         self.get_logger().info(
             "接收数据线程已启动 (53B 帧, CRC-16/MODBUS)"
         )
+
         self.serial.reset_input_buffer()
+        rx_idle = 0
         while rclpy.ok():
             try:
                 # 1. 查找帧头
                 header = self.serial.read(1)
-                if not header or header[0] != self.serial_receive_header:
+
+                if not header:
+                    rx_idle += 1
+                    if self.pub_serial_debug and rx_idle % 10 == 0:
+                        print("[RX] 无数据 (读超时, 下位机可能未发送)", flush=True)
+                    continue
+                rx_idle = 0
+                if self.pub_serial_debug:
+                    print(f"[RX] 原始字节: {header.hex()}", flush=True)
+                if header[0] != self.serial_receive_header:
                     continue
 
-                # 2. 读取剩余 52 字节
+                # print("帧头已找到")
+                # 2. 读取剩余数据 (52字节)
                 remaining_data = self.serial.read(packet_length - 1)
                 if len(remaining_data) != packet_length - 1:
                     self.get_logger().warn("数据包不完整")
@@ -186,9 +194,11 @@ class SerialNode(Node):
                 # 3. 组合完整包
                 full_packet = header + remaining_data
 
-                # 4. CRC-16/MODBUS 校验，覆盖前 51 字节
+                # print(full_packet)
+                # 4. CRC16 校验：载荷 = 前 51 字节 (0..50)
                 data_payload = full_packet[:-2]
                 checksum_bytes = full_packet[-2:]
+
                 received_crc = struct.unpack('<H', checksum_bytes)[0]
                 calculated_crc = crc16_modbus(data_payload)
                 if calculated_crc != received_crc:
@@ -224,6 +234,7 @@ class SerialNode(Node):
                 )
 
                 # 6.1 发布 IMU 消息
+
                 if self.pub_rpy:
                     rpy_msg = Vector3Stamped()
                     rpy_msg.header.stamp = self.get_clock().now().to_msg()
@@ -308,6 +319,54 @@ class SerialNode(Node):
                         serial_debug_msg
                     )
 
+
+                # 6.4 受击事件(仅在受击时发送，即armor_hit_seq 变化时发布一次)
+                if last_armor_hit_seq is None:
+                    last_armor_hit_seq = armor_hit_seq      # 首帧只记录，不误报
+                elif armor_hit_seq != last_armor_hit_seq:
+                    last_armor_hit_seq = armor_hit_seq
+                    serial_hit_msg.header.stamp = self.get_clock().now().to_msg()
+                    serial_hit_msg.header.frame_id = 'serial_receive_frame'
+                    serial_hit_msg.armor_id = armor_id
+                    serial_hit_msg.armor_reason = armor_reason
+                    serial_hit_msg.armor_hit_cnt = armor_hit_cnt
+                    serial_hit_msg.armor_hit_seq = armor_hit_seq
+                    serial_hit_msg.armor_angle_chassis = armor_angle_chassis
+                    serial_hit_msg.armor_angle_world = armor_angle_world
+                    self.pub_armor_hit.publish(serial_hit_msg)
+
+                # 6.5 测试用：整帧解包结果 + CRC 状态
+                if self.pub_serial_debug:
+                    serial_debug_msg.header.stamp = self.get_clock().now().to_msg()
+                    serial_debug_msg.sof = sof
+                    serial_debug_msg.detect_color = detect_color
+                    serial_debug_msg.reserved = reserved
+                    serial_debug_msg.roll = roll
+                    serial_debug_msg.pitch = pitch
+                    serial_debug_msg.yaw = yaw
+                    serial_debug_msg.vx = vx
+                    serial_debug_msg.vy = vy
+                    serial_debug_msg.self_sentry_hp = self_sentry_hp
+                    serial_debug_msg.self_hero_hp = self_hero_hp
+                    serial_debug_msg.self_infantry_hp = self_infantry_hp
+                    serial_debug_msg.remain_time = remain_time
+                    serial_debug_msg.remain_bullet = remain_bullet
+                    serial_debug_msg.match_progress = match_progress
+                    serial_debug_msg.occupation = occupation
+                    serial_debug_msg.bullet_speed = bullet_speed
+                    serial_debug_msg.armor_id = armor_id
+                    serial_debug_msg.armor_reason = armor_reason
+                    serial_debug_msg.armor_hit_cnt = armor_hit_cnt
+                    serial_debug_msg.armor_hit_seq = armor_hit_seq
+                    serial_debug_msg.armor_angle_chassis = armor_angle_chassis
+                    serial_debug_msg.armor_angle_world = armor_angle_world
+                    serial_debug_msg.crc_received = received_crc
+                    serial_debug_msg.crc_calculated = calculated_crc
+                    serial_debug_msg.crc_ok = (calculated_crc == received_crc)
+                    self.pub_serial_debug_pub.publish(serial_debug_msg)
+
+
+
             except (serial.SerialException, struct.error, ValueError) as e:
                 self.get_logger().error(f"接收数据异常: {str(e)}")
                 self.reopen_port()
@@ -353,7 +412,7 @@ class SerialNode(Node):
 
             self.serial.write(packet)
             # print(linear_velocity_x,linear_velocity_y)
-            print(packet)
+            # print(packet)
         except Exception as e:
             self.get_logger().error(f"发送数据时出错: {str(e)}")
 
