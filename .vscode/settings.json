@@ -15,6 +15,6 @@
         "--clang-tidy",
         "--header-insertion=never"
     ],
-    "cmake.sourceDirectory": "/home/kie-dt46/DT46_RM_Sentry/src/bot_navigation2"
+    "cmake.sourceDirectory": "/home/nico/DT46_RM_Sentry/src/rm_description"
 }
 

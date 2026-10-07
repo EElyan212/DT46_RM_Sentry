@@ -1,7 +1,6 @@
 # 串口接收帧调试消息（仅测试用）
 # 字段与下位机 53 字节固定长帧偏移一一对应
 std_msgs/Header header
-
 uint8 sof                 # 0  帧头，应为 0xA5
 uint8 detect_color        # 1  0=红, 1=蓝
 uint8 reserved            # 2  协议保留，应为 0
@@ -27,3 +26,4 @@ float32 armor_angle_world    # 47 受击方向场地方位 (0~360)
 uint16 crc_received       # 51 报文携带的 CRC
 uint16 crc_calculated     # 本地计算的 CRC
 bool crc_ok               # 两者是否一致
+

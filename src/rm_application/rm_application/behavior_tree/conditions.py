@@ -41,6 +41,7 @@ class CanChase(Node):
         get_enemy_position,
         get_robot_position,
         get_control_zone,
+        get_chase_boundary,
         is_chasing,
         attack_range,
     ):
@@ -52,6 +53,10 @@ class CanChase(Node):
 
         # 获取控制区开关和边界参数
         self.get_control_zone = get_control_zone
+
+        # 获取最大追击区域开关和边界参数
+        # 边界判断使用哨兵自身的地图坐标
+        self.get_chase_boundary = get_chase_boundary
 
         # 获取追击状态和攻击距离阈值
         self.is_chasing = is_chasing
@@ -77,9 +82,23 @@ class CanChase(Node):
         # 坐标无效或已经进入攻击范围，停止追击
         if not math.isfinite(distance) or distance <= self.attack_range:
             return Status.FAILURE
+        # 启用最大追击区域后，检查哨兵自身是否到达边界
+        boundary = self.get_chase_boundary()
 
-        # 已经开始追击时，允许离开控制区继续追
-        # 最大追击边界仍需后续在追击功能中接入
+        if boundary["enabled"]:
+            reached_boundary = (
+                robot_x <= boundary["x_min"]
+                or robot_x >= boundary["x_max"]
+                or robot_y <= boundary["y_min"]
+                or robot_y >= boundary["y_max"]
+            )
+
+            # 哨兵到达或超过边界时停止追击
+            if reached_boundary:
+                return Status.FAILURE
+
+        # 已经开始追击时，可以离开控制区继续追，
+        # 直到哨兵自身到达最大追击边界
         if self.is_chasing():
             return Status.SUCCESS
 
@@ -111,3 +130,61 @@ class IsMatchRunning(Node):
             return Status.SUCCESS
 
         return Status.FAILURE
+
+# 判断占点期间是否需要执行受击闪避
+class CanEvade(Node):
+    def __init__(
+        self,
+        name,
+        get_evade_enabled,
+        is_evading,
+        is_occupying,
+        get_pending_hit,
+        is_inside_control_zone,
+    ):
+        super().__init__(name)
+
+        # 动态读取闪避开关，之后可以通过 RQT 修改
+        self.get_evade_enabled = get_evade_enabled
+
+        # 获取闪避动作和占点动作当前是否正在运行
+        self.is_evading = is_evading
+        self.is_occupying = is_occupying
+
+        # 获取尚未处理的受击事件
+        # 没有待处理事件时应返回 None
+        self.get_pending_hit = get_pending_hit
+
+        # 判断机器人当前位置是否位于有效控制区内
+        self.is_inside_control_zone = is_inside_control_zone
+
+    def tick(self):
+        # 关闭闪避开关后立即停止闪避。
+        if not self.get_evade_enabled():
+            return Status.FAILURE
+
+        # 闪避已经开始后，不再要求占点动作继续运行，
+        # 但机器人必须仍然位于控制区内。
+        if self.is_evading():
+            if self.is_inside_control_zone():
+                return Status.SUCCESS
+
+            return Status.FAILURE
+
+        # 只允许从占点动作进入闪避。
+        if not self.is_occupying():
+            return Status.FAILURE
+
+        hit_event = self.get_pending_hit()
+        if hit_event is None:
+            return Status.FAILURE
+
+        # 只有弹丸命中才触发，撞击等原因不触发。
+        if hit_event.armor_reason != 0:
+            return Status.FAILURE
+
+        # 启动闪避前确认机器人位于控制区内。
+        if not self.is_inside_control_zone():
+            return Status.FAILURE
+
+        return Status.SUCCESS
