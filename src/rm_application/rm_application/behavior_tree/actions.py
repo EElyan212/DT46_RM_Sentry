@@ -123,3 +123,51 @@ class SpinChassis(Node):
         if self.running:
             self.stop_spin()
             self.running = False
+
+# 受击后在控制区内持续闪避
+class EvadeHit(Node):
+    def __init__(
+        self,
+        name,
+        start_evade,
+        update_evade,
+        stop_evade,
+    ):
+        super().__init__(name)
+
+        # 开始闪避的方法
+        self.start_evade = start_evade
+
+        # 获取闪避运行结果的方法
+        self.update_evade = update_evade
+
+        # 停止闪避导航的方法
+        self.stop_evade = stop_evade
+
+        # 是否已经启动闪避
+        self.running = False
+
+    def tick(self):
+        # 第一次进入闪避行为时，只启动一次
+        if not self.running:
+            if not self.start_evade():
+                return Status.FAILURE
+
+            self.running = True
+
+        # None 表示仍在闪避；True/False 表示闪避已经结束
+        result = self.update_evade()
+        if result is None:
+            return Status.RUNNING
+
+        # 闪避结束后取消剩余导航并清理状态
+        self.stop_evade()
+        self.running = False
+
+        return Status.SUCCESS if result else Status.FAILURE
+
+    def halt(self):
+        # 被回补给、追击或比赛结束打断时停止闪避
+        if self.running:
+            self.stop_evade()
+            self.running = False

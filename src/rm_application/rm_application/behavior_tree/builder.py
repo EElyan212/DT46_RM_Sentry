@@ -94,6 +94,7 @@ class BehaviorTreeBuilder:
             self.node.get_enemy_position,
             self.node.get_robot_position,
             self.node.get_control_zone,
+            self.node.get_chase_boundary,
             lambda: chase_action.running,
             self.node.attack_range,
         )

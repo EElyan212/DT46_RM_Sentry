@@ -55,10 +55,16 @@ class SerialNode(Node):
         self.pub_uart_receive_imu = self.create_publisher(Vector3Stamped, '/imu/rpy', qos)
         #创建发布者 3: odo 数据
         self.pub_uart_receive_odo = self.create_publisher(OdoMsg, '/nav/odo', 10)
-        # 创建发布者 4：受击反馈 数据
+
+        # 每次新受击发布一条事件消息
         self.pub_armor_hit = self.create_publisher(ArmorHit, '/armor/hit', 10)
-        # 测试用：整帧解包结果 + CRC 状态
-        self.pub_serial_debug_pub = self.create_publisher(SerialDebug, '/serial/debug', 10)
+        # 可选的整帧解包调试消息
+        self.pub_serial_debug_publisher = self.create_publisher(
+            SerialDebug,
+            '/serial/debug',
+            10,
+        )
+
 
         self.color = ColorPrint()
 
@@ -145,30 +151,29 @@ class SerialNode(Node):
         serial_decision_msg = Decision()
         serial_odo_msg = OdoMsg()
         serial_hit_msg = ArmorHit()
-        last_armor_hit_seq = None
+
         serial_debug_msg = SerialDebug()
+        last_armor_hit_seq = None
         serial_decision_msg.header.frame_id = 'serial_receive_frame'
         serial_decision_msg.color = 10
 
 
-        # [53 字节固定长帧, 小端, float=IEEE-754]
-        #  0 sof(1)   1 detect_color(1)  2 reserved(1)
-        #  3 roll(4)  7 pitch(4) 11 yaw(4) 15 vx(4) 19 vy(4)
-        # 23 self_sentry_hp(2) 25 self_hero_hp(2) 27 self_infantry_hp(2)
-        # 29 remain_time(2) 31 remain_bullet(2) 33 match_progress(1) 34 occupation(1)
-        # 35 bullet_speed(4)
-        # 39 armor_id(1) 40 armor_reason(1) 41 armor_hit_cnt(1) 42 armor_hit_seq(1)
-        # 43 armor_angle_chassis(4) 47 armor_angle_world(4)
-        # 51 crc16(2)  CRC-16/MODBUS, 覆盖 [0..50], 低字节在前
+        # 53 字节固定长帧，小端，float 为 IEEE-754 单精度：
+        # 0 sof, 1 detect_color, 2 reserved, 3..22 IMU/速度，
+        # 23..38 裁判数据，39..50 受击数据，51..52 CRC16。
         packet_length = 53
 
-        self.get_logger().info("接收数据线程已启动 (53B 帧, CRC-16/MODBUS)")
+        self.get_logger().info(
+            "接收数据线程已启动 (53B 帧, CRC-16/MODBUS)"
+        )
+
         self.serial.reset_input_buffer()
         rx_idle = 0
         while rclpy.ok():
             try:
                 # 1. 查找帧头
                 header = self.serial.read(1)
+
                 if not header:
                     rx_idle += 1
                     if self.pub_serial_debug and rx_idle % 10 == 0:
@@ -183,37 +188,54 @@ class SerialNode(Node):
                 print("帧头已找到")
                 # 2. 读取剩余数据 (52字节)
                 remaining_data = self.serial.read(packet_length - 1)
-                # print(len(remaining_data))
                 if len(remaining_data) != packet_length - 1:
                     self.get_logger().warn("数据包不完整")
                     continue
 
                 # 3. 组合完整包
                 full_packet = header + remaining_data
+
                 # print(full_packet)
                 # 4. CRC16 校验：载荷 = 前 51 字节 (0..50)
                 data_payload = full_packet[:-2]
-                # 校验位：最后2字节
                 checksum_bytes = full_packet[-2:]
 
-                # 解析收到的校验值 (低字节在前)
                 received_crc = struct.unpack('<H', checksum_bytes)[0]
-
-                # 计算本地 CRC-16/MODBUS
                 calculated_crc = crc16_modbus(data_payload)
-                # print(received_crc)
-                # print(calculated_crc)
                 if calculated_crc != received_crc:
-                    if self.pub_serial_debug:
-                        print(f"[RX] CRC 校验失败: recv=0x{received_crc:04X} calc=0x{calculated_crc:04X} "
-                              f"frame={full_packet.hex()}", flush=True)
                     continue
-                # print("通过校验")
-                # 5. 数据解包 (51字节)
-                sof, detect_color, reserved, roll, pitch, yaw, vx, vy, self_sentry_hp, self_hero_hp, self_infantry_hp, remain_time, remain_bullet, match_progress, occupation, bullet_speed, armor_id, armor_reason, armor_hit_cnt, armor_hit_seq, armor_angle_chassis, armor_angle_world = struct.unpack("<BBBfffffHHHHHBBfBBBBff", data_payload)
-                # print("获取数据成功")
-                #6.发布消息
-                #6.1 发布 IMU 消息
+
+                # 5. 解包前 51 字节数据载荷
+                (
+                    sof,
+                    detect_color,
+                    reserved,
+                    roll,
+                    pitch,
+                    yaw,
+                    vx,
+                    vy,
+                    self_sentry_hp,
+                    self_hero_hp,
+                    self_infantry_hp,
+                    remain_time,
+                    remain_bullet,
+                    match_progress,
+                    occupation,
+                    bullet_speed,
+                    armor_id,
+                    armor_reason,
+                    armor_hit_cnt,
+                    armor_hit_seq,
+                    armor_angle_chassis,
+                    armor_angle_world,
+                ) = struct.unpack(
+                    "<BBBfffffHHHHHBBfBBBBff",
+                    data_payload,
+                )
+
+                # 6.1 发布 IMU 消息
+
                 if self.pub_rpy:
                     rpy_msg = Vector3Stamped()
                     rpy_msg.header.stamp = self.get_clock().now().to_msg()
@@ -224,13 +246,13 @@ class SerialNode(Node):
 
                     self.pub_uart_receive_imu.publish(rpy_msg)
 
-                #6.2 发布odo消息
+                # 6.2 发布里程计消息
                 serial_odo_msg.vx = vx
                 serial_odo_msg.vy = vy
                 serial_odo_msg.yaw = yaw
                 self.pub_uart_receive_odo.publish(serial_odo_msg)
 
-                #6.3 发布 Decision 消息
+                # 6.3 发布 Decision 消息，保持行为树现有接口不变
                 serial_decision_msg.header.stamp = self.get_clock().now().to_msg()
                 serial_decision_msg.color = detect_color
                 serial_decision_msg.self_sentry_hp = self_sentry_hp
@@ -243,8 +265,63 @@ class SerialNode(Node):
                 serial_decision_msg.yaw = self.send_datas.yaw
                 serial_decision_msg.can_fire = self.send_datas.can_fire
                 serial_decision_msg.bullet_speed = bullet_speed
-                #使用模拟裁判系统消息进行测试时需要将self.pub_uart_receive_decision.publish(serial_decision_msg)注释掉
-                self.pub_uart_receive_decision.publish(serial_decision_msg)
+
+                #self.pub_uart_receive_decision.publish(serial_decision_msg)
+
+                # 6.4 序号变化时发布一次受击事件；首帧只初始化
+                if last_armor_hit_seq is None:
+                    last_armor_hit_seq = armor_hit_seq
+                elif armor_hit_seq != last_armor_hit_seq:
+                    last_armor_hit_seq = armor_hit_seq
+                    serial_hit_msg.header.stamp = (
+                        self.get_clock().now().to_msg()
+                    )
+                    serial_hit_msg.header.frame_id = 'serial_receive_frame'
+                    serial_hit_msg.armor_id = armor_id
+                    serial_hit_msg.armor_reason = armor_reason
+                    serial_hit_msg.armor_hit_cnt = armor_hit_cnt
+                    serial_hit_msg.armor_hit_seq = armor_hit_seq
+                    serial_hit_msg.armor_angle_chassis = armor_angle_chassis
+                    serial_hit_msg.armor_angle_world = armor_angle_world
+                    self.pub_armor_hit.publish(serial_hit_msg)
+
+                # 6.5 测试时可选发布完整解包结果
+                if self.pub_serial_debug:
+                    serial_debug_msg.header.stamp = (
+                        self.get_clock().now().to_msg()
+                    )
+                    serial_debug_msg.sof = sof
+                    serial_debug_msg.detect_color = detect_color
+                    serial_debug_msg.reserved = reserved
+                    serial_debug_msg.roll = roll
+                    serial_debug_msg.pitch = pitch
+                    serial_debug_msg.yaw = yaw
+                    serial_debug_msg.vx = vx
+                    serial_debug_msg.vy = vy
+                    serial_debug_msg.self_sentry_hp = self_sentry_hp
+                    serial_debug_msg.self_hero_hp = self_hero_hp
+                    serial_debug_msg.self_infantry_hp = self_infantry_hp
+                    serial_debug_msg.remain_time = remain_time
+                    serial_debug_msg.remain_bullet = remain_bullet
+                    serial_debug_msg.match_progress = match_progress
+                    serial_debug_msg.occupation = occupation
+                    serial_debug_msg.bullet_speed = bullet_speed
+                    serial_debug_msg.armor_id = armor_id
+                    serial_debug_msg.armor_reason = armor_reason
+                    serial_debug_msg.armor_hit_cnt = armor_hit_cnt
+                    serial_debug_msg.armor_hit_seq = armor_hit_seq
+                    serial_debug_msg.armor_angle_chassis = (
+                        armor_angle_chassis
+                    )
+                    serial_debug_msg.armor_angle_world = armor_angle_world
+                    serial_debug_msg.crc_received = received_crc
+                    serial_debug_msg.crc_calculated = calculated_crc
+                    serial_debug_msg.crc_ok = True
+                    self.pub_serial_debug_publisher.publish(
+                        serial_debug_msg
+                    )
+
+
 
 
                 # 6.4 受击事件(仅在受击时发送，即armor_hit_seq 变化时发布一次)

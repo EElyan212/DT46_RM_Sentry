@@ -28,6 +28,13 @@ class BehaviorTreeNode(Node):
         self.declare_parameter("control_zone_y_min", 0.0)
         self.declare_parameter("control_zone_y_max", 0.0)
 
+        # 声明最大追击区域参数；YAML 中的配置会覆盖这些默认值
+        self.declare_parameter("chase_boundary_enabled", False)
+        self.declare_parameter("chase_boundary_x_min", 0.0)
+        self.declare_parameter("chase_boundary_x_max", 0.0)
+        self.declare_parameter("chase_boundary_y_min", 0.0)
+        self.declare_parameter("chase_boundary_y_max", 0.0)
+
         self.declare_parameter("hp_limit", 150)
         self.declare_parameter("hp_up", 380)
         self.declare_parameter("attack_range", 10.0)
@@ -54,6 +61,23 @@ class BehaviorTreeNode(Node):
         ).value
         self.control_zone_y_max = self.get_parameter(
             "control_zone_y_max"
+        ).value
+
+        # 保存最大追击区域参数，供追击边界判断使用
+        self.chase_boundary_enabled = self.get_parameter(
+            "chase_boundary_enabled"
+        ).value
+        self.chase_boundary_x_min = self.get_parameter(
+            "chase_boundary_x_min"
+        ).value
+        self.chase_boundary_x_max = self.get_parameter(
+            "chase_boundary_x_max"
+        ).value
+        self.chase_boundary_y_min = self.get_parameter(
+            "chase_boundary_y_min"
+        ).value
+        self.chase_boundary_y_max = self.get_parameter(
+            "chase_boundary_y_max"
         ).value
 
         # 读取回补给和攻击距离参数，供 builder 使用
@@ -390,6 +414,15 @@ class BehaviorTreeNode(Node):
             "x_max": self.control_zone_x_max,
             "y_min": self.control_zone_y_min,
             "y_max": self.control_zone_y_max,
+        }
+    def get_chase_boundary(self):
+        # 提供最大追击区域配置，供追击边界判断使用
+        return {
+            "enabled": self.chase_boundary_enabled,
+            "x_min": self.chase_boundary_x_min,
+            "x_max": self.chase_boundary_x_max,
+            "y_min": self.chase_boundary_y_min,
+            "y_max": self.chase_boundary_y_max,
         }
     
 def main(args=None):
