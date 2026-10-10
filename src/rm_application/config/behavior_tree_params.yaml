@@ -21,12 +21,13 @@ behavior_tree_node:
     chase_boundary_y_min: 0.0
     chase_boundary_y_max: 0.0
 
+    # 追击过程中短暂丢失目标时的等待时间，单位：秒
+    # 在此时间内重新跟踪到敌人，则继续追击
+    target_lost_grace_time: 0.5
+
     # 回补给血量阈值
     hp_limit: 150
     hp_up: 380
-
-    # 自瞄攻击范围，单位：米
-    attack_range: 10.0
   
     # 占点目标和补给点，使用 map 坐标，单位：米
     center: [4.86, -2.39]

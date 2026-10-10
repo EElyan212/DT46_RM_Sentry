@@ -34,10 +34,11 @@ class BehaviorTreeNode(Node):
         self.declare_parameter("chase_boundary_x_max", 0.0)
         self.declare_parameter("chase_boundary_y_min", 0.0)
         self.declare_parameter("chase_boundary_y_max", 0.0)
+        # 追击过程中允许短暂丢失目标的时间
+        self.declare_parameter("target_lost_grace_time", 0.5)
 
         self.declare_parameter("hp_limit", 150)
         self.declare_parameter("hp_up", 380)
-        self.declare_parameter("attack_range", 10.0)
 
         # 声明并读取占点和补给点的 map 坐标
         self.declare_parameter("center", [4.86, -2.39])
@@ -80,16 +81,22 @@ class BehaviorTreeNode(Node):
             "chase_boundary_y_max"
         ).value
 
+        self.target_lost_grace_time = float(
+            self.get_parameter("target_lost_grace_time").value
+        )
+
         # 读取回补给和攻击距离参数，供 builder 使用
         self.hp_limit = self.get_parameter("hp_limit").value
         self.hp_up = self.get_parameter("hp_up").value
-        self.attack_range = self.get_parameter("attack_range").value
         
         # 尚未收到裁判系统数据
         self.latest_decision = None
 
         # 尚未收到敌人数据
         self.latest_enemy = None
+
+        # 最后一次有效跟踪到敌人的时间
+        self.last_enemy_tracked_time = None
 
         # 缓存 TF 数据，用于查询敌人的地图位置
         self.tf_buffer = Buffer()
@@ -169,6 +176,22 @@ class BehaviorTreeNode(Node):
     def enemy_callback(self, msg):
         # 保存最新收到的敌人数据
         self.latest_enemy = msg
+
+        # 只在有效跟踪敌人时更新时间
+        if msg.tracked:
+            self.last_enemy_tracked_time = self.get_clock().now()
+
+    def is_enemy_within_lost_grace(self):
+        # 从未跟踪到敌人时，不能使用等待时间
+        if self.last_enemy_tracked_time is None:
+            return False
+
+        # 计算距离最后一次有效跟踪经过了多久
+        elapsed = (
+            self.get_clock().now() - self.last_enemy_tracked_time
+        ).nanoseconds / 1e9
+
+        return elapsed <= self.target_lost_grace_time
 
     def tick_behavior_tree(self):
         # 每次 tick 都会重新检查优先级和当前条件
@@ -374,7 +397,11 @@ class BehaviorTreeNode(Node):
     
     def get_enemy_position(self):
         # 自瞄没有有效目标时，不使用缓存中的敌人坐标
-        if self.latest_enemy is None or not self.latest_enemy.tracked:
+        if (
+            self.latest_enemy is None
+            or not self.latest_enemy.tracked
+            or not self.is_enemy_within_lost_grace()
+        ):
             return None
 
         try:

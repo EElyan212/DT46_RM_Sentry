@@ -167,24 +167,26 @@ def test_can_chase():
         "y_min": -1.0,
         "y_max": 1.0,
     }]
+    chase_boundary = {
+        "enabled": True,
+        "x_min": -3.0,
+        "x_max": 3.0,
+        "y_min": -3.0,
+        "y_max": 3.0,
+    }
     chasing = [False]
+    enemy_within_lost_grace = [False]
     condition = CanChase(
         "是否需要追击",
         lambda: enemy_position[0],
         lambda: robot_position[0],
         lambda: control_zone[0],
+        lambda: chase_boundary,
+        lambda: enemy_within_lost_grace[0],
         lambda: chasing[0],
-        2.0,
     )
 
     # 没有有效目标时不追击。
-    assert condition.tick() == Status.FAILURE
-
-    # 在攻击范围内及边界上时不追击。
-    robot_position[0] = (0.0, 0.0)
-    enemy_position[0] = (1.9, 0.0)
-    assert condition.tick() == Status.FAILURE
-    enemy_position[0] = (2.0, 0.0)
     assert condition.tick() == Status.FAILURE
 
     # 尚未开始追击且不在控制区内时，不能发起追击。
@@ -203,10 +205,18 @@ def test_can_chase():
     chasing[0] = True
     assert condition.tick() == Status.SUCCESS
 
-    # 重新进入攻击范围或丢失目标后停止。
-    enemy_position[0] = (3.9, 0.0)
-    assert condition.tick() == Status.FAILURE
+    # 追击过程中短暂丢失目标时，保持追击。
     enemy_position[0] = None
+    enemy_within_lost_grace[0] = True
+    assert condition.tick() == Status.SUCCESS
+
+    # 超过等待时间后停止追击。
+    enemy_within_lost_grace[0] = False
+    assert condition.tick() == Status.FAILURE
+
+    # 哨兵自身到达最大追击边界时停止。
+    enemy_position[0] = (5.0, 0.0)
+    robot_position[0] = (3.0, 0.0)
     assert condition.tick() == Status.FAILURE
 
     print("追击条件测试通过\n")
@@ -222,13 +232,21 @@ def test_can_chase_interrupt():
         "y_min": -1.0,
         "y_max": 1.0,
     }
+    chase_boundary = {
+        "enabled": True,
+        "x_min": -2.0,
+        "x_max": 2.0,
+        "y_min": -2.0,
+        "y_max": 2.0,
+    }
     condition = CanChase(
         "是否需要追击",
         lambda: enemy_position[0],
         lambda: robot_position[0],
         lambda: control_zone,
+        lambda: chase_boundary,
         lambda: False,
-        2.0,
+        lambda: False,
     )
     chase = FakeNode("执行追击", Status.RUNNING)
     sequence = Sequence("追击行为", [condition, chase])
@@ -236,8 +254,8 @@ def test_can_chase_interrupt():
     assert sequence.tick() == Status.RUNNING
     assert chase.halt_count == 0
 
-    # 追击中进入攻击范围，Sequence 应停止追击动作。
-    enemy_position[0] = (2.0, 0.0)
+    # 追击中哨兵到达最大边界，Sequence 应停止追击动作。
+    robot_position[0] = (2.0, 0.0)
     assert sequence.tick() == Status.FAILURE
     assert chase.halt_count == 1
 
@@ -284,6 +302,13 @@ def test_chase_enemy():
         "y_min": -1.0,
         "y_max": 1.0,
     }
+    chase_boundary = {
+        "enabled": True,
+        "x_min": -3.0,
+        "x_max": 3.0,
+        "y_min": -3.0,
+        "y_max": 3.0,
+    }
     chase_result = [None]
     calls = {"start": 0, "stop": 0}
 
@@ -305,8 +330,9 @@ def test_chase_enemy():
         lambda: enemy_position[0],
         lambda: robot_position[0],
         lambda: control_zone,
+        lambda: chase_boundary,
+        lambda: False,
         lambda: action.running,
-        2.0,
     )
     sequence = Sequence("追击行为", [condition, action])
 
@@ -321,13 +347,14 @@ def test_chase_enemy():
     assert sequence.tick() == Status.RUNNING
     assert calls["start"] == 1
 
-    # 进入攻击范围后，条件失效并停止追击。
-    enemy_position[0] = (4.0, 0.0)
+    # 到达最大追击边界后，条件失效并停止追击。
+    robot_position[0] = (3.0, 0.0)
     assert sequence.tick() == Status.FAILURE
     assert calls["stop"] == 1
     assert action.running is False
 
     # 停止后仍在控制区外，不能立即重新启动。
+    robot_position[0] = (2.0, 0.0)
     enemy_position[0] = (5.0, 0.0)
     assert sequence.tick() == Status.FAILURE
     assert calls["start"] == 1
@@ -413,12 +440,19 @@ class FakeBehaviorNode:
             "y_min": -1.0,
             "y_max": 1.0,
         }
+        self.chase_boundary = {
+            "enabled": True,
+            "x_min": -3.0,
+            "x_max": 3.0,
+            "y_min": -3.0,
+            "y_max": 3.0,
+        }
         self.match_progress = 3
         self.chase_result = None
+        self.enemy_within_lost_grace = False
 
         self.hp_limit = 150
         self.hp_up = 380
-        self.attack_range = 2.0
 
         self.calls = {
             "start_resupply": 0,
@@ -442,6 +476,12 @@ class FakeBehaviorNode:
 
     def get_control_zone(self):
         return self.control_zone
+
+    def get_chase_boundary(self):
+        return self.chase_boundary
+
+    def is_enemy_within_lost_grace(self):
+        return self.enemy_within_lost_grace
 
     def get_match_progress(self):
         return self.match_progress
@@ -507,10 +547,24 @@ def test_behavior_tree_builder():
     assert tree.tick() == Status.RUNNING
     assert node.calls["start_chase"] == 1
 
-    # 外层限制触发后追击结束；仍在控制区外时不会立即重新启动。
-    node.chase_result = False
+    # 短暂丢失目标时保持当前追击，不取消也不重复启动。
+    node.enemy_position = None
+    node.enemy_within_lost_grace = True
+    assert tree.tick() == Status.RUNNING
+    assert node.calls["start_chase"] == 1
+    assert node.calls["stop_chase"] == 0
+
+    # 重新跟踪到目标后继续同一次追击。
+    node.enemy_position = (5.0, 0.0)
+    node.enemy_within_lost_grace = False
+    assert tree.tick() == Status.RUNNING
+    assert node.calls["start_chase"] == 1
+
+    # 到达最大追击边界后追击结束；仍在控制区外时不会立即重新启动。
+    node.robot_position = (3.0, 0.0)
     assert tree.tick() == Status.RUNNING
     assert node.calls["start_occupy"] == 2
+    assert node.calls["stop_chase"] == 1
     assert tree.tick() == Status.RUNNING
     assert node.calls["start_chase"] == 1
 
@@ -525,7 +579,7 @@ def test_behavior_tree_builder():
     node.hp = 100
     assert tree.tick() == Status.RUNNING
     assert node.calls["start_resupply"] == 1
-    assert node.calls["stop_chase"] == 1
+    assert node.calls["stop_chase"] == 2
 
     # 血量恢复且目标丢失：停止补给导航并重新占点。
     node.hp = 380

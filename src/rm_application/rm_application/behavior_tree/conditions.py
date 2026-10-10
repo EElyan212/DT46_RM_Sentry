@@ -1,5 +1,3 @@
-import math
-
 from rm_application.behavior_tree.core import Node, Status
 
 # 判断是否需要回补给
@@ -42,8 +40,8 @@ class CanChase(Node):
         get_robot_position,
         get_control_zone,
         get_chase_boundary,
+        is_enemy_within_lost_grace,
         is_chasing,
-        attack_range,
     ):
         super().__init__(name)
 
@@ -58,30 +56,23 @@ class CanChase(Node):
         # 边界判断使用哨兵自身的地图坐标
         self.get_chase_boundary = get_chase_boundary
 
-        # 获取追击状态和攻击距离阈值
+        # 判断短暂丢失目标是否仍在允许等待的时间内
+        self.is_enemy_within_lost_grace = is_enemy_within_lost_grace
+
+        # 获取追击动作当前是否正在运行
         self.is_chasing = is_chasing
-        self.attack_range = attack_range
 
     def tick(self):
         enemy_position = self.get_enemy_position()
         robot_position = self.get_robot_position()
 
-        # 缺少有效位置时，不允许追击
-        if enemy_position is None or robot_position is None:
+        # 没有底盘位置时无法判断追击边界
+        if robot_position is None:
             return Status.FAILURE
 
-        enemy_x, enemy_y = enemy_position
+        # 最大追击边界判断使用哨兵自身的 map 坐标
         robot_x, robot_y = robot_position
 
-        # 两者都在 map 坐标系中，计算水平直线距离
-        distance = math.hypot(
-            enemy_x - robot_x,
-            enemy_y - robot_y,
-        )
-
-        # 坐标无效或已经进入攻击范围，停止追击
-        if not math.isfinite(distance) or distance <= self.attack_range:
-            return Status.FAILURE
         # 启用最大追击区域后，检查哨兵自身是否到达边界
         boundary = self.get_chase_boundary()
 
@@ -96,6 +87,16 @@ class CanChase(Node):
             # 哨兵到达或超过边界时停止追击
             if reached_boundary:
                 return Status.FAILURE
+
+        # 追击过程中短暂丢失敌人时，暂时保持追击状态
+        if enemy_position is None:
+            if (
+                self.is_chasing()
+                and self.is_enemy_within_lost_grace()
+            ):
+                return Status.SUCCESS
+
+            return Status.FAILURE
 
         # 已经开始追击时，可以离开控制区继续追，
         # 直到哨兵自身到达最大追击边界
