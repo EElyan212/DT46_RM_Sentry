@@ -95,8 +95,8 @@ class BehaviorTreeBuilder:
             self.node.get_robot_position,
             self.node.get_control_zone,
             self.node.get_chase_boundary,
+            self.node.is_enemy_within_lost_grace,
             lambda: chase_action.running,
-            self.node.attack_range,
         )
         return Sequence(
             "追击行为",
