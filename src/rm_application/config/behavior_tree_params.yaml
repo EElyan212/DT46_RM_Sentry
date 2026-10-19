@@ -32,17 +32,3 @@ behavior_tree_node:
     # 占点目标和补给点，使用 map 坐标，单位：米
     center: [4.86, -2.39]
     home: [-0.233, 0.833]
-
-    # 是否启用占点期间的受击闪避
-    # false 时即使收到 /armor/hit 也不会移动
-    hit_evade_enabled: false
-
-    # 每次选择闪避目标点时的移动距离，单位：米
-    hit_evade_distance: 0.6
-
-    # 最后一次有效受击后继续动态移动的时间，单位：秒
-    hit_evade_quiet_time: 4.0
-
-    # 闪避目标与控制区边界之间保留的安全距离，单位：米
-    # 用于避免机器人中心未越界但车体已经越界
-    control_zone_margin: 0.25
