@@ -1,5 +1,17 @@
 from rm_application.behavior_tree.core import Node, Status
 
+# 把任务选择结果写入共享黑板
+class SetNavigationTask(Node):
+    def __init__(self, name, set_navigation_task, task):
+        super().__init__(name)
+
+        self.set_navigation_task = set_navigation_task
+        self.task = task
+
+    def tick(self):
+        self.set_navigation_task(self.task)
+        return Status.SUCCESS
+
 # 前往并守住控制区
 class OccupyZone(Node):
     def __init__(self, name, start_occupy, stop_occupy):

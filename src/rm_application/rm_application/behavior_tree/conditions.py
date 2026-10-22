@@ -1,5 +1,19 @@
 from rm_application.behavior_tree.core import Node, Status
 
+# 判断共享黑板中的导航任务是否为指定任务
+class IsNavigationTask(Node):
+    def __init__(self, name, get_navigation_task, expected_task):
+        super().__init__(name)
+
+        self.get_navigation_task = get_navigation_task
+        self.expected_task = expected_task
+
+    def tick(self):
+        if self.get_navigation_task() == self.expected_task:
+            return Status.SUCCESS
+
+        return Status.FAILURE
+
 # 判断是否需要回补给
 class NeedResupply(Node):
     def __init__(self, name, get_hp, hp_limit, hp_up):

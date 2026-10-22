@@ -88,6 +88,14 @@ class BehaviorTreeNode(Node):
         # 每次 tick 都会重新检查优先级和当前条件
         self.behavior_tree.tick()
     
+    def set_navigation_task(self, task):
+        # 任务选择树把当前导航任务写入共享黑板
+        self.blackboard.navigation_task = task
+
+    def get_navigation_task(self):
+        # 导航执行树从共享黑板读取当前导航任务
+        return self.blackboard.navigation_task
+    
     def start_occupy(self):
         # 占点行为不直接操作 Nav2
         # 把开始占点的请求交给统一通信接口
