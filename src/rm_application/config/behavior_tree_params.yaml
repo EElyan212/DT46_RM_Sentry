@@ -32,3 +32,13 @@ behavior_tree_node:
     # 占点目标和补给点，使用 map 坐标，单位：米
     center: [4.86, -2.39]
     home: [-0.233, 0.833]
+
+    # 中央控制区内三个巡逻子区域的矩形边界
+    # 顺序：[x_min, x_max, y_min, y_max]
+    # 当前暂用 0 占位，之后在 RViz 中确定实际边界
+    patrol_home_area: [0.0, 0.0, 0.0, 0.0]
+    patrol_center_area: [0.0, 0.0, 0.0, 0.0]
+    patrol_enemy_area: [0.0, 0.0, 0.0, 0.0]
+
+    # 随机目标与机器人当前位置至少相距多少米
+    patrol_min_goal_distance: 0.5

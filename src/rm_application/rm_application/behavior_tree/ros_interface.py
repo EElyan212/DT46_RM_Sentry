@@ -1,9 +1,21 @@
+import random
 from geometry_msgs.msg import PoseStamped
-from nav2_simple_commander.robot_navigator import BasicNavigator
-from rm_interfaces.msg import Decision, EnemyCenter
+from nav2_simple_commander.robot_navigator import (
+    BasicNavigator,
+    TaskResult,
+)
+from rm_interfaces.msg import (
+    Decision,
+    EnemyCenter,
+    TacticalModeCommand,
+)
 from std_msgs.msg import Int32
 from rclpy.action import ActionClient
 from rm_interfaces.action import Chase
+from rm_application.behavior_tree.nav_zone import (
+    PatrolRegion,
+    TacticalMode,
+)
 from rclpy.qos import (
     QoSProfile,
     ReliabilityPolicy,
@@ -31,6 +43,24 @@ class RosInterface:
             [-0.233, 0.833],
         )
 
+        # 声明三个巡逻子区域和最小巡逻距离
+        self.node.declare_parameter(
+            "patrol_home_area",
+            [0.0, 0.0, 0.0, 0.0],
+        )
+        self.node.declare_parameter(
+            "patrol_center_area",
+            [0.0, 0.0, 0.0, 0.0],
+        )
+        self.node.declare_parameter(
+            "patrol_enemy_area",
+            [0.0, 0.0, 0.0, 0.0],
+        )
+        self.node.declare_parameter(
+            "patrol_min_goal_distance",
+            0.5,
+        )
+
         # 保存占点和补给点坐标
         self.center_position = self.node.get_parameter(
             "center"
@@ -38,6 +68,27 @@ class RosInterface:
         self.home_position = self.node.get_parameter(
             "home"
         ).value
+
+        # 保存三个巡逻子区域和最小巡逻距离
+        self.patrol_home_area = self.node.get_parameter(
+            "patrol_home_area"
+        ).value
+        self.patrol_center_area = self.node.get_parameter(
+            "patrol_center_area"
+        ).value
+        self.patrol_enemy_area = self.node.get_parameter(
+            "patrol_enemy_area"
+        ).value
+        self.patrol_min_goal_distance = self.node.get_parameter(
+            "patrol_min_goal_distance"
+        ).value
+
+        # 建立巡逻区域名称与矩形边界的对应关系
+        self.patrol_areas = {
+            PatrolRegion.HOME: self.patrol_home_area,
+            PatrolRegion.CENTER: self.patrol_center_area,
+            PatrolRegion.ENEMY: self.patrol_enemy_area,
+        }
 
         # 占点和回补给共用的 Nav2 导航接口
         self.navigator = BasicNavigator(
@@ -54,6 +105,17 @@ class RosInterface:
             self.decision_callback,
             10,
         )
+
+        # 接收 RQT 发布的手动战术模式选择
+        self.tactical_mode_subscription = (
+            self.node.create_subscription(
+                TacticalModeCommand,
+                "/behavior_tree/tactical_mode",
+                self.tactical_mode_callback,
+                10,
+            )
+        )
+
         # 发布小陀螺模式，由 serial_node 转发给下位机
         self.gimbal_mode_publisher = self.node.create_publisher(
             Int32,
@@ -111,6 +173,40 @@ class RosInterface:
         self.blackboard.match_progress = msg.match_progress
         self.blackboard.self_hp = msg.self_sentry_hp
 
+    def tactical_mode_callback(self, msg):
+        # 收集消息中被勾选的战术模式
+        selected_modes = []
+
+        if msg.defense:
+            selected_modes.append(TacticalMode.DEFENSE)
+
+        if msg.neutral:
+            selected_modes.append(TacticalMode.NEUTRAL)
+
+        if msg.pressure:
+            selected_modes.append(TacticalMode.PRESSURE)
+
+        # 必须且只能勾选一个模式
+        if len(selected_modes) != 1:
+            self.node.get_logger().warning(
+                "战术模式消息无效：必须且只能勾选一个模式"
+            )
+            return
+
+        selected_mode = selected_modes[0]
+
+        # 重复收到当前模式时不重复处理
+        if selected_mode == self.blackboard.tactical_mode:
+            return
+
+        # 使用统一接口修改共享黑板
+        self.node.set_tactical_mode(selected_mode)
+
+        self.node.get_logger().info(
+            f"战术模式切换为：{selected_mode.value}"
+        )
+
+
     def enemy_callback(self, msg):
         # 保存最新收到的敌人数据
         self.latest_enemy = msg
@@ -157,6 +253,10 @@ class RosInterface:
         position = transform.transform.translation
         return position.x, position.y
 
+    def get_patrol_area(self, patrol_region):
+        # 根据当前战术要求返回对应的巡逻矩形
+        return self.patrol_areas.get(patrol_region)
+
     def get_robot_position(self):
         # 获取底盘在地图中的位置
         try:
@@ -171,6 +271,42 @@ class RosInterface:
 
         position = transform.transform.translation
         return position.x, position.y
+
+    def sample_patrol_target(self, patrol_region):
+        # 获取当前战术对应的巡逻矩形
+        area = self.get_patrol_area(patrol_region)
+        if area is None or len(area) != 4:
+            return None
+
+        x_min, x_max, y_min, y_max = map(float, area)
+
+        # 尚未配置有效区域时不生成导航目标
+        if x_min >= x_max or y_min >= y_max:
+            return None
+
+        # 没有有效定位时无法判断新目标距离
+        robot_position = self.get_robot_position()
+        if robot_position is None:
+            return None
+
+        robot_x, robot_y = robot_position
+        min_distance_squared = (
+            float(self.patrol_min_goal_distance) ** 2
+        )
+
+        # 最多尝试20次，防止区域太小时陷入死循环
+        for _ in range(20):
+            target_x = random.uniform(x_min, x_max)
+            target_y = random.uniform(y_min, y_max)
+
+            distance_squared = (
+                (target_x - robot_x) ** 2
+                + (target_y - robot_y) ** 2
+            )
+            if distance_squared >= min_distance_squared:
+                return target_x, target_y
+
+        return None
 
     def create_navigation_pose(self, position):
         # 创建 map 坐标系下的导航目标
@@ -215,6 +351,55 @@ class RosInterface:
         self.navigation_owner = "resupply"
         return True
 
+    def start_patrol(self, patrol_region):
+        # 在当前战术指定的矩形区域内选择巡逻目标
+        target_position = self.sample_patrol_target(
+            patrol_region
+        )
+        if target_position is None:
+            return False
+
+        # 把随机坐标包装成 Nav2 目标消息
+        target_pose = self.create_navigation_pose(
+            target_position
+        )
+
+        # 向 Nav2 发送巡逻目标
+        if not self.navigator.goToPose(target_pose):
+            return False
+
+        # 当前导航任务属于巡逻
+        self.navigation_owner = "patrol"
+        return True
+
+    def get_navigation_result(self, owner):
+        # 只有发出当前导航目标的行为才能读取结果
+        if self.navigation_owner != owner:
+            return False
+
+        # None 表示仍在前往当前目标
+        if not self.navigator.isTaskComplete():
+            return None
+
+        result = self.navigator.getResult()
+        self.navigation_owner = None
+
+        # True 表示成功到达；False 表示失败或取消
+        return result == TaskResult.SUCCEEDED
+
+    def get_occupy_result(self):
+        # 查询当前占点目标的导航结果
+        return self.get_navigation_result("occupy")
+
+    def get_resupply_result(self):
+        # 查询当前回补给目标的导航结果
+        return self.get_navigation_result("resupply")
+
+
+    def get_patrol_result(self):
+        # 查询当前巡逻目标的导航结果
+        return self.get_navigation_result("patrol")
+
     def stop_navigation(self, owner):
         # 只允许当前导航的所属行为取消它
         if self.navigation_owner != owner:
@@ -230,6 +415,10 @@ class RosInterface:
     def stop_resupply(self):
         # 只取消属于回补给的导航
         self.stop_navigation("resupply")
+    
+    def stop_patrol(self):
+        # 只取消属于巡逻的导航
+        self.stop_navigation("patrol")
     
     def wait_until_navigation_active(self):
         # 等待 Nav2 完成启动

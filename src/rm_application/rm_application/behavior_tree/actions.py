@@ -12,6 +12,18 @@ class SetNavigationTask(Node):
         self.set_navigation_task(self.task)
         return Status.SUCCESS
 
+# 把战术选择的巡逻区域写入共享黑板
+class SetPatrolRegion(Node):
+    def __init__(self, name, set_patrol_region, patrol_region):
+        super().__init__(name)
+
+        self.set_patrol_region = set_patrol_region
+        self.patrol_region = patrol_region
+
+    def tick(self):
+        self.set_patrol_region(self.patrol_region)
+        return Status.SUCCESS
+
 # 前往并守住控制区
 class OccupyZone(Node):
     def __init__(self, name, start_occupy, stop_occupy):
@@ -42,6 +54,79 @@ class OccupyZone(Node):
         if self.running:
             self.stop_occupy()
             self.running = False
+
+# 在指定区域内持续巡逻
+class PatrolZone(Node):
+    def __init__(
+        self,
+        name,
+        get_patrol_region,
+        start_patrol,
+        get_patrol_result,
+        stop_patrol,
+    ):
+        super().__init__(name)
+
+        self.get_patrol_region = get_patrol_region
+        self.start_patrol = start_patrol
+        self.get_patrol_result = get_patrol_result
+        self.stop_patrol = stop_patrol
+
+        # 是否正在前往一个巡逻目标
+        self.running = False
+
+        # 记录当前目标所属的巡逻区域
+        self.active_region = None
+
+    def tick(self):
+        patrol_region = self.get_patrol_region()
+
+        # 战术切换导致巡逻区域改变时，取消旧区域的目标
+        if (
+            self.running
+            and patrol_region != self.active_region
+        ):
+            self.stop_patrol()
+            self.running = False
+            self.active_region = None
+
+        # 尚未运行时，生成并发送一个巡逻目标
+        if not self.running:
+            if not self.start_patrol(patrol_region):
+                return Status.FAILURE
+
+            self.running = True
+            self.active_region = patrol_region
+            return Status.RUNNING
+
+        # 查询当前随机目标的导航结果
+        result = self.get_patrol_result()
+        if result is None:
+            return Status.RUNNING
+
+        self.running = False
+
+        # 当前目标不可达时交给上层恢复逻辑
+        if not result:
+            self.active_region = None
+            return Status.FAILURE
+
+        # 成功到达后，在同一区域生成下一个目标
+        if not self.start_patrol(patrol_region):
+            self.active_region = None
+            return Status.FAILURE
+
+        self.running = True
+        self.active_region = patrol_region
+        return Status.RUNNING
+
+    def halt(self):
+        # 被回血、占点或追击打断时取消巡逻
+        if self.running:
+            self.stop_patrol()
+
+        self.running = False
+        self.active_region = None
 
 # 前往补给区
 class GoResupply(Node):

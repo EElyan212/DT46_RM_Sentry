@@ -14,6 +14,20 @@ class IsNavigationTask(Node):
 
         return Status.FAILURE
 
+# 判断共享黑板中的战术模式是否为指定模式
+class IsTacticalMode(Node):
+    def __init__(self, name, get_tactical_mode, expected_mode):
+        super().__init__(name)
+
+        self.get_tactical_mode = get_tactical_mode
+        self.expected_mode = expected_mode
+
+    def tick(self):
+        if self.get_tactical_mode() == self.expected_mode:
+            return Status.SUCCESS
+
+        return Status.FAILURE
+
 # 判断是否需要回补给
 class NeedResupply(Node):
     def __init__(self, name, get_hp, hp_limit, hp_up):
@@ -44,6 +58,98 @@ class NeedResupply(Node):
             return Status.SUCCESS
 
         return Status.FAILURE
+
+# 判断哨兵是否需要进入中央控制区
+class NeedEnterCenterZone(Node):
+    def __init__(self, name, get_robot_position, get_control_zone):
+        super().__init__(name)
+        self.get_robot_position = get_robot_position
+        self.get_control_zone = get_control_zone
+
+    def tick(self):
+        zone = self.get_control_zone()
+
+        # 边界未配置或定位不可用时，暂不允许巡逻
+        if not zone["enabled"]:
+            return Status.SUCCESS
+
+        robot_position = self.get_robot_position()
+        if robot_position is None:
+            return Status.SUCCESS
+
+        robot_x, robot_y = robot_position
+
+        inside_zone = (
+            zone["x_min"] <= robot_x <= zone["x_max"]
+            and zone["y_min"] <= robot_y <= zone["y_max"]
+        )
+
+        return Status.FAILURE if inside_zone else Status.SUCCESS
+
+# 判断是否允许在中央控制区内受限追击
+class CanChaseInsideCenterZone(Node):
+    def __init__(
+        self,
+        name,
+        get_enemy_position,
+        get_robot_position,
+        get_control_zone,
+        is_enemy_within_lost_grace,
+        is_chasing,
+    ):
+        super().__init__(name)
+
+        self.get_enemy_position = get_enemy_position
+        self.get_robot_position = get_robot_position
+        self.get_control_zone = get_control_zone
+        self.is_enemy_within_lost_grace = is_enemy_within_lost_grace
+        self.is_chasing = is_chasing
+
+    def tick(self):
+        zone = self.get_control_zone()
+
+        # 没有配置中央控制区边界时，不启动受限追击
+        if not zone["enabled"]:
+            return Status.FAILURE
+
+        robot_position = self.get_robot_position()
+        if robot_position is None:
+            return Status.FAILURE
+
+        robot_x, robot_y = robot_position
+        robot_inside = (
+            zone["x_min"] <= robot_x <= zone["x_max"]
+            and zone["y_min"] <= robot_y <= zone["y_max"]
+        )
+
+        # 哨兵离开中央控制区后立即停止追击
+        if not robot_inside:
+            return Status.FAILURE
+
+        enemy_position = self.get_enemy_position()
+
+        # 追击中短暂丢失目标时，允许使用现有宽限时间
+        if enemy_position is None:
+            if (
+                self.is_chasing()
+                and self.is_enemy_within_lost_grace()
+            ):
+                return Status.SUCCESS
+
+            return Status.FAILURE
+
+        enemy_x, enemy_y = enemy_position
+        enemy_inside = (
+            zone["x_min"] <= enemy_x <= zone["x_max"]
+            and zone["y_min"] <= enemy_y <= zone["y_max"]
+        )
+
+        # 只有哨兵和敌人都在中央控制区内才允许追击
+        if enemy_inside:
+            return Status.SUCCESS
+
+        return Status.FAILURE
+
 
 # 判断是否需要追击敌人
 class CanChase(Node):
@@ -84,52 +190,62 @@ class CanChase(Node):
         if robot_position is None:
             return Status.FAILURE
 
-        # 最大追击边界判断使用哨兵自身的 map 坐标
-        robot_x, robot_y = robot_position
-
-        # 启用最大追击区域后，检查哨兵自身是否到达边界
+        zone = self.get_control_zone()
         boundary = self.get_chase_boundary()
 
-        if boundary["enabled"]:
-            reached_boundary = (
-                robot_x <= boundary["x_min"]
-                or robot_x >= boundary["x_max"]
-                or robot_y <= boundary["y_min"]
-                or robot_y >= boundary["y_max"]
-            )
-
-            # 哨兵到达或超过边界时停止追击
-            if reached_boundary:
-                return Status.FAILURE
-
-        # 追击过程中短暂丢失敌人时，暂时保持追击状态
-        if enemy_position is None:
-            if (
-                self.is_chasing()
-                and self.is_enemy_within_lost_grace()
-            ):
-                return Status.SUCCESS
-
+        # 中央控制区或最大追击边界未配置时，
+        # 不允许启动前压离区追击
+        if not zone["enabled"] or not boundary["enabled"]:
             return Status.FAILURE
 
-        # 已经开始追击时，可以离开控制区继续追，
-        # 直到哨兵自身到达最大追击边界
-        if self.is_chasing():
-            return Status.SUCCESS
+        robot_x, robot_y = robot_position
 
-        zone = self.get_control_zone()
+        # 哨兵到达最大追击边界后立即停止追击
+        reached_boundary = (
+            robot_x <= boundary["x_min"]
+            or robot_x >= boundary["x_max"]
+            or robot_y <= boundary["y_min"]
+            or robot_y >= boundary["y_max"]
+        )
 
-        # 调试时关闭限制，允许从控制区外开始追击
-        if not zone["enabled"]:
-            return Status.SUCCESS
+        if reached_boundary:
+            return Status.FAILURE
 
-        # 启用限制时，只允许从控制区内开始追击
-        inside_zone = (
+        robot_inside_zone = (
             zone["x_min"] <= robot_x <= zone["x_max"]
             and zone["y_min"] <= robot_y <= zone["y_max"]
         )
 
-        return Status.SUCCESS if inside_zone else Status.FAILURE
+        chasing = self.is_chasing()
+
+        # 只能从中央控制区内开始追击
+        if not chasing and not robot_inside_zone:
+            return Status.FAILURE
+
+        # 追击过程中短暂丢失敌人时，允许等待一小段时间
+        if enemy_position is None:
+            if chasing and self.is_enemy_within_lost_grace():
+                return Status.SUCCESS
+
+            return Status.FAILURE
+
+        # 已经开始追击后，可以离开中央控制区，
+        # 直到到达最大追击边界
+        return Status.SUCCESS
+
+# 判断比赛是否未在进行
+class IsMatchStopped(Node):
+    def __init__(self, name, get_match_progress):
+        super().__init__(name)
+
+        self.get_match_progress = get_match_progress
+
+    def tick(self):
+        # 未收到比赛数据、比赛尚未开始或比赛已经结束时都应停止
+        if self.get_match_progress() != 4:
+            return Status.SUCCESS
+
+        return Status.FAILURE
 
 # 判断比赛是否正在进行
 class IsMatchRunning(Node):

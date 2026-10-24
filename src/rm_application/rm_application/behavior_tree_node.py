@@ -96,6 +96,23 @@ class BehaviorTreeNode(Node):
         # 导航执行树从共享黑板读取当前导航任务
         return self.blackboard.navigation_task
     
+    def set_tactical_mode(self, tactical_mode):
+        # 战术选择结果写入共享黑板
+        self.blackboard.tactical_mode = tactical_mode
+
+    def get_tactical_mode(self):
+        # 行为树读取当前采用的战术模式
+        return self.blackboard.tactical_mode
+
+
+    def set_patrol_region(self, patrol_region):
+        # 战术选择树把巡逻区域写入共享黑板
+        self.blackboard.patrol_region = patrol_region
+
+    def get_patrol_region(self):
+        # 巡逻行为从共享黑板读取当前巡逻区域
+        return self.blackboard.patrol_region
+
     def start_occupy(self):
         # 占点行为不直接操作 Nav2
         # 把开始占点的请求交给统一通信接口
@@ -106,6 +123,15 @@ class BehaviorTreeNode(Node):
         # 把开始回补给的请求交给统一通信接口
         return self.ros_interface.start_resupply()
 
+    def get_occupy_result(self):
+        # 从统一通信接口读取占点导航结果
+        return self.ros_interface.get_occupy_result()
+
+    def get_resupply_result(self):
+        # 从统一通信接口读取回补给导航结果
+        return self.ros_interface.get_resupply_result()
+
+
     def stop_occupy(self):
         # 把停止占点导航的请求交给统一通信接口
         self.ros_interface.stop_occupy()
@@ -113,6 +139,20 @@ class BehaviorTreeNode(Node):
     def stop_resupply(self):
         # 把停止回补给导航的请求交给统一通信接口
         self.ros_interface.stop_resupply()
+
+    def start_patrol(self, patrol_region):
+        # 把开始区域巡逻的请求交给统一通信接口
+        return self.ros_interface.start_patrol(
+            patrol_region
+        )
+
+    def get_patrol_result(self):
+        # 从统一通信接口读取当前巡逻目标的导航结果
+        return self.ros_interface.get_patrol_result()
+
+    def stop_patrol(self):
+        # 把停止巡逻导航的请求交给统一通信接口
+        self.ros_interface.stop_patrol()
 
     def start_spin(self):
         # 把开启小陀螺的请求交给统一通信接口
