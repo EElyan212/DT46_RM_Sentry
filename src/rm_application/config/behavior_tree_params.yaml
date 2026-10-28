@@ -5,10 +5,10 @@ behavior_tree_node:
 
     # 控制区在 map 坐标系下的矩形边界，单位：米
     # 当前数值仅占位
-    control_zone_x_min: 0.0
-    control_zone_x_max: 0.0
-    control_zone_y_min: 0.0
-    control_zone_y_max: 0.0
+    control_zone_x_min: 1.23
+    control_zone_x_max: 1.83
+    control_zone_y_min: 1.48
+    control_zone_y_max: 2.08
 
     # 是否启用最大追击区域限制
     # 具体边界坐标确定前保持 false
@@ -16,17 +16,17 @@ behavior_tree_node:
 
     # 最大追击区域在 map 坐标系下的矩形边界，单位：米
     # 当前数值仅占位，之后通过 RViz 确定
-    chase_boundary_x_min: 0.0
-    chase_boundary_x_max: 0.0
-    chase_boundary_y_min: 0.0
-    chase_boundary_y_max: 0.0
+    chase_boundary_x_min: 1.0
+    chase_boundary_x_max: 2.86
+    chase_boundary_y_min: 1.09
+    chase_boundary_y_max: 2.29
 
     # 回补给血量阈值
     hp_limit: 150
     hp_up: 380
 
     # 自瞄攻击范围，单位：米
-    attack_range: 10.0
+    attack_range: 0.1
 
     # 占点目标和补给点，使用 map 坐标，单位：米
     center: [1.63, 1.78]

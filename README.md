@@ -21,7 +21,7 @@ ros2 run teleop_twist_keyboard teleop_twist_keyboard
 
 
 #保存地图到当前目录
-ros2 run nav2_map_server map_saver_cli -f room_19
+ros2 run nav2_map_server map_saver_cli -f room_1
 
 # 代价地图清理
 ros2 run rm_navigation2 map_clear

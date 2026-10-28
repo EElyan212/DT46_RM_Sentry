@@ -266,7 +266,7 @@ class SerialNode(Node):
                 serial_decision_msg.can_fire = self.send_datas.can_fire
                 serial_decision_msg.bullet_speed = bullet_speed
 
-                #self.pub_uart_receive_decision.publish(serial_decision_msg)
+                self.pub_uart_receive_decision.publish(serial_decision_msg)
 
                 # 6.4 序号变化时发布一次受击事件；首帧只初始化
                 if last_armor_hit_seq is None:

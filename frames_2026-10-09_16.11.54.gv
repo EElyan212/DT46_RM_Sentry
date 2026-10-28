@@ -1,0 +1,15 @@
+digraph G {
+"livox_odom" -> "livox_frame"[label=" Broadcaster: default_authority\nAverage rate: 10.195\nBuffer length: 5.1\nMost recent transform: 1791533514.392581\nOldest transform: 1791533509.292188\n"];
+"odom" -> "livox_odom"[label=" Broadcaster: default_authority\nAverage rate: 10000.0\nBuffer length: 0.0\nMost recent transform: 0.0\nOldest transform: 0.0\n"];
+"map" -> "odom"[label=" Broadcaster: default_authority\nAverage rate: 10.241\nBuffer length: 4.101\nMost recent transform: 1791533514.582581\nOldest transform: 1791533510.481582\n"];
+"base_footprint" -> "classis"[label=" Broadcaster: default_authority\nAverage rate: 10000.0\nBuffer length: 0.0\nMost recent transform: 0.0\nOldest transform: 0.0\n"];
+"livox_frame" -> "base_footprint"[label=" Broadcaster: default_authority\nAverage rate: 10000.0\nBuffer length: 0.0\nMost recent transform: 0.0\nOldest transform: 0.0\n"];
+"classis" -> "camera"[label=" Broadcaster: default_authority\nAverage rate: 10000.0\nBuffer length: 0.0\nMost recent transform: 0.0\nOldest transform: 0.0\n"];
+"classis" -> "imu_up"[label=" Broadcaster: default_authority\nAverage rate: 10000.0\nBuffer length: 0.0\nMost recent transform: 0.0\nOldest transform: 0.0\n"];
+"classis" -> "muzzle"[label=" Broadcaster: default_authority\nAverage rate: 10000.0\nBuffer length: 0.0\nMost recent transform: 0.0\nOldest transform: 0.0\n"];
+"classis" -> "gimbal"[label=" Broadcaster: default_authority\nAverage rate: 10.199\nBuffer length: 5.001\nMost recent transform: 1791533514.603058\nOldest transform: 1791533509.602553\n"];
+edge [style=invis];
+ subgraph cluster_legend { style=bold; color=black; label ="view_frames Result";
+"Recorded at time: 1791533514.6160326"[ shape=plaintext ] ;
+}->"map";
+}
