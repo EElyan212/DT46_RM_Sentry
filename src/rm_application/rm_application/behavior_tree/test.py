@@ -1,3 +1,5 @@
+from unittest.mock import patch
+
 from rm_application.behavior_tree.core import (
     Node,
     Status,
@@ -16,15 +18,46 @@ from rm_application.behavior_tree.actions import (
     OccupyZone,
     PatrolZone,
     SpinChassis,
+    WaitBeforeRetry,
+    SelectAlternativeGoal,
 )
 from rm_application.behavior_tree.builder import BehaviorTreeBuilder
+from rm_application.behavior_tree.recovery import RecoveryControl
 from rm_application.behavior_tree.nav_zone import (
+    NavigationResult,
     NavigationTask,
     PatrolRegion,
     TacticalMode,
 )
 from rm_application.behavior_tree.ros_interface import RosInterface
 from rm_interfaces.msg import TacticalModeCommand
+
+
+def test_wait_before_retry():
+    # 使用可控时间，不让测试真的等待。
+    now = [0.0]
+    action = WaitBeforeRetry("恢复等待", 0.5, lambda: now[0])
+    assert action.tick() == Status.RUNNING
+    now[0] = 0.25
+    assert action.tick() == Status.RUNNING
+    now[0] = 0.5
+    assert action.tick() == Status.SUCCESS
+
+    # 完成后再次执行，应重新等待完整时间。
+    now[0] = 1.0
+    assert action.tick() == Status.RUNNING
+    now[0] = 1.25
+    action.halt()
+    assert action.start_time is None
+
+    # 被抢占后重新进入，不沿用上次已经等待的时间。
+    now[0] = 2.0
+    assert action.tick() == Status.RUNNING
+    now[0] = 2.25
+    assert action.tick() == Status.RUNNING
+    now[0] = 2.5
+    assert action.tick() == Status.SUCCESS
+    print("恢复等待计时与打断测试通过\n")
 
 
 # 可指定返回状态的假节点
@@ -272,6 +305,7 @@ def test_can_chase_interrupt():
 
 def test_go_resupply():
     hp = [100]
+    resupply_result = [NavigationResult.RUNNING]
     calls = {"start": 0, "stop": 0}
 
     def start_resupply():
@@ -282,7 +316,12 @@ def test_go_resupply():
         calls["stop"] += 1
 
     condition = NeedResupply("需要回补给", lambda: hp[0], 150, 380)
-    action = GoResupply("前往补给区", start_resupply, stop_resupply)
+    action = GoResupply(
+        "前往补给区",
+        start_resupply,
+        lambda: resupply_result[0],
+        stop_resupply,
+    )
     sequence = Sequence("回补给行为", [condition, action])
 
     # 低血时启动一次，连续 tick 不重复发送导航目标。
@@ -291,10 +330,29 @@ def test_go_resupply():
     assert calls["start"] == 1
     assert calls["stop"] == 0
 
+    # 到达补给区后继续等待血量恢复，不重复发送目标。
+    resupply_result[0] = NavigationResult.SUCCEEDED
+    assert sequence.tick() == Status.RUNNING
+    assert action.arrived is True
+    assert sequence.tick() == Status.RUNNING
+    assert calls["start"] == 1
+
     # 血量恢复后，条件失效并停止补给动作。
     hp[0] = 380
     assert sequence.tick() == Status.FAILURE
     assert calls["stop"] == 1
+    assert action.running is False
+    assert action.arrived is False
+
+    # 真正的导航失败向上返回 FAILURE。
+    hp[0] = 100
+    resupply_result[0] = NavigationResult.FAILED
+    assert sequence.tick() == Status.FAILURE
+    assert action.running is False
+
+    # 主动取消属于正常退出，不触发恢复。
+    resupply_result[0] = NavigationResult.CANCELED
+    assert sequence.tick() == Status.SUCCESS
     assert action.running is False
 
     print("回补给动作测试通过\n")
@@ -379,6 +437,7 @@ def test_chase_enemy():
 
 
 def test_occupy_zone():
+    occupy_result = [NavigationResult.RUNNING]
     calls = {"start": 0, "stop": 0}
 
     def start_occupy():
@@ -388,10 +447,22 @@ def test_occupy_zone():
     def stop_occupy():
         calls["stop"] += 1
 
-    action = OccupyZone("占领控制区", start_occupy, stop_occupy)
+    action = OccupyZone(
+        "占领控制区",
+        start_occupy,
+        lambda: occupy_result[0],
+        stop_occupy,
+    )
 
     # 占点持续运行，但只发送一次导航目标。
     assert action.tick() == Status.RUNNING
+    assert action.tick() == Status.RUNNING
+    assert calls["start"] == 1
+
+    # 成功到达后继续守点，并且不重复发送导航目标。
+    occupy_result[0] = NavigationResult.SUCCEEDED
+    assert action.tick() == Status.RUNNING
+    assert action.arrived is True
     assert action.tick() == Status.RUNNING
     assert calls["start"] == 1
 
@@ -399,19 +470,42 @@ def test_occupy_zone():
     action.halt()
     assert calls["stop"] == 1
     assert action.running is False
+    assert action.arrived is False
+    occupy_result[0] = NavigationResult.RUNNING
     assert action.tick() == Status.RUNNING
     assert calls["start"] == 2
+
+    # 只有真正的导航失败才向上返回 FAILURE。
+    occupy_result[0] = NavigationResult.FAILED
+    assert action.tick() == Status.FAILURE
+    assert action.running is False
+    assert action.arrived is False
+
+    # 主动取消属于正常退出，不触发恢复。
+    occupy_result[0] = NavigationResult.CANCELED
+    assert action.tick() == Status.SUCCESS
+    assert action.running is False
 
     print("占点动作测试通过\n")
 
 
 def test_patrol_zone():
     patrol_region = [PatrolRegion.HOME]
-    patrol_result = [None]
+    patrol_result = [NavigationResult.RUNNING]
     started_regions = []
     calls = {"stop": 0}
 
-    def start_patrol(region):
+    areas = {
+        PatrolRegion.HOME: [-0.9, -0.5, 0.5, 0.9],
+        PatrolRegion.ENEMY: [0.5, 0.9, 0.5, 0.9],
+    }
+
+    def start_patrol(target_position):
+        region = patrol_region[0]
+        x_min, x_max, y_min, y_max = areas[region]
+        x, y = target_position
+        assert x_min <= x <= x_max and y_min <= y <= y_max
+        assert x * x + y * y >= 0.5 ** 2
         started_regions.append(region)
         return True
 
@@ -424,6 +518,9 @@ def test_patrol_zone():
         start_patrol,
         lambda: patrol_result[0],
         stop_patrol,
+        get_patrol_area=areas.get,
+        get_robot_position=lambda: (0.0, 0.0),
+        patrol_min_goal_distance=0.5,
     )
 
     # 第一次进入时发送一个目标，后续 tick 不重复发送。
@@ -432,7 +529,7 @@ def test_patrol_zone():
     assert started_regions == [PatrolRegion.HOME]
 
     # 到达当前目标后，在同一区域继续发送下一个目标。
-    patrol_result[0] = True
+    patrol_result[0] = NavigationResult.SUCCEEDED
     assert action.tick() == Status.RUNNING
     assert started_regions == [
         PatrolRegion.HOME,
@@ -440,20 +537,27 @@ def test_patrol_zone():
     ]
 
     # 巡逻区域改变时，取消旧目标并在新区域重新开始。
-    patrol_result[0] = None
+    patrol_result[0] = NavigationResult.RUNNING
     patrol_region[0] = PatrolRegion.ENEMY
     assert action.tick() == Status.RUNNING
     assert calls["stop"] == 1
     assert started_regions[-1] == PatrolRegion.ENEMY
 
     # Nav2 报告失败时，向上层返回 FAILURE。
-    patrol_result[0] = False
+    patrol_result[0] = NavigationResult.FAILED
     assert action.tick() == Status.FAILURE
     assert action.running is False
     assert action.active_region is None
 
+    # 主动取消属于正常退出，不向上报告导航故障。
+    patrol_result[0] = NavigationResult.CANCELED
+    assert action.tick() == Status.RUNNING
+    assert action.tick() == Status.SUCCESS
+    assert action.running is False
+    assert action.active_region is None
+
     # 被其他行为打断时取消正在运行的巡逻目标。
-    patrol_result[0] = None
+    patrol_result[0] = NavigationResult.RUNNING
     assert action.tick() == Status.RUNNING
     action.halt()
     assert calls["stop"] == 2
@@ -462,17 +566,90 @@ def test_patrol_zone():
     print("连续巡逻动作测试通过\n")
 
 
+def test_patrol_recovery_target():
+    region = [PatrolRegion.CENTER]
+    result = [NavigationResult.RUNNING]
+    accepted = [True]
+    sent_targets = []
+
+    def start_patrol(target):
+        sent_targets.append(target)
+        return accepted[0]
+
+    action = PatrolZone(
+        "测试巡逻备用点",
+        lambda: region[0],
+        start_patrol,
+        lambda: result[0],
+        lambda: None,
+        get_patrol_area=lambda current_region: [0.0, 1.0, 0.0, 1.0],
+        get_robot_position=lambda: (0.0, 0.0),
+    )
+
+    # 恢复节点准备的目标只保存，不立即发送导航。
+    action.save_recovery_target((0.7, 0.7))
+    assert sent_targets == []
+    with patch.object(action, "sample_patrol_target", return_value=(0.8, 0.8)) as sample:
+        # 下一次启动优先使用备用点，连续 tick 不重复发送。
+        assert action.tick() == Status.RUNNING
+        assert sent_targets == [(0.7, 0.7)]
+        assert action.recovery_target is None
+        assert action.recovery_region is None
+        assert action.tick() == Status.RUNNING
+        sample.assert_not_called()
+
+        # 到达备用点后恢复正常选点，备用点不会再次使用。
+        result[0] = NavigationResult.SUCCEEDED
+        assert action.tick() == Status.RUNNING
+        assert sent_targets == [(0.7, 0.7), (0.8, 0.8)]
+        assert action.goal_reached_count == 1
+        sample.assert_called_once_with(PatrolRegion.CENTER)
+
+    action.halt()
+    action.save_recovery_target((0.7, 0.7))
+    region[0] = PatrolRegion.HOME
+    with patch.object(action, "sample_patrol_target", return_value=(0.9, 0.9)) as sample:
+        # 切换区域后丢弃旧区域的备用点，按新区域重新选点。
+        assert action.tick() == Status.RUNNING
+        assert sent_targets[-1] == (0.9, 0.9)
+        sample.assert_called_once_with(PatrolRegion.HOME)
+        assert action.recovery_target is None
+        assert action.recovery_region is None
+
+    # 退出任务清理备用点，但保留累计到达次数。
+    action.save_recovery_target((0.6, 0.6))
+    action.halt()
+    assert action.recovery_target is None
+    assert action.recovery_region is None
+    assert action.goal_reached_count == 1
+
+    # 发送被拒绝时也消耗备用点，后续由恢复流程重新准备。
+    accepted[0] = False
+    action.save_recovery_target((0.6, 0.6))
+    assert action.tick() == Status.FAILURE
+    assert sent_targets[-1] == (0.6, 0.6)
+    assert action.recovery_target is None
+    assert action.recovery_region is None
+    accepted[0] = True
+    with patch.object(action, "sample_patrol_target", return_value=(0.8, 0.8)):
+        assert action.tick() == Status.RUNNING
+        assert sent_targets[-1] == (0.8, 0.8)
+
+    print("巡逻备用点消费与清理测试通过\n")
+
+
 def test_sample_patrol_target():
     # 跳过真实 ROS 初始化，只验证巡逻选点的纯计算逻辑。
-    interface = RosInterface.__new__(RosInterface)
-    interface.patrol_areas = {
+    action = PatrolZone.__new__(PatrolZone)
+    action.patrol_areas = {
         PatrolRegion.HOME: [1.0, 2.0, -1.0, 1.0],
     }
-    interface.patrol_min_goal_distance = 0.5
-    interface.get_robot_position = lambda: (0.0, 0.0)
+    action.get_patrol_area = action.patrol_areas.get
+    action.patrol_min_goal_distance = 0.5
+    action.get_robot_position = lambda: (0.0, 0.0)
 
     # 有效区域应生成区域内且距离机器人足够远的目标。
-    target = interface.sample_patrol_target(PatrolRegion.HOME)
+    target = action.sample_patrol_target(PatrolRegion.HOME)
     assert target is not None
     target_x, target_y = target
     assert 1.0 <= target_x <= 2.0
@@ -480,36 +657,266 @@ def test_sample_patrol_target():
     assert target_x ** 2 + target_y ** 2 >= 0.5 ** 2
 
     # 全零占位区域无效，不能生成导航目标。
-    interface.patrol_areas[PatrolRegion.HOME] = [
+    action.patrol_areas[PatrolRegion.HOME] = [
         0.0,
         0.0,
         0.0,
         0.0,
     ]
-    assert interface.sample_patrol_target(PatrolRegion.HOME) is None
+    assert action.sample_patrol_target(PatrolRegion.HOME) is None
 
     # 没有定位时不能计算目标与机器人的距离。
-    interface.patrol_areas[PatrolRegion.HOME] = [
+    action.patrol_areas[PatrolRegion.HOME] = [
         1.0,
         2.0,
         -1.0,
         1.0,
     ]
-    interface.get_robot_position = lambda: None
-    assert interface.sample_patrol_target(PatrolRegion.HOME) is None
+    action.get_robot_position = lambda: None
+    assert action.sample_patrol_target(PatrolRegion.HOME) is None
 
     # 区域太小且无法满足最小距离时，有限尝试后返回失败。
-    interface.patrol_areas[PatrolRegion.HOME] = [
+    action.patrol_areas[PatrolRegion.HOME] = [
         -0.1,
         0.1,
         -0.1,
         0.1,
     ]
-    interface.patrol_min_goal_distance = 1.0
-    interface.get_robot_position = lambda: (0.0, 0.0)
-    assert interface.sample_patrol_target(PatrolRegion.HOME) is None
+    action.patrol_min_goal_distance = 1.0
+    action.get_robot_position = lambda: (0.0, 0.0)
+    assert action.sample_patrol_target(PatrolRegion.HOME) is None
 
     print("巡逻随机选点测试通过\n")
+
+
+def test_sample_recovery_target():
+    area = [-1.0, 1.0, -1.0, 1.0]
+    action = SelectAlternativeGoal(
+        "恢复选点",
+        lambda: area,
+        lambda: (0.0, 0.0),
+        lambda target: None,
+        recovery_min_goal_distance=0.5,
+        recovery_sample_attempts=3,
+    )
+
+    # 首个候选点离失败点太近；第二个满足距离要求。
+    with patch(
+        "rm_application.behavior_tree.actions.random.uniform",
+        side_effect=[0.1, 0.1, 0.8, 0.6],
+    ) as sample:
+        target = action.sample_recovery_target(area, (0.0, 0.0))
+        assert target == (0.8, 0.6)
+        assert target[0] ** 2 + target[1] ** 2 >= 0.5 ** 2
+        assert [call.args for call in sample.call_args_list] == [
+            (-1.0, 1.0), (-1.0, 1.0),
+            (-1.0, 1.0), (-1.0, 1.0),
+        ]
+
+    # 实际随机采样也必须落在传入区域内。
+    target = action.sample_recovery_target([1.0, 2.0, 3.0, 4.0], (0.0, 0.0))
+    assert target is not None
+    assert 1.0 <= target[0] <= 2.0
+    assert 3.0 <= target[1] <= 4.0
+
+    # 占位区域、反向边界、缺少失败目标均不应开始采样。
+    with patch("rm_application.behavior_tree.actions.random.uniform") as sample:
+        assert action.sample_recovery_target([0.0] * 4, (0.0, 0.0)) is None
+        assert action.sample_recovery_target([1.0, -1.0, 0.0, 1.0], (0.0, 0.0)) is None
+        assert action.sample_recovery_target(area, None) is None
+        sample.assert_not_called()
+
+    # 候选点始终不合适时，严格限制采样次数。
+    with patch(
+        "rm_application.behavior_tree.actions.random.uniform",
+        return_value=0.0,
+    ) as sample:
+        assert action.sample_recovery_target(area, (0.0, 0.0)) is None
+        assert sample.call_count == 2 * action.recovery_sample_attempts
+
+    print("恢复选点范围、距离与次数限制测试通过\n")
+
+
+def test_select_alternative_goal():
+    area = [[-1.0, 1.0, -1.0, 1.0]]
+    failed_position = [(0.0, 0.0)]
+    saved_targets = []
+    action = SelectAlternativeGoal(
+        "准备备用目标",
+        lambda: area[0],
+        lambda: failed_position[0],
+        saved_targets.append,
+        recovery_sample_attempts=3,
+    )
+
+    # 选到合法点时只保存坐标，不启动导航。
+    with patch(
+        "rm_application.behavior_tree.actions.random.uniform",
+        side_effect=[0.1, 0.1, 0.8, 0.6],
+    ):
+        assert action.tick() == Status.SUCCESS
+    assert saved_targets == [(0.8, 0.6)]
+
+    # 没有合法区域或失败位置时，不把旧坐标当作新备用点保存。
+    area[0] = [0.0] * 4
+    assert action.tick() == Status.FAILURE
+    area[0] = [-1.0, 1.0, -1.0, 1.0]
+    failed_position[0] = None
+    assert action.tick() == Status.FAILURE
+    assert saved_targets == [(0.8, 0.6)]
+
+    print("备用目标准备与失败不保存测试通过\n")
+
+
+def test_recovery_control_rounds():
+    now = [0.0]
+    exhausted = []
+    action = FakeNode("模拟导航", Status.FAILURE)
+    recovery = RecoveryControl(
+        "有限恢复",
+        action,
+        WaitBeforeRetry("等待重试", 0.5, lambda: now[0]),
+        max_retries=2,
+        on_exhausted=lambda: exhausted.append(now[0]),
+    )
+
+    # 初次失败后，等待期间连续 tick 不再次执行导航。
+    assert recovery.tick() == Status.RUNNING
+    assert recovery.tick() == Status.RUNNING
+    for instant in (0.1, 0.2, 0.49):
+        now[0] = instant
+        assert recovery.tick() == Status.RUNNING
+        assert action.tick_count == 1
+
+    # 本轮包含初次尝试和两次额外重试，第三次失败时上报一次。
+    now[0] = 0.5
+    assert recovery.tick() == Status.RUNNING
+    assert action.tick_count == 2
+    assert recovery.tick() == Status.RUNNING
+    now[0] = 1.0
+    assert recovery.tick() == Status.FAILURE
+    assert action.tick_count == 3
+    assert exhausted == [1.0]
+
+    # 耗尽后仍需等待；父节点的 halt 不能绕过等待直接重发。
+    recovery.halt()
+    assert recovery.tick() == Status.RUNNING
+    now[0] = 1.49
+    assert recovery.tick() == Status.RUNNING
+    assert action.tick_count == 3
+
+    # 障碍条件改善后，新一轮尝试可以自行成功，不会永久停住。
+    action.result = Status.SUCCESS
+    now[0] = 1.5
+    assert recovery.tick() == Status.SUCCESS
+    assert action.tick_count == 4
+    assert recovery.retry_count == 0
+    assert recovery.recovering is False
+    assert exhausted == [1.0]
+
+    print("恢复等待、每轮次数、耗尽上报与自动再试测试通过\n")
+
+
+def test_recovery_control_interrupt_and_progress():
+    now = [0.0]
+    progress = [0]
+    action = FakeNode("模拟导航", Status.FAILURE)
+    wait = WaitBeforeRetry("等待重试", 0.5, lambda: now[0])
+    recovery = RecoveryControl(
+        "可打断恢复",
+        action,
+        wait,
+        get_progress=lambda: progress[0],
+    )
+
+    assert recovery.tick() == Status.RUNNING
+    assert recovery.tick() == Status.RUNNING
+    now[0] = 0.25
+    recovery.halt()
+    assert wait.start_time is None
+
+    # 恢复被打断后再进入，应重新等待，不能沿用原计时。
+    now[0] = 1.0
+    assert recovery.tick() == Status.RUNNING
+    now[0] = 1.49
+    assert recovery.tick() == Status.RUNNING
+    assert action.tick_count == 1
+    action.result = Status.RUNNING
+    now[0] = 1.5
+    assert recovery.tick() == Status.RUNNING
+    assert action.tick_count == 2
+    assert recovery.retry_count == 1
+
+    # 到达后正常动作仍为 RUNNING，也必须清零连续失败次数。
+    progress[0] += 1
+    assert recovery.tick() == Status.RUNNING
+    assert recovery.retry_count == 0
+
+    # 明确复位清除恢复状态，留给后续任务上下文变化时调用。
+    action.result = Status.FAILURE
+    assert recovery.tick() == Status.RUNNING
+    recovery.reset()
+    assert recovery.recovering is False
+    assert recovery.restart_round is False
+    assert recovery.retry_count == 0
+
+    print("恢复打断、到达计数与明确复位测试通过\n")
+
+
+def test_recovery_control_navigation_actions():
+    for action_class in (OccupyZone, GoResupply):
+        now = [0.0]
+        result = [NavigationResult.RUNNING]
+        calls = {"start": 0, "stop": 0}
+
+        def start_navigation():
+            calls["start"] += 1
+            return True
+
+        def stop_navigation():
+            calls["stop"] += 1
+
+        action = action_class(
+            "普通导航",
+            start_navigation,
+            lambda: result[0],
+            stop_navigation,
+        )
+        recovery = RecoveryControl(
+            "普通导航恢复",
+            action,
+            WaitBeforeRetry("等待", 0.5, lambda: now[0]),
+            get_progress=lambda: action.goal_reached_count,
+        )
+
+        assert recovery.tick() == Status.RUNNING
+        result[0] = NavigationResult.FAILED
+        assert recovery.tick() == Status.RUNNING
+        assert recovery.tick() == Status.RUNNING
+        assert calls["start"] == 1
+
+        result[0] = NavigationResult.RUNNING
+        now[0] = 0.5
+        assert recovery.tick() == Status.RUNNING
+        assert calls["start"] == 2
+        assert recovery.retry_count == 1
+
+        # 导航到达后继续守点／等待回血，恢复次数清零且不重复发点。
+        result[0] = NavigationResult.SUCCEEDED
+        assert recovery.tick() == Status.RUNNING
+        assert action.goal_reached_count == 1
+        assert recovery.retry_count == 0
+        assert recovery.tick() == Status.RUNNING
+        assert calls["start"] == 2
+        recovery.halt()
+        assert calls["stop"] == 1
+
+        # 主动取消属于正常退出，不转入恢复等待。
+        result[0] = NavigationResult.CANCELED
+        assert recovery.tick() == Status.SUCCESS
+        assert recovery.recovering is False
+
+    print("占点和回血与恢复控制组合测试通过\n")
 
 
 def test_spin_chassis():
@@ -564,11 +971,19 @@ class FakeBehaviorNode:
         }
         self.match_progress = 3
         self.chase_result = None
+        self.occupy_result = NavigationResult.RUNNING
+        self.resupply_result = NavigationResult.RUNNING
         self.enemy_within_lost_grace = False
         self.navigation_task = NavigationTask.STOP
         self.tactical_mode = TacticalMode.NEUTRAL
         self.patrol_region = PatrolRegion.CENTER
-        self.patrol_result = None
+        self.patrol_result = NavigationResult.RUNNING
+        self.patrol_min_goal_distance = 0.5
+        self.patrol_areas = {
+            PatrolRegion.HOME: [-0.9, -0.5, 0.5, 0.9],
+            PatrolRegion.CENTER: [-0.2, 0.2, 0.5, 0.9],
+            PatrolRegion.ENEMY: [0.5, 0.9, 0.5, 0.9],
+        }
 
         self.hp_limit = 150
         self.hp_up = 380
@@ -591,6 +1006,9 @@ class FakeBehaviorNode:
 
     def get_enemy_position(self):
         return self.enemy_position
+
+    def get_patrol_area(self, patrol_region):
+        return self.patrol_areas.get(patrol_region)
 
     def get_robot_position(self):
         return self.robot_position
@@ -629,6 +1047,9 @@ class FakeBehaviorNode:
         self.calls["start_resupply"] += 1
         return True
 
+    def get_resupply_result(self):
+        return self.resupply_result
+
     def stop_resupply(self):
         self.calls["stop_resupply"] += 1
 
@@ -646,12 +1067,15 @@ class FakeBehaviorNode:
         self.calls["start_occupy"] += 1
         return True
 
+    def get_occupy_result(self):
+        return self.occupy_result
+
     def stop_occupy(self):
         self.calls["stop_occupy"] += 1
 
-    def start_patrol(self, patrol_region):
+    def start_patrol(self, target_position):
         self.calls["start_patrol"] += 1
-        self.patrol_region = patrol_region
+        self.last_patrol_target = target_position
         return True
 
     def get_patrol_result(self):
@@ -992,6 +1416,7 @@ def test_behavior_tree_builder():
 
 
 if __name__ == "__main__":
+    test_wait_before_retry()
     test_sequence()
     test_selector()
     test_parallel()
@@ -1004,7 +1429,13 @@ if __name__ == "__main__":
     test_chase_enemy()
     test_occupy_zone()
     test_patrol_zone()
+    test_patrol_recovery_target()
     test_sample_patrol_target()
+    test_sample_recovery_target()
+    test_select_alternative_goal()
+    test_recovery_control_rounds()
+    test_recovery_control_interrupt_and_progress()
+    test_recovery_control_navigation_actions()
     test_spin_chassis()
     test_navigation_executor_patrol_switch()
     test_occupy_patrol_minimum_loop()

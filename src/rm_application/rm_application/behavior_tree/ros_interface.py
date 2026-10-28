@@ -1,4 +1,3 @@
-import random
 from geometry_msgs.msg import PoseStamped
 from nav2_simple_commander.robot_navigator import (
     BasicNavigator,
@@ -13,6 +12,7 @@ from std_msgs.msg import Int32
 from rclpy.action import ActionClient
 from rm_interfaces.action import Chase
 from rm_application.behavior_tree.nav_zone import (
+    NavigationResult,
     PatrolRegion,
     TacticalMode,
 )
@@ -61,6 +61,18 @@ class RosInterface:
             0.5,
         )
 
+        # 声明补给区有效范围，YAML 会覆盖这些默认值
+        self.node.declare_parameter("resupply_x_min", 0.0)
+        self.node.declare_parameter("resupply_x_max", 0.0)
+        self.node.declare_parameter("resupply_y_min", 0.0)
+        self.node.declare_parameter("resupply_y_max", 0.0)
+
+        # 声明占点、回血和巡逻共用的恢复参数
+        self.node.declare_parameter("recovery_min_goal_distance", 0.5)
+        self.node.declare_parameter("recovery_sample_attempts", 20)
+        self.node.declare_parameter("recovery_wait_seconds", 0.5)
+        self.node.declare_parameter("recovery_max_retries", 2)
+
         # 保存占点和补给点坐标
         self.center_position = self.node.get_parameter(
             "center"
@@ -83,6 +95,34 @@ class RosInterface:
             "patrol_min_goal_distance"
         ).value
 
+        # 读取补给区有效范围
+        self.resupply_x_min = self.node.get_parameter(
+            "resupply_x_min"
+        ).value
+        self.resupply_x_max = self.node.get_parameter(
+            "resupply_x_max"
+        ).value
+        self.resupply_y_min = self.node.get_parameter(
+            "resupply_y_min"
+        ).value
+        self.resupply_y_max = self.node.get_parameter(
+            "resupply_y_max"
+        ).value
+
+        # 读取恢复选点和重试参数
+        self.recovery_min_goal_distance = self.node.get_parameter(
+            "recovery_min_goal_distance"
+        ).value
+        self.recovery_sample_attempts = self.node.get_parameter(
+            "recovery_sample_attempts"
+        ).value
+        self.recovery_wait_seconds = self.node.get_parameter(
+            "recovery_wait_seconds"
+        ).value
+        self.recovery_max_retries = self.node.get_parameter(
+            "recovery_max_retries"
+        ).value
+
         # 建立巡逻区域名称与矩形边界的对应关系
         self.patrol_areas = {
             PatrolRegion.HOME: self.patrol_home_area,
@@ -97,6 +137,14 @@ class RosInterface:
 
         # 记录当前 Nav2 导航属于哪个行为
         self.navigation_owner = None
+
+        # 保存各行为最近尝试的导航目标
+        # 导航失败后，恢复选点需要避开这个位置
+        self.last_navigation_targets = {
+            "occupy": None,
+            "resupply": None,
+            "patrol": None,
+        }
 
         # 接收裁判系统和下位机提供的决策数据
         self.decision_subscription = self.node.create_subscription(
@@ -272,42 +320,6 @@ class RosInterface:
         position = transform.transform.translation
         return position.x, position.y
 
-    def sample_patrol_target(self, patrol_region):
-        # 获取当前战术对应的巡逻矩形
-        area = self.get_patrol_area(patrol_region)
-        if area is None or len(area) != 4:
-            return None
-
-        x_min, x_max, y_min, y_max = map(float, area)
-
-        # 尚未配置有效区域时不生成导航目标
-        if x_min >= x_max or y_min >= y_max:
-            return None
-
-        # 没有有效定位时无法判断新目标距离
-        robot_position = self.get_robot_position()
-        if robot_position is None:
-            return None
-
-        robot_x, robot_y = robot_position
-        min_distance_squared = (
-            float(self.patrol_min_goal_distance) ** 2
-        )
-
-        # 最多尝试20次，防止区域太小时陷入死循环
-        for _ in range(20):
-            target_x = random.uniform(x_min, x_max)
-            target_y = random.uniform(y_min, y_max)
-
-            distance_squared = (
-                (target_x - robot_x) ** 2
-                + (target_y - robot_y) ** 2
-            )
-            if distance_squared >= min_distance_squared:
-                return target_x, target_y
-
-        return None
-
     def create_navigation_pose(self, position):
         # 创建 map 坐标系下的导航目标
         pose = PoseStamped()
@@ -324,12 +336,18 @@ class RosInterface:
         return pose
 
     def start_occupy(self):
-        # 把中央占点坐标包装成 Nav2 目标消息
+        # 保存本次尝试的占点目标
+        # 转成元组，避免后续坐标列表变化影响记录
+        target_position = tuple(self.center_position)
+        self.last_navigation_targets["occupy"] = target_position
+
+        # 把占点坐标包装成 Nav2 目标消息
         target_pose = self.create_navigation_pose(
-            self.center_position
+            target_position
         )
 
         # 向 Nav2 发送占点目标
+        # 即使目标被拒绝，也保留刚刚尝试的坐标
         if not self.navigator.goToPose(target_pose):
             return False
 
@@ -338,9 +356,13 @@ class RosInterface:
         return True
 
     def start_resupply(self):
-        # 把补给点坐标包装成 Nav2 目标消息
+        # 保存本次尝试的补给目标
+        target_position = tuple(self.home_position)
+        self.last_navigation_targets["resupply"] = target_position
+
+        # 把补给坐标包装成 Nav2 目标消息
         target_pose = self.create_navigation_pose(
-            self.home_position
+            target_position
         )
 
         # 向 Nav2 发送补给目标
@@ -351,15 +373,16 @@ class RosInterface:
         self.navigation_owner = "resupply"
         return True
 
-    def start_patrol(self, patrol_region):
-        # 在当前战术指定的矩形区域内选择巡逻目标
-        target_position = self.sample_patrol_target(
-            patrol_region
-        )
+    def start_patrol(self, target_position):
+        # 接收巡逻行为已经选好的坐标
         if target_position is None:
             return False
 
-        # 把随机坐标包装成 Nav2 目标消息
+        # 保存本次尝试的巡逻目标
+        target_position = tuple(target_position)
+        self.last_navigation_targets["patrol"] = target_position
+
+        # 把巡逻坐标包装成 Nav2 目标消息
         target_pose = self.create_navigation_pose(
             target_position
         )
@@ -371,21 +394,31 @@ class RosInterface:
         # 当前导航任务属于巡逻
         self.navigation_owner = "patrol"
         return True
+    
+    def get_last_navigation_target(self, owner):
+        # 返回指定行为最近尝试的目标坐标
+        # 尚未尝试过时返回 None
+        return self.last_navigation_targets.get(owner)
 
     def get_navigation_result(self, owner):
-        # 只有发出当前导航目标的行为才能读取结果
+        # 当前没有属于该行为的导航目标
         if self.navigation_owner != owner:
-            return False
+            return NavigationResult.IDLE
 
-        # None 表示仍在前往当前目标
+        # Nav2 仍在执行当前目标
         if not self.navigator.isTaskComplete():
-            return None
+            return NavigationResult.RUNNING
 
         result = self.navigator.getResult()
         self.navigation_owner = None
 
-        # True 表示成功到达；False 表示失败或取消
-        return result == TaskResult.SUCCEEDED
+        if result == TaskResult.SUCCEEDED:
+            return NavigationResult.SUCCEEDED
+
+        if result == TaskResult.CANCELED:
+            return NavigationResult.CANCELED
+
+        return NavigationResult.FAILED
 
     def get_occupy_result(self):
         # 查询当前占点目标的导航结果

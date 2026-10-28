@@ -75,6 +75,22 @@ class BehaviorTreeNode(Node):
         self.hp_limit = self.get_parameter("hp_limit").value
         self.hp_up = self.get_parameter("hp_up").value
 
+        self.patrol_min_goal_distance = (
+            self.ros_interface.patrol_min_goal_distance
+        )
+        # 提供恢复参数，供 builder 组装恢复流程
+        self.recovery_wait_seconds = (
+            self.ros_interface.recovery_wait_seconds
+        )
+        self.recovery_max_retries = (
+            self.ros_interface.recovery_max_retries
+        )
+        self.recovery_min_goal_distance = (
+            self.ros_interface.recovery_min_goal_distance
+        )
+        self.recovery_sample_attempts = (
+            self.ros_interface.recovery_sample_attempts
+        )
         # 使用当前 ROS 节点提供的数据和通信方法构建行为树
         self.behavior_tree = BehaviorTreeBuilder(self).build()
 
@@ -140,10 +156,15 @@ class BehaviorTreeNode(Node):
         # 把停止回补给导航的请求交给统一通信接口
         self.ros_interface.stop_resupply()
 
-    def start_patrol(self, patrol_region):
-        # 把开始区域巡逻的请求交给统一通信接口
-        return self.ros_interface.start_patrol(
+    def get_patrol_area(self, patrol_region):
+        return self.ros_interface.get_patrol_area(
             patrol_region
+        )
+
+    def start_patrol(self, target_position):
+        # 只转发选好的坐标
+        return self.ros_interface.start_patrol(
+            target_position
         )
 
     def get_patrol_result(self):
@@ -153,6 +174,12 @@ class BehaviorTreeNode(Node):
     def stop_patrol(self):
         # 把停止巡逻导航的请求交给统一通信接口
         self.ros_interface.stop_patrol()
+
+    def get_last_navigation_target(self, owner):
+        # 读取指定行为最近尝试的目标，供恢复选点避开失败点
+        return self.ros_interface.get_last_navigation_target(
+            owner
+        )
 
     def start_spin(self):
         # 把开启小陀螺的请求交给统一通信接口

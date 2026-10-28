@@ -42,3 +42,21 @@ behavior_tree_node:
 
     # 随机目标与机器人当前位置至少相距多少米
     patrol_min_goal_distance: 0.5
+
+    # 补给区内经过验证、能够回血的有效范围，单位：米
+    # 实车确认前保持全零，表示暂时不能生成补给备用点
+    resupply_x_min: 0.0
+    resupply_x_max: 0.0
+    resupply_y_min: 0.0
+    resupply_y_max: 0.0
+
+    # 备用目标与刚刚失败的目标至少相距多少米
+    # 占点、回血和巡逻恢复共同使用
+    recovery_min_goal_distance: 0.5
+    # 在有效区域内最多随机采样多少次
+    recovery_sample_attempts: 20
+    # 导航失败后，重新导航前等待多久，单位：秒
+    recovery_wait_seconds: 0.5
+    # 初次导航之外最多额外尝试多少次
+    # 2 表示初次导航加两次恢复，共最多尝试三次
+    recovery_max_retries: 2

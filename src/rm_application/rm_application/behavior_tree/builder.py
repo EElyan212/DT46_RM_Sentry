@@ -28,7 +28,6 @@ from rm_application.behavior_tree.nav_zone import (
     TacticalMode,
 )
 
-
 # 负责创建和组装整棵哨兵行为树
 class BehaviorTreeBuilder:
     def __init__(self, node):
@@ -320,6 +319,7 @@ class BehaviorTreeBuilder:
                 GoResupply(
                     "执行前往补给区",
                     self.node.start_resupply,
+                    self.node.get_resupply_result,
                     self.node.stop_resupply,
                 ),
             ],
@@ -338,6 +338,7 @@ class BehaviorTreeBuilder:
                 OccupyZone(
                     "执行中央占点",
                     self.node.start_occupy,
+                    self.node.get_occupy_result,
                     self.node.stop_occupy,
                 ),
             ],
@@ -378,6 +379,9 @@ class BehaviorTreeBuilder:
                     self.node.start_patrol,
                     self.node.get_patrol_result,
                     self.node.stop_patrol,
+                    get_patrol_area=self.node.get_patrol_area,
+                    get_robot_position=self.node.get_robot_position,
+                    patrol_min_goal_distance=self.node.patrol_min_goal_distance,
                 ),
             ],
         )
@@ -421,6 +425,7 @@ class BehaviorTreeBuilder:
                 GoResupply(
                     "前往补给区",
                     self.node.start_resupply,
+                    self.node.get_resupply_result,
                     self.node.stop_resupply,
                 ),
             ],
@@ -459,6 +464,7 @@ class BehaviorTreeBuilder:
         return OccupyZone(
             "占领控制区",
             self.node.start_occupy,
+            self.node.get_occupy_result,
             self.node.stop_occupy,
         )
 

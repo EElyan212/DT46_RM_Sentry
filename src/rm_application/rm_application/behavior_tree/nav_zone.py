@@ -27,3 +27,11 @@ class NavigationTask(str, Enum):
     OCCUPY_CENTER = "OCCUPY_CENTER"
     PATROL = "PATROL"
     CHASE = "CHASE"
+
+class NavigationResult(str, Enum):
+    """一次 Nav2 导航目标的执行状态。"""
+    IDLE = "IDLE"
+    RUNNING = "RUNNING"
+    SUCCEEDED = "SUCCEEDED"
+    FAILED = "FAILED"
+    CANCELED = "CANCELED"
