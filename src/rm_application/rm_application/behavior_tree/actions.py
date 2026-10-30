@@ -102,6 +102,7 @@ class PatrolZone(Node):
         get_patrol_area,
         get_robot_position,
         patrol_min_goal_distance=0.5,
+        is_navigation_stopped=None,
     ):
         super().__init__(name)
 
@@ -109,6 +110,8 @@ class PatrolZone(Node):
         self.start_patrol = start_patrol
         self.get_patrol_result = get_patrol_result
         self.stop_patrol = stop_patrol
+        # 查询旧导航是否已经结束，换巡逻区域时使用
+        self.is_navigation_stopped = is_navigation_stopped
         self.get_patrol_area = get_patrol_area
         self.get_robot_position = get_robot_position
         self.patrol_min_goal_distance = patrol_min_goal_distance
@@ -205,8 +208,16 @@ class PatrolZone(Node):
             self.running = False
             self.active_region = None
 
-        # 尚未运行时，生成并发送一个巡逻目标
+        # 尚未运行时，先确认旧导航已经结束
         if not self.running:
+            if (
+                self.is_navigation_stopped is not None
+                and not self.is_navigation_stopped()
+            ):
+                # 等待取消完成，不把正常换区当成导航失败
+                return Status.RUNNING
+
+            # 使用本次 tick 读取到的最新巡逻区域
             if not self._start_patrol_goal(patrol_region):
                 return Status.FAILURE
 
@@ -493,18 +504,23 @@ class SelectAlternativeGoal(Node):
         return None
 
     def tick(self):
-        # 获取有效区域和失败位置，并尝试选择备用目标
+        # 首次选点就失败时，可能还没有发出过任何导航目标
+        failed_position = self.get_failed_position()
+
+        # 没有失败目标就无需换点，交回原动作重新尝试正常选点
+        if failed_position is None:
+            return Status.SUCCESS
+
+        # 在当前区域内，选择远离失败目标的备用点
         target = self.sample_recovery_target(
             self.get_area(),
-            self.get_failed_position(),
+            failed_position,
         )
 
-        # 没有可用备用点时，向恢复控制节点报告失败
+        # 已有失败目标但选不到合法备用点时，报告恢复失败
         if target is None:
             return Status.FAILURE
 
-        # 保存备用目标，具体导航由原任务的执行动作发起
+        # 只保存坐标，具体导航由原任务的执行动作发起
         self.save_target(target)
-
-        # SUCCESS 只表示备用目标准备完成，不表示导航成功
         return Status.SUCCESS

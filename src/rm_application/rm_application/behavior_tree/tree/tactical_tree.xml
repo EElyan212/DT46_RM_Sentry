@@ -1,0 +1,92 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<root BTCPP_format="4"
+      main_tree_to_execute="TacticalTaskSelection">
+
+    <BehaviorTree ID="TacticalTaskSelection">
+        <ReactiveFallback name="根据战术模式选择任务">
+
+            <!-- 防守：优先回点，区内偏己方巡逻 -->
+            <ReactiveSequence name="防守模式">
+                <IsDefenseMode name="当前模式是防守" />
+
+                <ReactiveFallback name="防守任务选择">
+                    <ReactiveSequence name="选择占点">
+                        <NeedEnterCenterZone name="需要返回控制区" />
+                        <SelectOccupy name="选择占点任务" />
+                    </ReactiveSequence>
+
+                    <ReactiveSequence name="选择己方侧巡逻">
+                        <SetHomePatrolRegion name="设置己方侧巡逻区域" />
+                        <SelectPatrol name="选择巡逻任务" />
+                    </ReactiveSequence>
+                </ReactiveFallback>
+            </ReactiveSequence>
+
+            <!-- 中立：优先回点，区内允许受限追击 -->
+            <ReactiveSequence name="中立模式">
+                <IsNeutralMode name="当前模式是中立" />
+
+                <ReactiveFallback name="中立任务选择">
+                    <ReactiveSequence name="选择占点">
+                        <NeedEnterCenterZone name="需要返回控制区" />
+                        <SelectOccupy name="选择占点任务" />
+                    </ReactiveSequence>
+
+                    <ReactiveSequence name="选择区内追击">
+                        <IsChaseReady name="追击冷却已结束" />
+                        <CanChaseInsideCenterZone name="允许区内追击" />
+                        <SelectChase name="选择追击任务" />
+                    </ReactiveSequence>
+
+                    <ReactiveSequence name="选择中央巡逻">
+                        <SetCenterPatrolRegion name="设置中央巡逻区域" />
+                        <SelectPatrol name="选择巡逻任务" />
+                    </ReactiveSequence>
+                </ReactiveFallback>
+            </ReactiveSequence>
+
+            <!-- 前压：优先追击，否则回点或偏敌方巡逻 -->
+            <ReactiveSequence name="前压模式">
+                <IsPressureMode name="当前模式是前压" />
+
+                <ReactiveFallback name="前压任务选择">
+                    <ReactiveSequence name="选择追击">
+                        <IsChaseReady name="追击冷却已结束" />
+                        <CanChase name="允许前压追击" />
+                        <SelectChase name="选择追击任务" />
+                    </ReactiveSequence>
+
+                    <ReactiveSequence name="选择占点">
+                        <NeedEnterCenterZone name="需要返回控制区" />
+                        <SelectOccupy name="选择占点任务" />
+                    </ReactiveSequence>
+
+                    <ReactiveSequence name="选择敌方侧巡逻">
+                        <SetEnemyPatrolRegion name="设置敌方侧巡逻区域" />
+                        <SelectPatrol name="选择巡逻任务" />
+                    </ReactiveSequence>
+                </ReactiveFallback>
+            </ReactiveSequence>
+
+        </ReactiveFallback>
+    </BehaviorTree>
+
+    <!-- 供 Groot 识别自定义节点 -->
+    <TreeNodesModel>
+        <Condition ID="IsDefenseMode" />
+        <Condition ID="IsNeutralMode" />
+        <Condition ID="IsPressureMode" />
+        <Condition ID="NeedEnterCenterZone" />
+        <Condition ID="IsChaseReady" />
+        <Condition ID="CanChaseInsideCenterZone" />
+        <Condition ID="CanChase" />
+
+        <Action ID="SelectOccupy" />
+        <Action ID="SelectChase" />
+        <Action ID="SelectPatrol" />
+        <Action ID="SetHomePatrolRegion" />
+        <Action ID="SetCenterPatrolRegion" />
+        <Action ID="SetEnemyPatrolRegion" />
+    </TreeNodesModel>
+
+</root>

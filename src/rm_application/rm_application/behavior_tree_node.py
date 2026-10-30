@@ -1,3 +1,4 @@
+import time
 import rclpy
 from rclpy.node import Node
 from rm_application.behavior_tree.ros_interface import RosInterface
@@ -29,7 +30,9 @@ class BehaviorTreeNode(Node):
         self.declare_parameter("chase_boundary_y_max", 0.0)
         # 追击过程中允许短暂丢失目标的时间
         self.declare_parameter("target_lost_grace_time", 0.5)
-
+        # 追击恢复耗尽后，多久允许再次选择追击，单位：秒
+        self.declare_parameter("chase_failure_cooldown_seconds", 3.0)
+        
         self.declare_parameter("hp_limit", 150)
         self.declare_parameter("hp_up", 380)
 
@@ -111,6 +114,26 @@ class BehaviorTreeNode(Node):
     def get_navigation_task(self):
         # 导航执行树从共享黑板读取当前导航任务
         return self.blackboard.navigation_task
+
+    def is_chase_ready(self):
+        # 冷却结束后，还需要由追击条件节点检查敌人和边界
+        return time.monotonic() >= self.blackboard.chase_retry_after
+
+    def report_chase_exhausted(self):
+        # 追击恢复耗尽时，暂时关闭追击资格
+        cooldown_seconds = float(
+            self.get_parameter(
+                "chase_failure_cooldown_seconds"
+            ).value
+        )
+
+        self.blackboard.chase_retry_after = (
+            time.monotonic() + cooldown_seconds
+        )
+
+        self.get_logger().warn(
+            "追击恢复耗尽，暂时禁止选择追击"
+        )    
     
     def set_tactical_mode(self, tactical_mode):
         # 战术选择结果写入共享黑板
@@ -180,6 +203,14 @@ class BehaviorTreeNode(Node):
         return self.ros_interface.get_last_navigation_target(
             owner
         )
+
+    def is_navigation_stopped(self):
+        # 普通 Nav2 导航必须已经结束并释放
+        if not self.ros_interface.is_navigation_stopped():
+            return False
+
+        # 追击服务也必须已结束，才能启动新的平移任务
+        return self.ros_interface.is_chase_stopped()
 
     def start_spin(self):
         # 把开启小陀螺的请求交给统一通信接口

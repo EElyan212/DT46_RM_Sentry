@@ -2,6 +2,7 @@ from rm_application.behavior_tree.core import (
     Sequence,
     Selector,
     Parallel,
+    Switch,
 )
 from rm_application.behavior_tree.conditions import (
     NeedResupply,
@@ -12,8 +13,11 @@ from rm_application.behavior_tree.conditions import (
     IsNavigationTask,
     IsTacticalMode,
     NeedEnterCenterZone,
+    IsChaseReady,
 )
 from rm_application.behavior_tree.actions import (
+    SelectAlternativeGoal,
+    WaitBeforeRetry,
     GoResupply,
     ChaseEnemy,
     OccupyZone,
@@ -27,6 +31,7 @@ from rm_application.behavior_tree.nav_zone import (
     PatrolRegion,
     TacticalMode,
 )
+from rm_application.behavior_tree.recovery import RecoveryControl
 
 # 负责创建和组装整棵哨兵行为树
 class BehaviorTreeBuilder:
@@ -126,6 +131,10 @@ class BehaviorTreeBuilder:
         return Sequence(
             "选择区内追击任务",
             [
+                IsChaseReady(
+                    "追击失败冷却已结束",
+                    self.node.is_chase_ready,
+                ),
                 can_chase,
                 SetNavigationTask(
                     "任务牌改为区内追击",
@@ -245,6 +254,10 @@ class BehaviorTreeBuilder:
         return Sequence(
             "选择追击任务",
             [
+                IsChaseReady(
+                    "追击失败冷却已结束",
+                    self.node.is_chase_ready,
+                ),
                 can_chase,
                 SetNavigationTask(
                     "任务牌改为追击",
@@ -307,7 +320,27 @@ class BehaviorTreeBuilder:
         )
 
     def _build_resupply_task_execution(self):
-        # 任务牌为“回补给”时，调用已有的回补给行为
+        # 创建正常的回补给动作
+        resupply_action = GoResupply(
+            "执行前往补给区",
+            self.node.start_resupply,
+            self.node.get_resupply_result,
+            self.node.stop_resupply,
+        )
+
+        # 回补给失败后，先等待，再重试原来的补给目标
+        resupply_recovery = RecoveryControl(
+            "回补给恢复控制",
+            action=resupply_action,
+            recovery_action=WaitBeforeRetry(
+                "回补给失败后等待",
+                self.node.recovery_wait_seconds,
+            ),
+            max_retries=self.node.recovery_max_retries,
+            get_progress=lambda: resupply_action.goal_reached_count,
+        )
+
+        # 任务牌改变时，退出回补给动作或恢复等待
         return Sequence(
             "执行回补给任务",
             [
@@ -316,17 +349,33 @@ class BehaviorTreeBuilder:
                     self.node.get_navigation_task,
                     NavigationTask.RESUPPLY,
                 ),
-                GoResupply(
-                    "执行前往补给区",
-                    self.node.start_resupply,
-                    self.node.get_resupply_result,
-                    self.node.stop_resupply,
-                ),
+                resupply_recovery,
             ],
         )
 
     def _build_occupy_task_execution(self):
-        # 任务牌为“中央占点”时，调用已有的占点行为
+        # 创建正常的占点动作
+        occupy_action = OccupyZone(
+            "执行中央占点",
+            self.node.start_occupy,
+            self.node.get_occupy_result,
+            self.node.stop_occupy,
+        )
+
+        # 占点失败后，先等待，再重试原来的占点目标
+        occupy_recovery = RecoveryControl(
+            "中央占点恢复控制",
+            action=occupy_action,
+            recovery_action=WaitBeforeRetry(
+                "占点失败后等待",
+                self.node.recovery_wait_seconds,
+            ),
+            max_retries=self.node.recovery_max_retries,
+            get_progress=lambda: occupy_action.goal_reached_count,
+        )
+
+        # 每次 tick 先检查任务牌
+        # 其他任务可以抢占正常占点，也可以抢占恢复等待
         return Sequence(
             "执行中央占点任务",
             [
@@ -335,17 +384,34 @@ class BehaviorTreeBuilder:
                     self.node.get_navigation_task,
                     NavigationTask.OCCUPY_CENTER,
                 ),
-                OccupyZone(
-                    "执行中央占点",
-                    self.node.start_occupy,
-                    self.node.get_occupy_result,
-                    self.node.stop_occupy,
-                ),
+                occupy_recovery,
             ],
-        )
+        )    
 
     def _build_chase_task_execution(self):
-        # 任务牌为“追击”时，调用已有的追击行为
+        # 创建追击动作，继续调用已有的追击服务
+        chase_action = ChaseEnemy(
+            "执行任务牌指定的追击",
+            self.node.start_chase,
+            self.node.get_chase_result,
+            self.node.stop_chase,
+        )
+
+        # 追击失败后先等待，再重新启动一次追击
+        # 额外重试次数由恢复控制管理，追击服务内部不重复计数
+        chase_recovery = RecoveryControl(
+            "追击恢复控制",
+            action=chase_action,
+            recovery_action=WaitBeforeRetry(
+                "追击失败后等待",
+                self.node.recovery_wait_seconds,
+            ),
+            max_retries=1,
+            on_exhausted=self.node.report_chase_exhausted,
+        )
+
+        # 每次 tick 先检查任务牌
+        # 回补给、停止或其他任务可以打断追击和恢复等待
         return Sequence(
             "执行追击任务",
             [
@@ -354,17 +420,61 @@ class BehaviorTreeBuilder:
                     self.node.get_navigation_task,
                     NavigationTask.CHASE,
                 ),
-                ChaseEnemy(
-                    "执行任务牌指定的追击",
-                    self.node.start_chase,
-                    self.node.get_chase_result,
-                    self.node.stop_chase,
-                ),
+                chase_recovery,
             ],
         )
 
     def _build_patrol_task_execution(self):
-        # 任务牌为“巡逻”时，执行当前黑板指定区域的巡逻
+        # 创建巡逻动作，负责正常选点、发送目标和使用备用点
+        patrol_action = PatrolZone(
+            "执行区域巡逻",
+            self.node.get_patrol_region,
+            self.node.start_patrol,
+            self.node.get_patrol_result,
+            self.node.stop_patrol,
+            get_patrol_area=self.node.get_patrol_area,
+            get_robot_position=self.node.get_robot_position,
+            patrol_min_goal_distance=self.node.patrol_min_goal_distance,
+            is_navigation_stopped=self.node.is_navigation_stopped,
+        )
+
+        # 巡逻失败后先等待，再为当前巡逻区域准备备用点
+        patrol_recovery_steps = Sequence(
+            "巡逻恢复步骤",
+            [
+                WaitBeforeRetry(
+                    "巡逻失败后等待",
+                    self.node.recovery_wait_seconds,
+                ),
+                SelectAlternativeGoal(
+                    "准备巡逻备用点",
+                    get_area=lambda: self.node.get_patrol_area(
+                        self.node.get_patrol_region()
+                    ),
+                    get_failed_position=lambda: (
+                        self.node.get_last_navigation_target("patrol")
+                    ),
+                    save_target=patrol_action.save_recovery_target,
+                    recovery_min_goal_distance=(
+                        self.node.recovery_min_goal_distance
+                    ),
+                    recovery_sample_attempts=(
+                        self.node.recovery_sample_attempts
+                    ),
+                ),
+            ],
+        )
+
+        # 恢复步骤完成后，再由原巡逻动作发送备用目标
+        patrol_recovery = RecoveryControl(
+            "区域巡逻恢复控制",
+            action=patrol_action,
+            recovery_action=patrol_recovery_steps,
+            max_retries=self.node.recovery_max_retries,
+            get_progress=lambda: patrol_action.goal_reached_count,
+        )
+
+        # 每轮先检查任务牌，允许其他任务抢占巡逻和恢复
         return Sequence(
             "执行区域巡逻任务",
             [
@@ -373,29 +483,30 @@ class BehaviorTreeBuilder:
                     self.node.get_navigation_task,
                     NavigationTask.PATROL,
                 ),
-                PatrolZone(
-                    "执行区域巡逻",
-                    self.node.get_patrol_region,
-                    self.node.start_patrol,
-                    self.node.get_patrol_result,
-                    self.node.stop_patrol,
-                    get_patrol_area=self.node.get_patrol_area,
-                    get_robot_position=self.node.get_robot_position,
-                    patrol_min_goal_distance=self.node.patrol_min_goal_distance,
-                ),
+                patrol_recovery,
             ],
         )
 
     def _build_navigation_executor(self):
-        # 根据唯一的导航任务牌，选择对应的平移行为执行
-        return Selector(
+        # 任务选择树已经确定优先级，这里只执行任务牌指定的分支
+        return Switch(
             "公共导航执行树",
-            [
-                self._build_resupply_task_execution(),
-                self._build_chase_task_execution(),
-                self._build_occupy_task_execution(),
-                self._build_patrol_task_execution(),
-            ],
+            get_key=self.node.get_navigation_task,
+            can_start=self.node.is_navigation_stopped,
+            children={
+                NavigationTask.RESUPPLY: (
+                    self._build_resupply_task_execution()
+                ),
+                NavigationTask.CHASE: (
+                    self._build_chase_task_execution()
+                ),
+                NavigationTask.OCCUPY_CENTER: (
+                    self._build_occupy_task_execution()
+                ),
+                NavigationTask.PATROL: (
+                    self._build_patrol_task_execution()
+                ),
+            },
         )
 
     def _build_navigation_task_behavior(

@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<root BTCPP_format="4"
+      main_tree_to_execute="SentryMain">
+
+    <!-- 导航文件内部已经引用战术树 -->
+    <include path="navigation_tree.xml"
+             file="navigation_tree.xml" />
+
+    <!-- 加载已有的小陀螺姿态控制 -->
+    <include path="stance_tree.xml"
+             file="stance_tree.xml" />
+
+    <BehaviorTree ID="SentryMain">
+        <!-- 平移导航和底盘旋转每轮分别执行 -->
+        <ContinuousParallel name="哨兵主树">
+            <SubTree ID="NavigationTaskSelection"
+                     name="导航控制" />
+
+            <SubTree ID="StanceControl"
+                     name="姿态控制" />
+        </ContinuousParallel>
+    </BehaviorTree>
+
+    <!-- 供 Groot 识别自定义并行节点 -->
+    <TreeNodesModel>
+        <Control ID="ContinuousParallel" />
+    </TreeNodesModel>
+
+</root>

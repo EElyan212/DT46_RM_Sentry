@@ -1,1447 +1,461 @@
-from unittest.mock import patch
+"""导航收尾和 XML 导航流程测试。
 
-from rm_application.behavior_tree.core import (
-    Node,
-    Status,
-    Sequence,
-    Selector,
-    Parallel,
-)
-from rm_application.behavior_tree.conditions import (
-    NeedResupply,
-    CanChase,
-    IsMatchRunning,
-)
-from rm_application.behavior_tree.actions import (
-    GoResupply,
-    ChaseEnemy,
-    OccupyZone,
-    PatrolZone,
-    SpinChassis,
-    WaitBeforeRetry,
-    SelectAlternativeGoal,
-)
+使用模拟对象调用实际回调，不连接 Nav2，不代替仿真或实车联调。
+"""
+
+from concurrent.futures import Future
+from pathlib import Path
+from threading import Lock
+from types import SimpleNamespace
+from unittest.mock import Mock, patch
+
+import py_trees
+
+from geometry_msgs.msg import PoseStamped
+from nav2_simple_commander.robot_navigator import TaskResult
+
+from rm_application.behavior_tree.actions import PatrolZone
+from rm_application.behavior_tree.blackboard import Blackboard
 from rm_application.behavior_tree.builder import BehaviorTreeBuilder
-from rm_application.behavior_tree.recovery import RecoveryControl
+from rm_application.behavior_tree.core import Status
 from rm_application.behavior_tree.nav_zone import (
     NavigationResult,
     NavigationTask,
     PatrolRegion,
-    TacticalMode,
 )
 from rm_application.behavior_tree.ros_interface import RosInterface
-from rm_interfaces.msg import TacticalModeCommand
+from rm_application.behavior_tree.xml_loader import load_behavior_tree
+from rm_application.behavior_tree_node import BehaviorTreeNode
+from rm_application.chase_client import ChaseClient
 
 
-def test_wait_before_retry():
-    # 使用可控时间，不让测试真的等待。
-    now = [0.0]
-    action = WaitBeforeRetry("恢复等待", 0.5, lambda: now[0])
-    assert action.tick() == Status.RUNNING
-    now[0] = 0.25
-    assert action.tick() == Status.RUNNING
-    now[0] = 0.5
-    assert action.tick() == Status.SUCCESS
 
-    # 完成后再次执行，应重新等待完整时间。
-    now[0] = 1.0
-    assert action.tick() == Status.RUNNING
-    now[0] = 1.25
-    action.halt()
-    assert action.start_time is None
+def test_chase_cancel_confirmation():
+    interface = RosInterface.__new__(RosInterface)
+    interface.node = Mock()
+    interface.chase_goal_pending = True
+    interface.chase_goal_handle = None
+    interface.chase_result = None
+    interface.chase_cancel_pending = False
 
-    # 被抢占后重新进入，不沿用上次已经等待的时间。
-    now[0] = 2.0
-    assert action.tick() == Status.RUNNING
-    now[0] = 2.25
-    assert action.tick() == Status.RUNNING
-    now[0] = 2.5
-    assert action.tick() == Status.SUCCESS
-    print("恢复等待计时与打断测试通过\n")
+    # 请求尚未被接受时要求取消，不能提前判断追击已经结束。
+    assert interface.is_chase_stopped() is False
+    interface.stop_chase()
+    assert interface.chase_cancel_pending is True
+    assert interface.is_chase_stopped() is False
 
+    result_future = Future()
+    cancel_future = Future()
+    handle = Mock()
+    handle.accepted = True
+    handle.get_result_async.return_value = result_future
+    handle.cancel_goal_async.return_value = cancel_future
+    goal_future = Future()
+    goal_future.set_result(handle)
+    interface.chase_goal_response_callback(goal_future)
+    handle.cancel_goal_async.assert_called_once()
+    assert interface.chase_goal_pending is False
+    assert interface.is_chase_stopped() is False
 
-# 可指定返回状态的假节点
-class FakeNode(Node):
-    def __init__(self, name, result):
-        super().__init__(name)
-        self.result = result
-        self.tick_count = 0
-        self.halt_count = 0
+    # 取消请求收到答复，也不代表追击已经返回最终结果。
+    cancel_future.set_result(SimpleNamespace(goals_canceling=[1]))
+    assert interface.is_chase_stopped() is False
+    result_future.set_result(SimpleNamespace(result=SimpleNamespace(
+        success=False, message="追击已取消"
+    )))
+    assert interface.is_chase_stopped() is True
+    assert interface.chase_goal_handle is None
+    assert interface.chase_cancel_pending is False
 
-    def tick(self):
-        self.tick_count += 1
-        print(f"{self.name}: {self.result.name}")
-        return self.result
+    # 读取最终结果异常时无法确认服务结束，不能释放句柄。
+    interface.chase_goal_handle = handle
+    interface.chase_cancel_pending = True
+    failed_future = Future()
+    failed_future.set_exception(RuntimeError("结果读取失败"))
+    interface.chase_result_callback(failed_future)
+    assert interface.is_chase_stopped() is False
+    assert interface.chase_goal_handle is handle
 
-    def halt(self):
-        self.halt_count += 1
-        print(f"停止: {self.name}")
-
-
-def test_sequence():
-    first = FakeNode("第一个", Status.SUCCESS)
-    second = FakeNode("第二个", Status.FAILURE)
-    third = FakeNode("第三个", Status.SUCCESS)
-
-    sequence = Sequence("测试Sequence", [first, second, third])
-    result = sequence.tick()
-
-    assert result == Status.FAILURE
-    assert third.tick_count == 0
-
-    print("Sequence 测试通过\n")
+    print("追击请求未接受、取消答复和最终结果的结束确认测试通过\n")
 
 
-def test_selector():
-    first = FakeNode("第一个", Status.FAILURE)
-    second = FakeNode("第二个", Status.SUCCESS)
-    third = FakeNode("第三个", Status.SUCCESS)
 
-    selector = Selector("测试Selector", [first, second, third])
-    result = selector.tick()
+def test_chase_server_waits_for_navigation_cancel():
+    events = []
+    navigator = Mock(spec=["cancelTask", "isTaskComplete", "goToPose"])
+    navigator.cancelTask.side_effect = lambda: events.append("cancel")
+    completions = iter([False, False, True])
 
-    assert result == Status.SUCCESS
-    assert third.tick_count == 0
+    def is_complete():
+        complete = next(completions)
+        events.append("done" if complete else "running")
+        return complete
 
-    print("Selector 测试通过\n")
-
-
-def test_parallel():
-    first = FakeNode("第一个", Status.FAILURE)
-    second = FakeNode("第二个", Status.RUNNING)
-    third = FakeNode("第三个", Status.SUCCESS)
-
-    parallel = Parallel("测试Parallel", [first, second, third])
-    result = parallel.tick()
-
-    assert result == Status.RUNNING
-    assert first.tick_count == 1
-    assert second.tick_count == 1
-    assert third.tick_count == 1
-
-    print("Parallel 测试通过\n")
-
-
-def test_selector_interrupt():
-    resupply = FakeNode("回补给", Status.FAILURE)
-    chase = FakeNode("追击", Status.RUNNING)
-
-    selector = Selector("底盘选择", [resupply, chase])
-
-    # 第一次：回补给不满足，开始追击
-    first_result = selector.tick()
-
-    assert first_result == Status.RUNNING
-    assert selector.running_child is chase
-    assert chase.halt_count == 0
-
-    # 第二次：血量变低，回补给开始运行
-    resupply.result = Status.RUNNING
-    second_result = selector.tick()
-
-    assert second_result == Status.RUNNING
-    assert selector.running_child is resupply
-    assert chase.halt_count == 1
-
-    print("Selector 打断测试通过\n")
-
-
-def test_sequence_interrupt():
-    can_chase = FakeNode("是否值得追", Status.SUCCESS)
-    chase = FakeNode("执行追击", Status.RUNNING)
-
-    sequence = Sequence("追击行为", [can_chase, chase])
-
-    # 第一次：条件成立，开始追击
-    first_result = sequence.tick()
-
-    assert first_result == Status.RUNNING
-    assert sequence.running_child is chase
-    assert chase.halt_count == 0
-
-    # 第二次：条件失效，停止追击
-    can_chase.result = Status.FAILURE
-    second_result = sequence.tick()
-
-    assert second_result == Status.FAILURE
-    assert sequence.running_child is None
-    assert chase.halt_count == 1
-
-    print("Sequence 打断测试通过\n")
-
-
-def test_need_resupply():
-    hp = [400]
-    condition = NeedResupply("需要回补给", lambda: hp[0], 150, 380)
-
-    assert condition.tick() == Status.FAILURE
-
-    # 低血开始回补给
-    hp[0] = 150
-    assert condition.tick() == Status.SUCCESS
-
-    # 回血途中不提前结束
-    hp[0] = 200
-    assert condition.tick() == Status.SUCCESS
-
-    hp[0] = 379
-    assert condition.tick() == Status.SUCCESS
-
-    # 恢复到目标血量才结束
-    hp[0] = 380
-    assert condition.tick() == Status.FAILURE
-
-    # 结束回补给后，血量仍高于启动阈值时不重新进入。
-    hp[0] = 200
-    assert condition.tick() == Status.FAILURE
-
-    print("回补给条件测试通过\n")
-
-
-def test_can_chase():
-    enemy_position = [None]
-    robot_position = [(2.0, 0.0)]
-    control_zone = [{
-        "enabled": True,
-        "x_min": -1.0,
-        "x_max": 1.0,
-        "y_min": -1.0,
-        "y_max": 1.0,
-    }]
-    chase_boundary = {
-        "enabled": True,
-        "x_min": -3.0,
-        "x_max": 3.0,
-        "y_min": -3.0,
-        "y_max": 3.0,
-    }
-    chasing = [False]
-    enemy_within_lost_grace = [False]
-    condition = CanChase(
-        "是否需要追击",
-        lambda: enemy_position[0],
-        lambda: robot_position[0],
-        lambda: control_zone[0],
-        lambda: chase_boundary,
-        lambda: enemy_within_lost_grace[0],
-        lambda: chasing[0],
+    navigator.isTaskComplete.side_effect = is_complete
+    logger = Mock()
+    service = SimpleNamespace(
+        offset_distance=1.5,
+        navigator=navigator,
+        get_logger=lambda: logger,
+        is_enemy_tracked=lambda: True,
+        get_target_client=Mock(),
+        _start_target_updater=Mock(),
+        _stop_target_updater=Mock(
+            side_effect=lambda: events.append("updater_stopped")
+        ),
     )
-
-    # 没有有效目标时不追击。
-    assert condition.tick() == Status.FAILURE
-
-    # 尚未开始追击且不在控制区内时，不能发起追击。
-    robot_position[0] = (2.0, 0.0)
-    enemy_position[0] = (5.0, 0.0)
-    assert condition.tick() == Status.FAILURE
-
-    # 进入控制区后，可以发起追击。
-    robot_position[0] = (0.0, 0.0)
-    enemy_position[0] = (3.0, 0.0)
-    assert condition.tick() == Status.SUCCESS
-
-    # 追击开始后，允许离开控制区继续追。
-    robot_position[0] = (2.0, 0.0)
-    enemy_position[0] = (5.0, 0.0)
-    chasing[0] = True
-    assert condition.tick() == Status.SUCCESS
-
-    # 追击过程中短暂丢失目标时，保持追击。
-    enemy_position[0] = None
-    enemy_within_lost_grace[0] = True
-    assert condition.tick() == Status.SUCCESS
-
-    # 超过等待时间后停止追击。
-    enemy_within_lost_grace[0] = False
-    assert condition.tick() == Status.FAILURE
-
-    # 哨兵自身到达最大追击边界时停止。
-    enemy_position[0] = (5.0, 0.0)
-    robot_position[0] = (3.0, 0.0)
-    assert condition.tick() == Status.FAILURE
-
-    print("追击条件测试通过\n")
-
-
-def test_can_chase_interrupt():
-    enemy_position = [(3.0, 0.0)]
-    robot_position = [(0.0, 0.0)]
-    control_zone = {
-        "enabled": True,
-        "x_min": -1.0,
-        "x_max": 1.0,
-        "y_min": -1.0,
-        "y_max": 1.0,
-    }
-    chase_boundary = {
-        "enabled": True,
-        "x_min": -2.0,
-        "x_max": 2.0,
-        "y_min": -2.0,
-        "y_max": 2.0,
-    }
-    condition = CanChase(
-        "是否需要追击",
-        lambda: enemy_position[0],
-        lambda: robot_position[0],
-        lambda: control_zone,
-        lambda: chase_boundary,
-        lambda: False,
-        lambda: False,
+    service.get_target_client.wait_for_server.return_value = True
+    goal = SimpleNamespace(
+        request=SimpleNamespace(offset_distance=0.0),
+        is_cancel_requested=True,
+        canceled=Mock(side_effect=lambda: events.append("chase_canceled")),
     )
-    chase = FakeNode("执行追击", Status.RUNNING)
-    sequence = Sequence("追击行为", [condition, chase])
+    # 不创建线程或 ROS 节点，直接运行真实服务回调的取消分支。
+    with patch("rm_application.chase_client.rclpy.ok", side_effect=[True] * 4 + [False]):
+        with patch("rm_application.chase_client.time.sleep", side_effect=lambda _: events.append("wait")):
+            result = ChaseClient.execute_callback(service, goal)
 
-    assert sequence.tick() == Status.RUNNING
-    assert chase.halt_count == 0
-
-    # 追击中哨兵到达最大边界，Sequence 应停止追击动作。
-    robot_position[0] = (2.0, 0.0)
-    assert sequence.tick() == Status.FAILURE
-    assert chase.halt_count == 1
-
-    print("追击条件打断测试通过\n")
-
-
-def test_go_resupply():
-    hp = [100]
-    resupply_result = [NavigationResult.RUNNING]
-    calls = {"start": 0, "stop": 0}
-
-    def start_resupply():
-        calls["start"] += 1
-        return True
-
-    def stop_resupply():
-        calls["stop"] += 1
-
-    condition = NeedResupply("需要回补给", lambda: hp[0], 150, 380)
-    action = GoResupply(
-        "前往补给区",
-        start_resupply,
-        lambda: resupply_result[0],
-        stop_resupply,
-    )
-    sequence = Sequence("回补给行为", [condition, action])
-
-    # 低血时启动一次，连续 tick 不重复发送导航目标。
-    assert sequence.tick() == Status.RUNNING
-    assert sequence.tick() == Status.RUNNING
-    assert calls["start"] == 1
-    assert calls["stop"] == 0
-
-    # 到达补给区后继续等待血量恢复，不重复发送目标。
-    resupply_result[0] = NavigationResult.SUCCEEDED
-    assert sequence.tick() == Status.RUNNING
-    assert action.arrived is True
-    assert sequence.tick() == Status.RUNNING
-    assert calls["start"] == 1
-
-    # 血量恢复后，条件失效并停止补给动作。
-    hp[0] = 380
-    assert sequence.tick() == Status.FAILURE
-    assert calls["stop"] == 1
-    assert action.running is False
-    assert action.arrived is False
-
-    # 真正的导航失败向上返回 FAILURE。
-    hp[0] = 100
-    resupply_result[0] = NavigationResult.FAILED
-    assert sequence.tick() == Status.FAILURE
-    assert action.running is False
-
-    # 主动取消属于正常退出，不触发恢复。
-    resupply_result[0] = NavigationResult.CANCELED
-    assert sequence.tick() == Status.SUCCESS
-    assert action.running is False
-
-    print("回补给动作测试通过\n")
-
-
-def test_chase_enemy():
-    enemy_position = [(3.0, 0.0)]
-    robot_position = [(0.0, 0.0)]
-    control_zone = {
-        "enabled": True,
-        "x_min": -1.0,
-        "x_max": 1.0,
-        "y_min": -1.0,
-        "y_max": 1.0,
-    }
-    chase_boundary = {
-        "enabled": True,
-        "x_min": -3.0,
-        "x_max": 3.0,
-        "y_min": -3.0,
-        "y_max": 3.0,
-    }
-    chase_result = [None]
-    calls = {"start": 0, "stop": 0}
-
-    def start_chase():
-        calls["start"] += 1
-        return True
-
-    def stop_chase():
-        calls["stop"] += 1
-
-    action = ChaseEnemy(
-        "执行追击",
-        start_chase,
-        lambda: chase_result[0],
-        stop_chase,
-    )
-    condition = CanChase(
-        "是否需要追击",
-        lambda: enemy_position[0],
-        lambda: robot_position[0],
-        lambda: control_zone,
-        lambda: chase_boundary,
-        lambda: False,
-        lambda: action.running,
-    )
-    sequence = Sequence("追击行为", [condition, action])
-
-    # 追击期间只启动一次，并持续返回 RUNNING。
-    assert sequence.tick() == Status.RUNNING
-    assert sequence.tick() == Status.RUNNING
-    assert calls["start"] == 1
-
-    # 已经开始追击后，离开控制区仍继续运行。
-    robot_position[0] = (2.0, 0.0)
-    enemy_position[0] = (5.0, 0.0)
-    assert sequence.tick() == Status.RUNNING
-    assert calls["start"] == 1
-
-    # 到达最大追击边界后，条件失效并停止追击。
-    robot_position[0] = (3.0, 0.0)
-    assert sequence.tick() == Status.FAILURE
-    assert calls["stop"] == 1
-    assert action.running is False
-
-    # 停止后仍在控制区外，不能立即重新启动。
-    robot_position[0] = (2.0, 0.0)
-    enemy_position[0] = (5.0, 0.0)
-    assert sequence.tick() == Status.FAILURE
-    assert calls["start"] == 1
-
-    # 返回控制区后可以重新启动，并能接收完成结果。
-    robot_position[0] = (0.0, 0.0)
-    enemy_position[0] = (3.0, 0.0)
-    chase_result[0] = True
-    assert sequence.tick() == Status.SUCCESS
-    assert calls["start"] == 2
-    assert action.running is False
-
-    print("追击动作测试通过\n")
-
-
-def test_occupy_zone():
-    occupy_result = [NavigationResult.RUNNING]
-    calls = {"start": 0, "stop": 0}
-
-    def start_occupy():
-        calls["start"] += 1
-        return True
-
-    def stop_occupy():
-        calls["stop"] += 1
-
-    action = OccupyZone(
-        "占领控制区",
-        start_occupy,
-        lambda: occupy_result[0],
-        stop_occupy,
-    )
-
-    # 占点持续运行，但只发送一次导航目标。
-    assert action.tick() == Status.RUNNING
-    assert action.tick() == Status.RUNNING
-    assert calls["start"] == 1
-
-    # 成功到达后继续守点，并且不重复发送导航目标。
-    occupy_result[0] = NavigationResult.SUCCEEDED
-    assert action.tick() == Status.RUNNING
-    assert action.arrived is True
-    assert action.tick() == Status.RUNNING
-    assert calls["start"] == 1
-
-    # 被高优先级行为打断后停止，再次进入时可以重新启动。
-    action.halt()
-    assert calls["stop"] == 1
-    assert action.running is False
-    assert action.arrived is False
-    occupy_result[0] = NavigationResult.RUNNING
-    assert action.tick() == Status.RUNNING
-    assert calls["start"] == 2
-
-    # 只有真正的导航失败才向上返回 FAILURE。
-    occupy_result[0] = NavigationResult.FAILED
-    assert action.tick() == Status.FAILURE
-    assert action.running is False
-    assert action.arrived is False
-
-    # 主动取消属于正常退出，不触发恢复。
-    occupy_result[0] = NavigationResult.CANCELED
-    assert action.tick() == Status.SUCCESS
-    assert action.running is False
-
-    print("占点动作测试通过\n")
-
-
-def test_patrol_zone():
-    patrol_region = [PatrolRegion.HOME]
-    patrol_result = [NavigationResult.RUNNING]
-    started_regions = []
-    calls = {"stop": 0}
-
-    areas = {
-        PatrolRegion.HOME: [-0.9, -0.5, 0.5, 0.9],
-        PatrolRegion.ENEMY: [0.5, 0.9, 0.5, 0.9],
-    }
-
-    def start_patrol(target_position):
-        region = patrol_region[0]
-        x_min, x_max, y_min, y_max = areas[region]
-        x, y = target_position
-        assert x_min <= x <= x_max and y_min <= y <= y_max
-        assert x * x + y * y >= 0.5 ** 2
-        started_regions.append(region)
-        return True
-
-    def stop_patrol():
-        calls["stop"] += 1
-
-    action = PatrolZone(
-        "区域巡逻",
-        lambda: patrol_region[0],
-        start_patrol,
-        lambda: patrol_result[0],
-        stop_patrol,
-        get_patrol_area=areas.get,
-        get_robot_position=lambda: (0.0, 0.0),
-        patrol_min_goal_distance=0.5,
-    )
-
-    # 第一次进入时发送一个目标，后续 tick 不重复发送。
-    assert action.tick() == Status.RUNNING
-    assert action.tick() == Status.RUNNING
-    assert started_regions == [PatrolRegion.HOME]
-
-    # 到达当前目标后，在同一区域继续发送下一个目标。
-    patrol_result[0] = NavigationResult.SUCCEEDED
-    assert action.tick() == Status.RUNNING
-    assert started_regions == [
-        PatrolRegion.HOME,
-        PatrolRegion.HOME,
+    assert result.success is False
+    assert result.message == "追击已取消"
+    navigator.cancelTask.assert_called_once()
+    navigator.goToPose.assert_not_called()
+    goal.canceled.assert_called_once()
+    assert events == [
+        "cancel", "running", "wait", "running", "wait",
+        "done", "chase_canceled", "updater_stopped",
     ]
-
-    # 巡逻区域改变时，取消旧目标并在新区域重新开始。
-    patrol_result[0] = NavigationResult.RUNNING
-    patrol_region[0] = PatrolRegion.ENEMY
-    assert action.tick() == Status.RUNNING
-    assert calls["stop"] == 1
-    assert started_regions[-1] == PatrolRegion.ENEMY
-
-    # Nav2 报告失败时，向上层返回 FAILURE。
-    patrol_result[0] = NavigationResult.FAILED
-    assert action.tick() == Status.FAILURE
-    assert action.running is False
-    assert action.active_region is None
-
-    # 主动取消属于正常退出，不向上报告导航故障。
-    patrol_result[0] = NavigationResult.CANCELED
-    assert action.tick() == Status.RUNNING
-    assert action.tick() == Status.SUCCESS
-    assert action.running is False
-    assert action.active_region is None
-
-    # 被其他行为打断时取消正在运行的巡逻目标。
-    patrol_result[0] = NavigationResult.RUNNING
-    assert action.tick() == Status.RUNNING
-    action.halt()
-    assert calls["stop"] == 2
-    assert action.running is False
-
-    print("连续巡逻动作测试通过\n")
+    print("追击服务等待 Nav2 最终结束才报告取消完成的测试通过\n")
 
 
-def test_patrol_recovery_target():
-    region = [PatrolRegion.CENTER]
-    result = [NavigationResult.RUNNING]
-    accepted = [True]
-    sent_targets = []
 
-    def start_patrol(target):
-        sent_targets.append(target)
-        return accepted[0]
-
-    action = PatrolZone(
-        "测试巡逻备用点",
-        lambda: region[0],
-        start_patrol,
-        lambda: result[0],
-        lambda: None,
-        get_patrol_area=lambda current_region: [0.0, 1.0, 0.0, 1.0],
-        get_robot_position=lambda: (0.0, 0.0),
+def _make_chase_execution_test_case():
+    navigator = Mock(spec=["cancelTask", "isTaskComplete", "getResult", "goToPose"])
+    navigator.goToPose.return_value = True
+    service = SimpleNamespace(
+        offset_distance=1.5,
+        navigator=navigator,
+        get_logger=Mock(return_value=Mock()),
+        is_enemy_tracked=Mock(return_value=True),
+        get_target_client=Mock(),
+        _start_target_updater=Mock(),
+        _stop_target_updater=Mock(),
+        target_pose_lock=Lock(),
+        latest_target_pose=PoseStamped(),
     )
-
-    # 恢复节点准备的目标只保存，不立即发送导航。
-    action.save_recovery_target((0.7, 0.7))
-    assert sent_targets == []
-    with patch.object(action, "sample_patrol_target", return_value=(0.8, 0.8)) as sample:
-        # 下一次启动优先使用备用点，连续 tick 不重复发送。
-        assert action.tick() == Status.RUNNING
-        assert sent_targets == [(0.7, 0.7)]
-        assert action.recovery_target is None
-        assert action.recovery_region is None
-        assert action.tick() == Status.RUNNING
-        sample.assert_not_called()
-
-        # 到达备用点后恢复正常选点，备用点不会再次使用。
-        result[0] = NavigationResult.SUCCEEDED
-        assert action.tick() == Status.RUNNING
-        assert sent_targets == [(0.7, 0.7), (0.8, 0.8)]
-        assert action.goal_reached_count == 1
-        sample.assert_called_once_with(PatrolRegion.CENTER)
-
-    action.halt()
-    action.save_recovery_target((0.7, 0.7))
-    region[0] = PatrolRegion.HOME
-    with patch.object(action, "sample_patrol_target", return_value=(0.9, 0.9)) as sample:
-        # 切换区域后丢弃旧区域的备用点，按新区域重新选点。
-        assert action.tick() == Status.RUNNING
-        assert sent_targets[-1] == (0.9, 0.9)
-        sample.assert_called_once_with(PatrolRegion.HOME)
-        assert action.recovery_target is None
-        assert action.recovery_region is None
-
-    # 退出任务清理备用点，但保留累计到达次数。
-    action.save_recovery_target((0.6, 0.6))
-    action.halt()
-    assert action.recovery_target is None
-    assert action.recovery_region is None
-    assert action.goal_reached_count == 1
-
-    # 发送被拒绝时也消耗备用点，后续由恢复流程重新准备。
-    accepted[0] = False
-    action.save_recovery_target((0.6, 0.6))
-    assert action.tick() == Status.FAILURE
-    assert sent_targets[-1] == (0.6, 0.6)
-    assert action.recovery_target is None
-    assert action.recovery_region is None
-    accepted[0] = True
-    with patch.object(action, "sample_patrol_target", return_value=(0.8, 0.8)):
-        assert action.tick() == Status.RUNNING
-        assert sent_targets[-1] == (0.8, 0.8)
-
-    print("巡逻备用点消费与清理测试通过\n")
-
-
-def test_sample_patrol_target():
-    # 跳过真实 ROS 初始化，只验证巡逻选点的纯计算逻辑。
-    action = PatrolZone.__new__(PatrolZone)
-    action.patrol_areas = {
-        PatrolRegion.HOME: [1.0, 2.0, -1.0, 1.0],
-    }
-    action.get_patrol_area = action.patrol_areas.get
-    action.patrol_min_goal_distance = 0.5
-    action.get_robot_position = lambda: (0.0, 0.0)
-
-    # 有效区域应生成区域内且距离机器人足够远的目标。
-    target = action.sample_patrol_target(PatrolRegion.HOME)
-    assert target is not None
-    target_x, target_y = target
-    assert 1.0 <= target_x <= 2.0
-    assert -1.0 <= target_y <= 1.0
-    assert target_x ** 2 + target_y ** 2 >= 0.5 ** 2
-
-    # 全零占位区域无效，不能生成导航目标。
-    action.patrol_areas[PatrolRegion.HOME] = [
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-    ]
-    assert action.sample_patrol_target(PatrolRegion.HOME) is None
-
-    # 没有定位时不能计算目标与机器人的距离。
-    action.patrol_areas[PatrolRegion.HOME] = [
-        1.0,
-        2.0,
-        -1.0,
-        1.0,
-    ]
-    action.get_robot_position = lambda: None
-    assert action.sample_patrol_target(PatrolRegion.HOME) is None
-
-    # 区域太小且无法满足最小距离时，有限尝试后返回失败。
-    action.patrol_areas[PatrolRegion.HOME] = [
-        -0.1,
-        0.1,
-        -0.1,
-        0.1,
-    ]
-    action.patrol_min_goal_distance = 1.0
-    action.get_robot_position = lambda: (0.0, 0.0)
-    assert action.sample_patrol_target(PatrolRegion.HOME) is None
-
-    print("巡逻随机选点测试通过\n")
-
-
-def test_sample_recovery_target():
-    area = [-1.0, 1.0, -1.0, 1.0]
-    action = SelectAlternativeGoal(
-        "恢复选点",
-        lambda: area,
-        lambda: (0.0, 0.0),
-        lambda target: None,
-        recovery_min_goal_distance=0.5,
-        recovery_sample_attempts=3,
+    service.get_target_client.wait_for_server.return_value = True
+    service._has_pose_changed = lambda old, new, threshold: ChaseClient._has_pose_changed(
+        service, old, new, threshold
     )
-
-    # 首个候选点离失败点太近；第二个满足距离要求。
-    with patch(
-        "rm_application.behavior_tree.actions.random.uniform",
-        side_effect=[0.1, 0.1, 0.8, 0.6],
-    ) as sample:
-        target = action.sample_recovery_target(area, (0.0, 0.0))
-        assert target == (0.8, 0.6)
-        assert target[0] ** 2 + target[1] ** 2 >= 0.5 ** 2
-        assert [call.args for call in sample.call_args_list] == [
-            (-1.0, 1.0), (-1.0, 1.0),
-            (-1.0, 1.0), (-1.0, 1.0),
-        ]
-
-    # 实际随机采样也必须落在传入区域内。
-    target = action.sample_recovery_target([1.0, 2.0, 3.0, 4.0], (0.0, 0.0))
-    assert target is not None
-    assert 1.0 <= target[0] <= 2.0
-    assert 3.0 <= target[1] <= 4.0
-
-    # 占位区域、反向边界、缺少失败目标均不应开始采样。
-    with patch("rm_application.behavior_tree.actions.random.uniform") as sample:
-        assert action.sample_recovery_target([0.0] * 4, (0.0, 0.0)) is None
-        assert action.sample_recovery_target([1.0, -1.0, 0.0, 1.0], (0.0, 0.0)) is None
-        assert action.sample_recovery_target(area, None) is None
-        sample.assert_not_called()
-
-    # 候选点始终不合适时，严格限制采样次数。
-    with patch(
-        "rm_application.behavior_tree.actions.random.uniform",
-        return_value=0.0,
-    ) as sample:
-        assert action.sample_recovery_target(area, (0.0, 0.0)) is None
-        assert sample.call_count == 2 * action.recovery_sample_attempts
-
-    print("恢复选点范围、距离与次数限制测试通过\n")
-
-
-def test_select_alternative_goal():
-    area = [[-1.0, 1.0, -1.0, 1.0]]
-    failed_position = [(0.0, 0.0)]
-    saved_targets = []
-    action = SelectAlternativeGoal(
-        "准备备用目标",
-        lambda: area[0],
-        lambda: failed_position[0],
-        saved_targets.append,
-        recovery_sample_attempts=3,
+    goal = SimpleNamespace(
+        request=SimpleNamespace(offset_distance=0.0),
+        is_cancel_requested=False,
+        publish_feedback=Mock(),
+        abort=Mock(),
+        succeed=Mock(),
+        canceled=Mock(),
     )
-
-    # 选到合法点时只保存坐标，不启动导航。
-    with patch(
-        "rm_application.behavior_tree.actions.random.uniform",
-        side_effect=[0.1, 0.1, 0.8, 0.6],
-    ):
-        assert action.tick() == Status.SUCCESS
-    assert saved_targets == [(0.8, 0.6)]
-
-    # 没有合法区域或失败位置时，不把旧坐标当作新备用点保存。
-    area[0] = [0.0] * 4
-    assert action.tick() == Status.FAILURE
-    area[0] = [-1.0, 1.0, -1.0, 1.0]
-    failed_position[0] = None
-    assert action.tick() == Status.FAILURE
-    assert saved_targets == [(0.8, 0.6)]
-
-    print("备用目标准备与失败不保存测试通过\n")
+    return service, goal
 
 
-def test_recovery_control_rounds():
-    now = [0.0]
-    exhausted = []
-    action = FakeNode("模拟导航", Status.FAILURE)
-    recovery = RecoveryControl(
-        "有限恢复",
-        action,
-        WaitBeforeRetry("等待重试", 0.5, lambda: now[0]),
-        max_retries=2,
-        on_exhausted=lambda: exhausted.append(now[0]),
-    )
 
-    # 初次失败后，等待期间连续 tick 不再次执行导航。
-    assert recovery.tick() == Status.RUNNING
-    assert recovery.tick() == Status.RUNNING
-    for instant in (0.1, 0.2, 0.49):
-        now[0] = instant
-        assert recovery.tick() == Status.RUNNING
-        assert action.tick_count == 1
-
-    # 本轮包含初次尝试和两次额外重试，第三次失败时上报一次。
-    now[0] = 0.5
-    assert recovery.tick() == Status.RUNNING
-    assert action.tick_count == 2
-    assert recovery.tick() == Status.RUNNING
-    now[0] = 1.0
-    assert recovery.tick() == Status.FAILURE
-    assert action.tick_count == 3
-    assert exhausted == [1.0]
-
-    # 耗尽后仍需等待；父节点的 halt 不能绕过等待直接重发。
-    recovery.halt()
-    assert recovery.tick() == Status.RUNNING
-    now[0] = 1.49
-    assert recovery.tick() == Status.RUNNING
-    assert action.tick_count == 3
-
-    # 障碍条件改善后，新一轮尝试可以自行成功，不会永久停住。
-    action.result = Status.SUCCESS
-    now[0] = 1.5
-    assert recovery.tick() == Status.SUCCESS
-    assert action.tick_count == 4
-    assert recovery.retry_count == 0
-    assert recovery.recovering is False
-    assert exhausted == [1.0]
-
-    print("恢复等待、每轮次数、耗尽上报与自动再试测试通过\n")
+def _run_chase_execution_test(service, goal, cycles=8):
+    # 限制循环次数，测试回归时也不会无限运行；没有真实等待或线程。
+    with patch("rm_application.chase_client.rclpy.ok", side_effect=[True] * cycles + [False]):
+        with patch("rm_application.chase_client.time.sleep"):
+            return ChaseClient.execute_callback(service, goal)
 
 
-def test_recovery_control_interrupt_and_progress():
-    now = [0.0]
-    progress = [0]
-    action = FakeNode("模拟导航", Status.FAILURE)
-    wait = WaitBeforeRetry("等待重试", 0.5, lambda: now[0])
-    recovery = RecoveryControl(
-        "可打断恢复",
-        action,
-        wait,
-        get_progress=lambda: progress[0],
-    )
 
-    assert recovery.tick() == Status.RUNNING
-    assert recovery.tick() == Status.RUNNING
-    now[0] = 0.25
-    recovery.halt()
-    assert wait.start_time is None
+def test_chase_reports_navigation_failure():
+    for nav_result in (TaskResult.FAILED, TaskResult.UNKNOWN):
+        service, goal = _make_chase_execution_test_case()
+        service.navigator.isTaskComplete.return_value = True
+        service.navigator.getResult.return_value = nav_result
+        next_target = PoseStamped()
+        next_target.pose.position.x = 1.0
 
-    # 恢复被打断后再进入，应重新等待，不能沿用原计时。
-    now[0] = 1.0
-    assert recovery.tick() == Status.RUNNING
-    now[0] = 1.49
-    assert recovery.tick() == Status.RUNNING
-    assert action.tick_count == 1
-    action.result = Status.RUNNING
-    now[0] = 1.5
-    assert recovery.tick() == Status.RUNNING
-    assert action.tick_count == 2
-    assert recovery.retry_count == 1
-
-    # 到达后正常动作仍为 RUNNING，也必须清零连续失败次数。
-    progress[0] += 1
-    assert recovery.tick() == Status.RUNNING
-    assert recovery.retry_count == 0
-
-    # 明确复位清除恢复状态，留给后续任务上下文变化时调用。
-    action.result = Status.FAILURE
-    assert recovery.tick() == Status.RUNNING
-    recovery.reset()
-    assert recovery.recovering is False
-    assert recovery.restart_round is False
-    assert recovery.retry_count == 0
-
-    print("恢复打断、到达计数与明确复位测试通过\n")
-
-
-def test_recovery_control_navigation_actions():
-    for action_class in (OccupyZone, GoResupply):
-        now = [0.0]
-        result = [NavigationResult.RUNNING]
-        calls = {"start": 0, "stop": 0}
-
-        def start_navigation():
-            calls["start"] += 1
+        def send_target(_target):
+            service.latest_target_pose = next_target
             return True
 
-        def stop_navigation():
-            calls["stop"] += 1
+        service.navigator.goToPose.side_effect = send_target
+        result = _run_chase_execution_test(service, goal)
+        # 即使敌人目标已经更新，也必须先处理旧导航的失败。
+        assert result is not None
+        service.navigator.goToPose.assert_called_once()
+        service._stop_target_updater.assert_called_once()
+        assert result.success is False
+        assert "追击导航未成功" in result.message
+        goal.abort.assert_called_once_with()
 
-        action = action_class(
-            "普通导航",
-            start_navigation,
-            lambda: result[0],
-            stop_navigation,
-        )
-        recovery = RecoveryControl(
-            "普通导航恢复",
-            action,
-            WaitBeforeRetry("等待", 0.5, lambda: now[0]),
-            get_progress=lambda: action.goal_reached_count,
-        )
+    # 已发出的导航失败后，即使跟踪数据暂时丢失，也不能跳过结果检查。
+    service, goal = _make_chase_execution_test_case()
+    service.is_enemy_tracked.side_effect = [True, True] + [False] * 8
+    service.navigator.isTaskComplete.return_value = True
+    service.navigator.getResult.return_value = TaskResult.FAILED
+    result = _run_chase_execution_test(service, goal)
+    assert result is not None, "跟踪数据丢失时，导航失败被 continue 跳过"
+    assert result.success is False
+    goal.abort.assert_called_once_with()
+    service.navigator.goToPose.assert_called_once()
+    service._stop_target_updater.assert_called_once()
 
-        assert recovery.tick() == Status.RUNNING
-        result[0] = NavigationResult.FAILED
-        assert recovery.tick() == Status.RUNNING
-        assert recovery.tick() == Status.RUNNING
-        assert calls["start"] == 1
+    # 新目标被拒绝时，不能沿用上一目标成功的结果并继续反复发点。
+    service, goal = _make_chase_execution_test_case()
+    service.navigator.goToPose.return_value = False
+    service.navigator.isTaskComplete.return_value = True
+    service.navigator.getResult.return_value = TaskResult.SUCCEEDED
+    result = _run_chase_execution_test(service, goal)
+    assert result is not None, "Nav2 拒绝追击目标后没有返回失败"
+    assert result.success is False
+    goal.abort.assert_called_once_with()
+    service.navigator.goToPose.assert_called_once()
+    service._stop_target_updater.assert_called_once()
 
-        result[0] = NavigationResult.RUNNING
-        now[0] = 0.5
-        assert recovery.tick() == Status.RUNNING
-        assert calls["start"] == 2
-        assert recovery.retry_count == 1
+    # 启动前失败同样使用 ROS 的无参数 abort()，结果通过 return 返回。
+    for missing in ("enemy", "target_server"):
+        service, goal = _make_chase_execution_test_case()
+        if missing == "enemy":
+            service.is_enemy_tracked.return_value = False
+        else:
+            service.get_target_client.wait_for_server.return_value = False
+        result = _run_chase_execution_test(service, goal)
+        assert result.success is False
+        goal.abort.assert_called_once_with()
+        service.navigator.goToPose.assert_not_called()
 
-        # 导航到达后继续守点／等待回血，恢复次数清零且不重复发点。
-        result[0] = NavigationResult.SUCCEEDED
-        assert recovery.tick() == Status.RUNNING
-        assert action.goal_reached_count == 1
-        assert recovery.retry_count == 0
-        assert recovery.tick() == Status.RUNNING
-        assert calls["start"] == 2
-        recovery.halt()
-        assert calls["stop"] == 1
-
-        # 主动取消属于正常退出，不转入恢复等待。
-        result[0] = NavigationResult.CANCELED
-        assert recovery.tick() == Status.SUCCESS
-        assert recovery.recovering is False
-
-    print("占点和回血与恢复控制组合测试通过\n")
+    print("追击导航失败与未知结果上报测试通过\n")
 
 
-def test_spin_chassis():
-    match_progress = [4]
-    calls = {"start": 0, "stop": 0}
 
-    def start_spin():
-        calls["start"] += 1
+def test_chase_navigation_success_continues():
+    service, goal = _make_chase_execution_test_case()
+    service.navigator.isTaskComplete.side_effect = [True, True]
+    service.navigator.getResult.return_value = TaskResult.SUCCEEDED
+    next_target = PoseStamped()
+    next_target.pose.position.x = 1.0
+
+    def send_target(_target):
+        if service.navigator.goToPose.call_count == 1:
+            service.latest_target_pose = next_target
+        else:
+            goal.is_cancel_requested = True
         return True
 
-    def stop_spin():
-        calls["stop"] += 1
-
-    condition = IsMatchRunning("比赛正在进行", lambda: match_progress[0])
-    action = SpinChassis("开启小陀螺", start_spin, stop_spin)
-    sequence = Sequence("小陀螺行为", [condition, action])
-
-    # 比赛期间只开启一次并持续运行。
-    assert sequence.tick() == Status.RUNNING
-    assert sequence.tick() == Status.RUNNING
-    assert calls["start"] == 1
-
-    # 比赛结束后关闭小陀螺。
-    match_progress[0] = 3
-    assert sequence.tick() == Status.FAILURE
-    assert calls["stop"] == 1
-    assert action.running is False
-
-    print("小陀螺动作测试通过\n")
+    service.navigator.goToPose.side_effect = send_target
+    result = _run_chase_execution_test(service, goal)
+    # 到达一个追击点后继续追击，直到上层要求退出。
+    assert service.navigator.goToPose.call_count == 2
+    service.navigator.getResult.assert_called_once()
+    goal.succeed.assert_not_called()
+    goal.abort.assert_not_called()
+    goal.canceled.assert_called_once_with()
+    assert result.message == "追击已取消"
+    print("追击到达导航点后继续追击测试通过\n")
 
 
-class FakeBehaviorNode:
-    """为 builder 提供参数、状态和动作方法，不包含真实 ROS 通信。"""
 
-    def __init__(self):
-        self.hp = 400
-        self.enemy_position = None
-        self.robot_position = (0.0, 0.0)
-        self.control_zone = {
-            "enabled": True,
-            "x_min": -1.0,
-            "x_max": 1.0,
-            "y_min": -1.0,
-            "y_max": 1.0,
-        }
-        self.chase_boundary = {
-            "enabled": True,
-            "x_min": -3.0,
-            "x_max": 3.0,
-            "y_min": -3.0,
-            "y_max": 3.0,
-        }
-        self.match_progress = 3
-        self.chase_result = None
-        self.occupy_result = NavigationResult.RUNNING
-        self.resupply_result = NavigationResult.RUNNING
-        self.enemy_within_lost_grace = False
-        self.navigation_task = NavigationTask.STOP
-        self.tactical_mode = TacticalMode.NEUTRAL
-        self.patrol_region = PatrolRegion.CENTER
-        self.patrol_result = NavigationResult.RUNNING
-        self.patrol_min_goal_distance = 0.5
-        self.patrol_areas = {
-            PatrolRegion.HOME: [-0.9, -0.5, 0.5, 0.9],
-            PatrolRegion.CENTER: [-0.2, 0.2, 0.5, 0.9],
-            PatrolRegion.ENEMY: [0.5, 0.9, 0.5, 0.9],
-        }
-
-        self.hp_limit = 150
-        self.hp_up = 380
-
-        self.calls = {
-            "start_resupply": 0,
-            "stop_resupply": 0,
-            "start_chase": 0,
-            "stop_chase": 0,
-            "start_occupy": 0,
-            "stop_occupy": 0,
-            "start_patrol": 0,
-            "stop_patrol": 0,
-            "start_spin": 0,
-            "stop_spin": 0,
-        }
-
-    def get_hp(self):
-        return self.hp
-
-    def get_enemy_position(self):
-        return self.enemy_position
-
-    def get_patrol_area(self, patrol_region):
-        return self.patrol_areas.get(patrol_region)
-
-    def get_robot_position(self):
-        return self.robot_position
-
-    def get_control_zone(self):
-        return self.control_zone
-
-    def get_chase_boundary(self):
-        return self.chase_boundary
-
-    def is_enemy_within_lost_grace(self):
-        return self.enemy_within_lost_grace
-
-    def get_match_progress(self):
-        return self.match_progress
-
-    def get_navigation_task(self):
-        return self.navigation_task
-
-    def set_navigation_task(self, navigation_task):
-        self.navigation_task = navigation_task
-
-    def get_tactical_mode(self):
-        return self.tactical_mode
-
-    def set_tactical_mode(self, tactical_mode):
-        self.tactical_mode = tactical_mode
-
-    def get_patrol_region(self):
-        return self.patrol_region
-
-    def set_patrol_region(self, patrol_region):
-        self.patrol_region = patrol_region
-
-    def start_resupply(self):
-        self.calls["start_resupply"] += 1
-        return True
-
-    def get_resupply_result(self):
-        return self.resupply_result
-
-    def stop_resupply(self):
-        self.calls["stop_resupply"] += 1
-
-    def start_chase(self):
-        self.calls["start_chase"] += 1
-        return True
-
-    def get_chase_result(self):
-        return self.chase_result
-
-    def stop_chase(self):
-        self.calls["stop_chase"] += 1
-
-    def start_occupy(self):
-        self.calls["start_occupy"] += 1
-        return True
-
-    def get_occupy_result(self):
-        return self.occupy_result
-
-    def stop_occupy(self):
-        self.calls["stop_occupy"] += 1
-
-    def start_patrol(self, target_position):
-        self.calls["start_patrol"] += 1
-        self.last_patrol_target = target_position
-        return True
-
-    def get_patrol_result(self):
-        return self.patrol_result
-
-    def stop_patrol(self):
-        self.calls["stop_patrol"] += 1
-
-    def start_spin(self):
-        self.calls["start_spin"] += 1
-        return True
-
-    def stop_spin(self):
-        self.calls["stop_spin"] += 1
+def test_chase_cooldown_state():
+    node = SimpleNamespace(
+        blackboard=Blackboard(),
+        get_parameter=Mock(return_value=SimpleNamespace(value=3.0)),
+        get_logger=Mock(return_value=Mock()),
+    )
+    with patch("rm_application.behavior_tree_node.time.monotonic") as clock:
+        clock.return_value = 100.0
+        # 首次选择追击前，冷却状态必须已经初始化。
+        assert BehaviorTreeNode.is_chase_ready(node) is True
+        BehaviorTreeNode.report_chase_exhausted(node)
+        assert node.blackboard.chase_retry_after == 103.0
+        assert BehaviorTreeNode.is_chase_ready(node) is False
+        clock.return_value = 102.99
+        assert BehaviorTreeNode.is_chase_ready(node) is False
+        clock.return_value = 103.0
+        assert BehaviorTreeNode.is_chase_ready(node) is True
+    print("追击冷却初始化、耗尽记录与到期恢复测试通过\n")
 
 
-def test_navigation_executor_patrol_switch():
-    node = FakeBehaviorNode()
-    executor = BehaviorTreeBuilder(
-        node
-    )._build_navigation_executor()
-
-    # PATROL 任务牌启动巡逻，连续 tick 不重复启动。
-    node.navigation_task = NavigationTask.PATROL
-    assert executor.tick() == Status.RUNNING
-    assert executor.tick() == Status.RUNNING
-    assert node.calls["start_patrol"] == 1
-
-    # 巡逻区域变化时取消旧目标，并在新区域重新开始。
-    node.patrol_region = PatrolRegion.ENEMY
-    assert executor.tick() == Status.RUNNING
-    assert node.calls["stop_patrol"] == 1
-    assert node.calls["start_patrol"] == 2
-
-    # 任务牌切换为占点时，停止巡逻并启动占点导航。
-    node.navigation_task = NavigationTask.OCCUPY_CENTER
-    assert executor.tick() == Status.RUNNING
-    assert node.calls["stop_patrol"] == 2
-    assert node.calls["start_occupy"] == 1
-
-    print("公共导航执行树巡逻切换测试通过\n")
-
-
-def test_occupy_patrol_minimum_loop():
-    node = FakeBehaviorNode()
+def test_chase_selection_respects_cooldown():
+    state = SimpleNamespace(task=NavigationTask.CHASE, ready=False)
+    node = SimpleNamespace(
+        is_chase_ready=lambda: state.ready,
+        get_navigation_task=lambda: state.task,
+        set_navigation_task=lambda task: setattr(state, "task", task),
+        set_patrol_region=Mock(),
+        get_enemy_position=lambda: (1.0, 1.0),
+        get_robot_position=lambda: (1.0, 1.0),
+        get_control_zone=lambda: dict(
+            enabled=True, x_min=0.0, x_max=2.0, y_min=0.0, y_max=2.0
+        ),
+        get_chase_boundary=lambda: dict(
+            enabled=True, x_min=-10.0, x_max=10.0, y_min=-10.0, y_max=10.0
+        ),
+        is_enemy_within_lost_grace=lambda: False,
+    )
     builder = BehaviorTreeBuilder(node)
-    task_selection = (
-        builder._build_occupy_or_patrol_task_selection(
-            PatrolRegion.CENTER
+    # 目标始终有效；两个实际策略都必须在冷却期间选择巡逻。
+    for build in (
+        builder._build_neutral_task_selection,
+        builder._build_pressure_task_selection,
+    ):
+        state.task = NavigationTask.CHASE
+        state.ready = False
+        selection = build()
+        assert selection.tick() == Status.SUCCESS
+        assert state.task == NavigationTask.PATROL, (
+            f"{build.__name__} 冷却期间仍然选择追击"
         )
+        state.ready = True
+        assert selection.tick() == Status.SUCCESS
+        assert state.task == NavigationTask.CHASE
+    print("中立和前压策略遵守追击冷却的测试通过\n")
+
+
+def test_patrol_region_switch_waits_for_cancel():
+    state = SimpleNamespace(region=PatrolRegion.CENTER, stopped=True)
+    start = Mock(return_value=True)
+    stop = Mock(side_effect=lambda: setattr(state, "stopped", False))
+    action = PatrolZone(
+        "巡逻换区测试",
+        get_patrol_region=lambda: state.region,
+        start_patrol=start,
+        get_patrol_result=Mock(),
+        stop_patrol=stop,
+        get_patrol_area=Mock(),
+        get_robot_position=Mock(),
+        is_navigation_stopped=lambda: state.stopped,
     )
-    behavior = builder._build_navigation_task_behavior(
-        task_selection
+    points = {
+        PatrolRegion.CENTER: (1.0, 1.0),
+        PatrolRegion.ENEMY: (2.0, 2.0),
+        PatrolRegion.HOME: (-1.0, -1.0),
+    }
+    action.sample_patrol_target = lambda region: points[region]
+    assert action.tick() == Status.RUNNING
+    state.region = PatrolRegion.ENEMY
+    assert action.tick() == Status.RUNNING
+    stop.assert_called_once()
+    assert start.call_count == 1
+    # 等待期间再次换区，应等旧导航结束后直接使用最新区域。
+    state.region = PatrolRegion.HOME
+    assert action.tick() == Status.RUNNING
+    assert start.call_count == 1
+    state.stopped = True
+    assert action.tick() == Status.RUNNING
+    stop.assert_called_once()
+    assert [call.args[0] for call in start.call_args_list] == [
+        points[PatrolRegion.CENTER], points[PatrolRegion.HOME],
+    ]
+    assert action.active_region == PatrolRegion.HOME
+    action.get_patrol_result.assert_not_called()
+    print("巡逻换区等待取消完成、等待中使用最新区域的测试通过\n")
+
+
+def test_xml_navigation_task_selection():
+    # 加载实际 XML 和已有执行树，仅模拟 ROS 数据及导航结果。
+    blackboard = Blackboard(self_hp=300)
+    navigation = SimpleNamespace(owner=None)
+    events = []
+
+    def start(owner):
+        assert navigation.owner is None, "旧导航尚未结束就启动了新任务"
+        navigation.owner = owner
+        events.append(f"启动{owner}")
+        return True
+
+    def stop(owner):
+        assert navigation.owner == owner
+        events.append(f"取消{owner}")
+        # 请求取消不等于确认结束，owner 由测试在确认时清除。
+
+    node = Mock(
+        hp_limit=100,
+        hp_up=200,
+        recovery_wait_seconds=0.5,
+        recovery_max_retries=2,
+        recovery_min_goal_distance=0.5,
+        recovery_sample_attempts=20,
+        patrol_min_goal_distance=0.5,
     )
-
-    # 控制区外选择占点，并启动中央点导航。
-    node.robot_position = (2.0, 0.0)
-    assert behavior.tick() == Status.RUNNING
-    assert node.navigation_task == NavigationTask.OCCUPY_CENTER
-    assert node.calls["start_occupy"] == 1
-
-    # 进入控制区后改为巡逻，取消占点并启动巡逻目标。
-    node.robot_position = (0.0, 0.0)
-    assert behavior.tick() == Status.RUNNING
-    assert node.navigation_task == NavigationTask.PATROL
-    assert node.patrol_region == PatrolRegion.CENTER
-    assert node.calls["stop_occupy"] == 1
-    assert node.calls["start_patrol"] == 1
-
-    # 保持在区内时继续同一次巡逻，不重复发送目标。
-    assert behavior.tick() == Status.RUNNING
-    assert node.calls["start_patrol"] == 1
-
-    # 再次离开控制区后取消巡逻，并重新执行中央占点。
-    node.robot_position = (2.0, 0.0)
-    assert behavior.tick() == Status.RUNNING
-    assert node.navigation_task == NavigationTask.OCCUPY_CENTER
-    assert node.calls["stop_patrol"] == 1
-    assert node.calls["start_occupy"] == 2
-
-    print("占点到区内巡逻最小闭环测试通过\n")
-
-
-def test_tactical_navigation_task_selection():
-    node = FakeBehaviorNode()
-    builder = BehaviorTreeBuilder(node)
-    behavior = builder._build_navigation_task_behavior(
-        builder._build_navigation_task_selection()
+    node.get_match_progress.side_effect = lambda: blackboard.match_progress
+    node.get_hp.side_effect = lambda: blackboard.self_hp
+    node.get_tactical_mode.side_effect = lambda: blackboard.tactical_mode
+    # 本用例专门验证占点与回血交接，未配置控制区时继续选择占点。
+    node.get_control_zone.return_value = {"enabled": False}
+    node.get_navigation_task.side_effect = lambda: blackboard.navigation_task
+    node.set_navigation_task.side_effect = lambda task: setattr(
+        blackboard, "navigation_task", task
     )
+    node.is_navigation_stopped.side_effect = lambda: navigation.owner is None
+    node.start_occupy.side_effect = lambda: start("占点")
+    node.stop_occupy.side_effect = lambda: stop("占点")
+    node.get_occupy_result.return_value = NavigationResult.RUNNING
+    node.start_resupply.side_effect = lambda: start("回血")
+    node.stop_resupply.side_effect = lambda: stop("回血")
+    node.get_resupply_result.return_value = NavigationResult.RUNNING
+    xml_path = Path(__file__).resolve().parent / "tree" / "navigation_tree.xml"
+    root = load_behavior_tree(node, xml_path)
 
-    # 比赛未进行时保持 STOP，所有平移行为都不启动。
-    assert behavior.tick() == Status.FAILURE
-    assert node.navigation_task == NavigationTask.STOP
-    assert node.calls["start_resupply"] == 0
-    assert node.calls["start_chase"] == 0
-    assert node.calls["start_occupy"] == 0
-    assert node.calls["start_patrol"] == 0
+    def tick(expected_task, expected_status):
+        root.tick_once()
+        assert blackboard.navigation_task == expected_task
+        assert root.status == expected_status
 
-    # 中立模式、位于区内且没有目标时，在中央子区域巡逻。
-    node.match_progress = 4
-    assert behavior.tick() == Status.RUNNING
-    assert node.navigation_task == NavigationTask.PATROL
-    assert node.patrol_region == PatrolRegion.CENTER
-    assert node.calls["start_patrol"] == 1
+    running = py_trees.common.Status.RUNNING
+    # 已确认停止时，沿用原执行器无活动任务返回 FAILURE 的约定。
+    tick(NavigationTask.STOP, py_trees.common.Status.FAILURE)
+    assert events == []
 
-    # 哨兵和敌人都在区内时，区内追击抢占巡逻。
-    node.enemy_position = (0.5, 0.0)
-    assert behavior.tick() == Status.RUNNING
-    assert node.navigation_task == NavigationTask.CHASE
-    assert node.calls["stop_patrol"] == 1
-    assert node.calls["start_chase"] == 1
+    blackboard.match_progress = 4
+    tick(NavigationTask.OCCUPY_CENTER, running)
+    tick(NavigationTask.OCCUPY_CENTER, running)
+    node.start_occupy.assert_called_once()
 
-    # 敌人离开控制区后立即停止追击，恢复中立巡逻。
-    node.enemy_position = (2.0, 0.0)
-    assert behavior.tick() == Status.RUNNING
-    assert node.navigation_task == NavigationTask.PATROL
-    assert node.patrol_region == PatrolRegion.CENTER
-    assert node.calls["stop_chase"] == 1
-    assert node.calls["start_patrol"] == 2
+    # 达到回血阈值后取消占点，等待期间不重复取消或启动回血。
+    blackboard.self_hp = 100
+    tick(NavigationTask.RESUPPLY, running)
+    tick(NavigationTask.RESUPPLY, running)
+    blackboard.self_hp = 150
+    tick(NavigationTask.RESUPPLY, running)
+    node.stop_occupy.assert_called_once()
+    node.start_resupply.assert_not_called()
 
-    # 防守模式即使区内存在敌人，也不启动底盘追击。
-    node.tactical_mode = TacticalMode.DEFENSE
-    node.enemy_position = (0.5, 0.0)
-    assert behavior.tick() == Status.RUNNING
-    assert node.navigation_task == NavigationTask.PATROL
-    assert node.patrol_region == PatrolRegion.HOME
-    assert node.calls["start_chase"] == 1
+    navigation.owner = None  # 模拟旧导航最终结束。
+    tick(NavigationTask.RESUPPLY, running)
+    node.start_resupply.assert_called_once()
 
-    # 前压模式没有可追目标时，在偏敌方子区域巡逻。
-    node.tactical_mode = TacticalMode.PRESSURE
-    node.enemy_position = None
-    assert behavior.tick() == Status.RUNNING
-    assert node.navigation_task == NavigationTask.PATROL
-    assert node.patrol_region == PatrolRegion.ENEMY
+    # 达到回血结束阈值后，同样等回血导航释放再重新占点。
+    blackboard.self_hp = 200
+    tick(NavigationTask.OCCUPY_CENTER, running)
+    node.stop_resupply.assert_called_once()
+    assert node.start_occupy.call_count == 1
+    navigation.owner = None
+    tick(NavigationTask.OCCUPY_CENTER, running)
+    assert node.start_occupy.call_count == 2
 
-    # 离开中央控制区后，占点任务优先于三种战术内部行为。
-    node.robot_position = (2.0, 0.0)
-    assert behavior.tick() == Status.RUNNING
-    assert node.navigation_task == NavigationTask.OCCUPY_CENTER
-    assert node.calls["start_occupy"] == 1
-
-    # 低血时回补给抢占当前占点任务。
-    node.hp = 100
-    assert behavior.tick() == Status.RUNNING
-    assert node.navigation_task == NavigationTask.RESUPPLY
-    assert node.calls["stop_occupy"] == 1
-    assert node.calls["start_resupply"] == 1
-
-    # 比赛结束后改为 STOP，并取消正在运行的补给导航。
-    node.match_progress = 3
-    assert behavior.tick() == Status.FAILURE
-    assert node.navigation_task == NavigationTask.STOP
-    assert node.calls["stop_resupply"] == 1
-
-    print("三种战术导航任务选择测试通过\n")
-
-
-def test_pressure_chase_leave_zone_and_return():
-    node = FakeBehaviorNode()
-    node.match_progress = 4
-    node.tactical_mode = TacticalMode.PRESSURE
-    node.enemy_position = (2.0, 0.0)
-
-    builder = BehaviorTreeBuilder(node)
-    behavior = builder._build_navigation_task_behavior(
-        builder._build_navigation_task_selection()
-    )
-
-    # 最大追击边界未配置时，前压模式也只能在区内巡逻。
-    node.chase_boundary["enabled"] = False
-    assert behavior.tick() == Status.RUNNING
-    assert node.navigation_task == NavigationTask.PATROL
-    assert node.patrol_region == PatrolRegion.ENEMY
-    assert node.calls["start_chase"] == 0
-
-    # 配置最大追击边界后，可以从中央控制区内开始追击。
-    node.chase_boundary["enabled"] = True
-    assert behavior.tick() == Status.RUNNING
-    assert node.navigation_task == NavigationTask.CHASE
-    assert node.calls["stop_patrol"] == 1
-    assert node.calls["start_chase"] == 1
-
-    # 追击开始后，哨兵可以离开中央控制区继续追击。
-    node.robot_position = (2.0, 0.0)
-    node.enemy_position = (2.5, 0.0)
-    assert behavior.tick() == Status.RUNNING
-    assert node.navigation_task == NavigationTask.CHASE
-    assert node.calls["stop_chase"] == 0
-    assert node.calls["start_occupy"] == 0
-
-    # 哨兵到达最大追击边界后停止追击，并重新执行中央占点。
-    node.robot_position = (3.0, 0.0)
-    assert behavior.tick() == Status.RUNNING
-    assert node.navigation_task == NavigationTask.OCCUPY_CENTER
-    assert node.calls["stop_chase"] == 1
-    assert node.calls["start_occupy"] == 1
-
-    print("前压离区追击与回点测试通过\n")
-
-
-def test_tactical_mode_callback():
-    class FakeLogger:
-        def __init__(self):
-            self.infos = []
-            self.warnings = []
-
-        def info(self, message):
-            self.infos.append(message)
-
-        def warning(self, message):
-            self.warnings.append(message)
-
-    class FakeBlackboard:
-        tactical_mode = TacticalMode.NEUTRAL
-
-    class FakeTacticalModeNode:
-        def __init__(self, blackboard):
-            self.blackboard = blackboard
-            self.logger = FakeLogger()
-
-        def set_tactical_mode(self, tactical_mode):
-            self.blackboard.tactical_mode = tactical_mode
-
-        def get_logger(self):
-            return self.logger
-
-    blackboard = FakeBlackboard()
-    node = FakeTacticalModeNode(blackboard)
-    interface = RosInterface.__new__(RosInterface)
-    interface.node = node
-    interface.blackboard = blackboard
-
-    # 单独勾选一个模式时，切换到对应战术。
-    interface.tactical_mode_callback(
-        TacticalModeCommand(defense=True)
-    )
-    assert blackboard.tactical_mode == TacticalMode.DEFENSE
-
-    interface.tactical_mode_callback(
-        TacticalModeCommand(neutral=True)
-    )
-    assert blackboard.tactical_mode == TacticalMode.NEUTRAL
-
-    interface.tactical_mode_callback(
-        TacticalModeCommand(pressure=True)
-    )
-    assert blackboard.tactical_mode == TacticalMode.PRESSURE
-
-    # 重复选择当前模式时不重复记录切换日志。
-    info_count = len(node.logger.infos)
-    interface.tactical_mode_callback(
-        TacticalModeCommand(pressure=True)
-    )
-    assert len(node.logger.infos) == info_count
-
-    # 全不勾或同时勾选多个时拒绝消息，并保持原模式。
-    interface.tactical_mode_callback(TacticalModeCommand())
-    interface.tactical_mode_callback(
-        TacticalModeCommand(defense=True, neutral=True)
-    )
-    assert blackboard.tactical_mode == TacticalMode.PRESSURE
-    assert len(node.logger.warnings) == 2
-
-    print("RQT 战术模式回调测试通过\n")
-
-
-def test_behavior_tree_builder():
-    node = FakeBehaviorNode()
-    tree = BehaviorTreeBuilder(node).build()
-
-    # 比赛开始前，平移和小陀螺都不启动。
-    assert tree.tick() == Status.FAILURE
-    assert node.calls["start_occupy"] == 0
-    assert node.calls["start_spin"] == 0
-
-    # 比赛开始：默认中立模式，位于区内时开始中央巡逻并开启小陀螺。
-    node.match_progress = 4
-    assert tree.tick() == Status.RUNNING
-    assert node.navigation_task == NavigationTask.PATROL
-    assert node.patrol_region == PatrolRegion.CENTER
-    assert node.calls["start_patrol"] == 1
-    assert node.calls["start_spin"] == 1
-
-    # 区内出现敌人：受限追击抢占巡逻，小陀螺不重复开启。
-    node.enemy_position = (0.5, 0.0)
-    assert tree.tick() == Status.RUNNING
-    assert node.navigation_task == NavigationTask.CHASE
-    assert node.calls["start_chase"] == 1
-    assert node.calls["stop_patrol"] == 1
-    assert node.calls["start_spin"] == 1
-
-    # 哨兵离开控制区后停止追击，重新执行中央占点。
-    node.robot_position = (2.0, 0.0)
-    node.enemy_position = (5.0, 0.0)
-    assert tree.tick() == Status.RUNNING
-    assert node.navigation_task == NavigationTask.OCCUPY_CENTER
-    assert node.calls["stop_chase"] == 1
-    assert node.calls["start_occupy"] == 1
-
-    # 回到控制区且没有目标时，停止占点并恢复中立巡逻。
-    node.robot_position = (0.0, 0.0)
-    node.enemy_position = None
-    assert tree.tick() == Status.RUNNING
-    assert node.navigation_task == NavigationTask.PATROL
-    assert node.calls["stop_occupy"] == 1
-    assert node.calls["start_patrol"] == 2
-
-    # 区内再次发现敌人后可以重新开始追击。
-    node.enemy_position = (0.5, 0.0)
-    assert tree.tick() == Status.RUNNING
-    assert node.navigation_task == NavigationTask.CHASE
-    assert node.calls["start_chase"] == 2
-
-    # 短暂丢失目标时保持当前追击，不取消也不重复启动。
-    node.enemy_position = None
-    node.enemy_within_lost_grace = True
-    assert tree.tick() == Status.RUNNING
-    assert node.navigation_task == NavigationTask.CHASE
-    assert node.calls["start_chase"] == 2
-
-    # 血量过低：回补给抢占正在运行的追击。
-    node.hp = 100
-    assert tree.tick() == Status.RUNNING
-    assert node.navigation_task == NavigationTask.RESUPPLY
-    assert node.calls["start_resupply"] == 1
-    assert node.calls["stop_chase"] == 2
-
-    # 比赛结束：任务牌变为 STOP，停止补给导航和小陀螺。
-    node.match_progress = 3
-    assert tree.tick() == Status.FAILURE
-    assert node.navigation_task == NavigationTask.STOP
-    assert node.calls["stop_resupply"] == 1
-    assert node.calls["stop_spin"] == 1
-
-    print("行为树组装与优先级测试通过\n")
-
-
+    # 比赛结束优先于低血回血，取消占点并等待最终停止。
+    blackboard.match_progress = 5
+    blackboard.self_hp = 50
+    tick(NavigationTask.STOP, running)
+    tick(NavigationTask.STOP, running)
+    navigation.owner = None
+    tick(NavigationTask.STOP, py_trees.common.Status.FAILURE)
+    assert events == [
+        "启动占点", "取消占点", "启动回血",
+        "取消回血", "启动占点", "取消占点",
+    ]
+    node.start_chase.assert_not_called()
+    node.start_patrol.assert_not_called()
+    print("XML 选择与执行、回血阈值保持及导航取消交接测试通过\n")
 
 
 if __name__ == "__main__":
-    test_wait_before_retry()
-    test_sequence()
-    test_selector()
-    test_parallel()
-    test_selector_interrupt()
-    test_sequence_interrupt()
-    test_need_resupply()
-    test_can_chase()
-    test_can_chase_interrupt()
-    test_go_resupply()
-    test_chase_enemy()
-    test_occupy_zone()
-    test_patrol_zone()
-    test_patrol_recovery_target()
-    test_sample_patrol_target()
-    test_sample_recovery_target()
-    test_select_alternative_goal()
-    test_recovery_control_rounds()
-    test_recovery_control_interrupt_and_progress()
-    test_recovery_control_navigation_actions()
-    test_spin_chassis()
-    test_navigation_executor_patrol_switch()
-    test_occupy_patrol_minimum_loop()
-    test_tactical_navigation_task_selection()
-    test_pressure_chase_leave_zone_and_return()
-    test_tactical_mode_callback()
-    test_behavior_tree_builder()
-
-    print("所有测试通过")
+    test_chase_cancel_confirmation()
+    test_chase_server_waits_for_navigation_cancel()
+    test_chase_reports_navigation_failure()
+    test_chase_navigation_success_continues()
+    test_chase_cooldown_state()
+    test_chase_selection_respects_cooldown()
+    test_patrol_region_switch_waits_for_cancel()
+    test_xml_navigation_task_selection()
+    print("当前导航收尾与 XML 导航流程的 8 项测试全部通过")

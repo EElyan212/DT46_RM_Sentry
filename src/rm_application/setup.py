@@ -15,7 +15,10 @@ setup(
         (os.path.join('share', package_name,'launch'), glob('launch/*.launch.py')),
         (os.path.join('share', package_name,'config'), glob('config/*.yaml')),
     ],
-    install_requires=['setuptools'],
+    install_requires=[
+    'setuptools',
+    'py_trees==2.6.0',
+],
     zip_safe=True,
     maintainer='kie-dt46',
     maintainer_email='c1470759@outlook.com',

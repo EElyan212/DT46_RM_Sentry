@@ -112,6 +112,53 @@ class Selector(Node):
 
         self.running_child = None
 
+# 按外部指定的任务切换子节点
+class Switch(Node):
+    def __init__(self, name, get_key, children, can_start=None):
+        super().__init__(name)
+
+        # 读取当前任务，例如导航任务牌
+        self.get_key = get_key
+
+        # 保存“任务：执行分支”的对应关系
+        self.children = children
+
+        # 查询旧执行器是否已经释放，允许启动新分支
+        self.can_start = can_start
+
+        # 记录当前选中的分支，便于切换时先停止它
+        self.active_child = None
+
+    def tick(self):
+        # 等待期间也重新读取任务牌，以最新任务为准
+        key = self.get_key()
+        child = self.children.get(key)
+
+        # 任务发生变化时，先请求旧分支停止
+        if child is not self.active_child:
+            self.halt()
+
+        # 只有进入新分支前才检查
+        # 正在运行的分支继续正常 tick
+        if self.active_child is None:
+            if self.can_start is not None and not self.can_start():
+                return Status.RUNNING
+
+            self.active_child = child
+
+        # STOP 或没有对应分支的任务
+        # 确认停止后，不启动新动作
+        if child is None:
+            return Status.FAILURE
+
+        return child.tick()
+
+    def halt(self):
+        if self.active_child is not None:
+            self.active_child.halt()
+
+        self.active_child = None
+
 # 并行节点
 class Parallel(Node):
     def __init__(self, name, children):

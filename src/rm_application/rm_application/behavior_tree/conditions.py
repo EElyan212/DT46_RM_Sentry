@@ -261,3 +261,17 @@ class IsMatchRunning(Node):
             return Status.SUCCESS
 
         return Status.FAILURE
+
+# 判断追击失败后的冷却是否已经结束
+class IsChaseReady(Node):
+    def __init__(self, name, is_chase_ready):
+        super().__init__(name)
+
+        self.is_chase_ready = is_chase_ready
+
+    def tick(self):
+        # 冷却期间，让任务选择树继续检查占点或巡逻
+        if self.is_chase_ready():
+            return Status.SUCCESS
+
+        return Status.FAILURE
