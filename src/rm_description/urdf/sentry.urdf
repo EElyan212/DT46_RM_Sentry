@@ -15,9 +15,9 @@
   <!-- 虚拟的 base_footprint，代表机器人在地面的投影 -->
   <link name="base_footprint"/>
 
-  <!-- livox_frame -> base_footprint（保留原雷达安装外参与底盘关系） -->
+  <!-- livox_frame -> base_footprint（雷达倒置，中心与 base_footprint 重合，离地 0.6m） -->
   <joint name="livox_frame_joint" type="fixed">
-    <origin xyz="0 0.356755 -0.150917" rpy="1.5708 0 0"/>
+    <origin xyz="0 0 0.6" rpy="3.14159 0 0"/>
     <parent link="livox_frame"/>
     <child link="base_footprint"/>
     <axis xyz="0 0 0"/>

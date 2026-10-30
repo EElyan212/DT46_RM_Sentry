@@ -14,8 +14,8 @@ def generate_launch_description():
             executable='static_transform_publisher',
             name='static_tf_odom_to_livox_odom',
             arguments=[
-                '0.0', '0.15', '0.37',
-                '0.0', '0.0', '0.0',
+                '0.0', '0.0', '0.6',
+                '3.14159', '0.0', '0.0',
                 'odom', 'livox_odom'
             ],
             output='screen'
