@@ -21,27 +21,42 @@ behavior_tree_node:
     chase_boundary_y_min: 0.0
     chase_boundary_y_max: 0.0
 
+    # 追击过程中短暂丢失目标时的等待时间，单位：秒
+    # 在此时间内重新跟踪到敌人，则继续追击
+    target_lost_grace_time: 0.5
+
     # 回补给血量阈值
     hp_limit: 150
     hp_up: 380
-
-    # 自瞄攻击范围，单位：米
-    attack_range: 10.0
   
     # 占点目标和补给点，使用 map 坐标，单位：米
     center: [4.86, -2.39]
     home: [-0.233, 0.833]
 
-    # 是否启用占点期间的受击闪避
-    # false 时即使收到 /armor/hit 也不会移动
-    hit_evade_enabled: false
+    # 中央控制区内三个巡逻子区域的矩形边界
+    # 顺序：[x_min, x_max, y_min, y_max]
+    # 当前暂用 0 占位，之后在 RViz 中确定实际边界
+    patrol_home_area: [0.0, 0.0, 0.0, 0.0]
+    patrol_center_area: [0.0, 0.0, 0.0, 0.0]
+    patrol_enemy_area: [0.0, 0.0, 0.0, 0.0]
 
-    # 每次选择闪避目标点时的移动距离，单位：米
-    hit_evade_distance: 0.6
+    # 随机目标与机器人当前位置至少相距多少米
+    patrol_min_goal_distance: 0.5
 
-    # 最后一次有效受击后继续动态移动的时间，单位：秒
-    hit_evade_quiet_time: 4.0
+    # 补给区内经过验证、能够回血的有效范围，单位：米
+    # 实车确认前保持全零，表示暂时不能生成补给备用点
+    resupply_x_min: 0.0
+    resupply_x_max: 0.0
+    resupply_y_min: 0.0
+    resupply_y_max: 0.0
 
-    # 闪避目标与控制区边界之间保留的安全距离，单位：米
-    # 用于避免机器人中心未越界但车体已经越界
-    control_zone_margin: 0.25
+    # 备用目标与刚刚失败的目标至少相距多少米
+    # 占点、回血和巡逻恢复共同使用
+    recovery_min_goal_distance: 0.5
+    # 在有效区域内最多随机采样多少次
+    recovery_sample_attempts: 20
+    # 导航失败后，重新导航前等待多久，单位：秒
+    recovery_wait_seconds: 0.5
+    # 初次导航之外最多额外尝试多少次
+    # 2 表示初次导航加两次恢复，共最多尝试三次
+    recovery_max_retries: 2

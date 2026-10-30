@@ -1,6 +1,32 @@
-import math
-
 from rm_application.behavior_tree.core import Node, Status
+
+# 判断共享黑板中的导航任务是否为指定任务
+class IsNavigationTask(Node):
+    def __init__(self, name, get_navigation_task, expected_task):
+        super().__init__(name)
+
+        self.get_navigation_task = get_navigation_task
+        self.expected_task = expected_task
+
+    def tick(self):
+        if self.get_navigation_task() == self.expected_task:
+            return Status.SUCCESS
+
+        return Status.FAILURE
+
+# 判断共享黑板中的战术模式是否为指定模式
+class IsTacticalMode(Node):
+    def __init__(self, name, get_tactical_mode, expected_mode):
+        super().__init__(name)
+
+        self.get_tactical_mode = get_tactical_mode
+        self.expected_mode = expected_mode
+
+    def tick(self):
+        if self.get_tactical_mode() == self.expected_mode:
+            return Status.SUCCESS
+
+        return Status.FAILURE
 
 # 判断是否需要回补给
 class NeedResupply(Node):
@@ -33,6 +59,98 @@ class NeedResupply(Node):
 
         return Status.FAILURE
 
+# 判断哨兵是否需要进入中央控制区
+class NeedEnterCenterZone(Node):
+    def __init__(self, name, get_robot_position, get_control_zone):
+        super().__init__(name)
+        self.get_robot_position = get_robot_position
+        self.get_control_zone = get_control_zone
+
+    def tick(self):
+        zone = self.get_control_zone()
+
+        # 边界未配置或定位不可用时，暂不允许巡逻
+        if not zone["enabled"]:
+            return Status.SUCCESS
+
+        robot_position = self.get_robot_position()
+        if robot_position is None:
+            return Status.SUCCESS
+
+        robot_x, robot_y = robot_position
+
+        inside_zone = (
+            zone["x_min"] <= robot_x <= zone["x_max"]
+            and zone["y_min"] <= robot_y <= zone["y_max"]
+        )
+
+        return Status.FAILURE if inside_zone else Status.SUCCESS
+
+# 判断是否允许在中央控制区内受限追击
+class CanChaseInsideCenterZone(Node):
+    def __init__(
+        self,
+        name,
+        get_enemy_position,
+        get_robot_position,
+        get_control_zone,
+        is_enemy_within_lost_grace,
+        is_chasing,
+    ):
+        super().__init__(name)
+
+        self.get_enemy_position = get_enemy_position
+        self.get_robot_position = get_robot_position
+        self.get_control_zone = get_control_zone
+        self.is_enemy_within_lost_grace = is_enemy_within_lost_grace
+        self.is_chasing = is_chasing
+
+    def tick(self):
+        zone = self.get_control_zone()
+
+        # 没有配置中央控制区边界时，不启动受限追击
+        if not zone["enabled"]:
+            return Status.FAILURE
+
+        robot_position = self.get_robot_position()
+        if robot_position is None:
+            return Status.FAILURE
+
+        robot_x, robot_y = robot_position
+        robot_inside = (
+            zone["x_min"] <= robot_x <= zone["x_max"]
+            and zone["y_min"] <= robot_y <= zone["y_max"]
+        )
+
+        # 哨兵离开中央控制区后立即停止追击
+        if not robot_inside:
+            return Status.FAILURE
+
+        enemy_position = self.get_enemy_position()
+
+        # 追击中短暂丢失目标时，允许使用现有宽限时间
+        if enemy_position is None:
+            if (
+                self.is_chasing()
+                and self.is_enemy_within_lost_grace()
+            ):
+                return Status.SUCCESS
+
+            return Status.FAILURE
+
+        enemy_x, enemy_y = enemy_position
+        enemy_inside = (
+            zone["x_min"] <= enemy_x <= zone["x_max"]
+            and zone["y_min"] <= enemy_y <= zone["y_max"]
+        )
+
+        # 只有哨兵和敌人都在中央控制区内才允许追击
+        if enemy_inside:
+            return Status.SUCCESS
+
+        return Status.FAILURE
+
+
 # 判断是否需要追击敌人
 class CanChase(Node):
     def __init__(
@@ -42,8 +160,8 @@ class CanChase(Node):
         get_robot_position,
         get_control_zone,
         get_chase_boundary,
+        is_enemy_within_lost_grace,
         is_chasing,
-        attack_range,
     ):
         super().__init__(name)
 
@@ -58,63 +176,76 @@ class CanChase(Node):
         # 边界判断使用哨兵自身的地图坐标
         self.get_chase_boundary = get_chase_boundary
 
-        # 获取追击状态和攻击距离阈值
+        # 判断短暂丢失目标是否仍在允许等待的时间内
+        self.is_enemy_within_lost_grace = is_enemy_within_lost_grace
+
+        # 获取追击动作当前是否正在运行
         self.is_chasing = is_chasing
-        self.attack_range = attack_range
 
     def tick(self):
         enemy_position = self.get_enemy_position()
         robot_position = self.get_robot_position()
 
-        # 缺少有效位置时，不允许追击
-        if enemy_position is None or robot_position is None:
+        # 没有底盘位置时无法判断追击边界
+        if robot_position is None:
             return Status.FAILURE
-
-        enemy_x, enemy_y = enemy_position
-        robot_x, robot_y = robot_position
-
-        # 两者都在 map 坐标系中，计算水平直线距离
-        distance = math.hypot(
-            enemy_x - robot_x,
-            enemy_y - robot_y,
-        )
-
-        # 坐标无效或已经进入攻击范围，停止追击
-        if not math.isfinite(distance) or distance <= self.attack_range:
-            return Status.FAILURE
-        # 启用最大追击区域后，检查哨兵自身是否到达边界
-        boundary = self.get_chase_boundary()
-
-        if boundary["enabled"]:
-            reached_boundary = (
-                robot_x <= boundary["x_min"]
-                or robot_x >= boundary["x_max"]
-                or robot_y <= boundary["y_min"]
-                or robot_y >= boundary["y_max"]
-            )
-
-            # 哨兵到达或超过边界时停止追击
-            if reached_boundary:
-                return Status.FAILURE
-
-        # 已经开始追击时，可以离开控制区继续追，
-        # 直到哨兵自身到达最大追击边界
-        if self.is_chasing():
-            return Status.SUCCESS
 
         zone = self.get_control_zone()
+        boundary = self.get_chase_boundary()
 
-        # 调试时关闭限制，允许从控制区外开始追击
-        if not zone["enabled"]:
-            return Status.SUCCESS
+        # 中央控制区或最大追击边界未配置时，
+        # 不允许启动前压离区追击
+        if not zone["enabled"] or not boundary["enabled"]:
+            return Status.FAILURE
 
-        # 启用限制时，只允许从控制区内开始追击
-        inside_zone = (
+        robot_x, robot_y = robot_position
+
+        # 哨兵到达最大追击边界后立即停止追击
+        reached_boundary = (
+            robot_x <= boundary["x_min"]
+            or robot_x >= boundary["x_max"]
+            or robot_y <= boundary["y_min"]
+            or robot_y >= boundary["y_max"]
+        )
+
+        if reached_boundary:
+            return Status.FAILURE
+
+        robot_inside_zone = (
             zone["x_min"] <= robot_x <= zone["x_max"]
             and zone["y_min"] <= robot_y <= zone["y_max"]
         )
 
-        return Status.SUCCESS if inside_zone else Status.FAILURE
+        chasing = self.is_chasing()
+
+        # 只能从中央控制区内开始追击
+        if not chasing and not robot_inside_zone:
+            return Status.FAILURE
+
+        # 追击过程中短暂丢失敌人时，允许等待一小段时间
+        if enemy_position is None:
+            if chasing and self.is_enemy_within_lost_grace():
+                return Status.SUCCESS
+
+            return Status.FAILURE
+
+        # 已经开始追击后，可以离开中央控制区，
+        # 直到到达最大追击边界
+        return Status.SUCCESS
+
+# 判断比赛是否未在进行
+class IsMatchStopped(Node):
+    def __init__(self, name, get_match_progress):
+        super().__init__(name)
+
+        self.get_match_progress = get_match_progress
+
+    def tick(self):
+        # 未收到比赛数据、比赛尚未开始或比赛已经结束时都应停止
+        if self.get_match_progress() != 4:
+            return Status.SUCCESS
+
+        return Status.FAILURE
 
 # 判断比赛是否正在进行
 class IsMatchRunning(Node):
@@ -130,61 +261,3 @@ class IsMatchRunning(Node):
             return Status.SUCCESS
 
         return Status.FAILURE
-
-# 判断占点期间是否需要执行受击闪避
-class CanEvade(Node):
-    def __init__(
-        self,
-        name,
-        get_evade_enabled,
-        is_evading,
-        is_occupying,
-        get_pending_hit,
-        is_inside_control_zone,
-    ):
-        super().__init__(name)
-
-        # 动态读取闪避开关，之后可以通过 RQT 修改
-        self.get_evade_enabled = get_evade_enabled
-
-        # 获取闪避动作和占点动作当前是否正在运行
-        self.is_evading = is_evading
-        self.is_occupying = is_occupying
-
-        # 获取尚未处理的受击事件
-        # 没有待处理事件时应返回 None
-        self.get_pending_hit = get_pending_hit
-
-        # 判断机器人当前位置是否位于有效控制区内
-        self.is_inside_control_zone = is_inside_control_zone
-
-    def tick(self):
-        # 关闭闪避开关后立即停止闪避。
-        if not self.get_evade_enabled():
-            return Status.FAILURE
-
-        # 闪避已经开始后，不再要求占点动作继续运行，
-        # 但机器人必须仍然位于控制区内。
-        if self.is_evading():
-            if self.is_inside_control_zone():
-                return Status.SUCCESS
-
-            return Status.FAILURE
-
-        # 只允许从占点动作进入闪避。
-        if not self.is_occupying():
-            return Status.FAILURE
-
-        hit_event = self.get_pending_hit()
-        if hit_event is None:
-            return Status.FAILURE
-
-        # 只有弹丸命中才触发，撞击等原因不触发。
-        if hit_event.armor_reason != 0:
-            return Status.FAILURE
-
-        # 启动闪避前确认机器人位于控制区内。
-        if not self.is_inside_control_zone():
-            return Status.FAILURE
-
-        return Status.SUCCESS

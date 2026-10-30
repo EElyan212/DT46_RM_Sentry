@@ -112,6 +112,7 @@ def crc16_modbus(message: bytes, crc_init: int = 0xFFFF) -> int:
     """
     CRC-16/MODBUS：多项式 0xA001（反射），初始值 0xFFFF。
     下位机协议要求覆盖接收帧 [0..50]，校验值低字节在前。
+    """
 
     crc = crc_init
     for byte in message:

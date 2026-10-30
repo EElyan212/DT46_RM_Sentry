@@ -108,7 +108,8 @@ class SerialNode(Node):
                 ('serial_receive_header', 0xA5),
                 ('serial_send_header', 0x5A),
                 ('pub_rpy', False),
-                ('pub_serial_debug', False)
+                ('pub_serial_debug', False),
+                ('decision_input_mode', 'mock')
             ]
         )
 
@@ -124,6 +125,13 @@ class SerialNode(Node):
         self.serial_send_header = self.get_parameter("serial_send_header").value
         self.pub_rpy = self.get_parameter("pub_rpy").value
         self.pub_serial_debug = self.get_parameter("pub_serial_debug").value
+        self.decision_input_mode = (str(self.get_parameter("decision_input_mode").value).strip().lower())
+        valid_decision_input_modes = {"serial", "mock"}
+        if self.decision_input_mode not in valid_decision_input_modes:
+            raise ValueError(
+                "decision_input_mode 只能填写 'serial' 或 'mock'，"
+                f"当前值为: {self.decision_input_mode}"
+            )
 
         # 3. 打印当前生效的配置信息，方便在终端确认 YAML 是否加载成功
         self.get_logger().info("-" * 30)
@@ -132,6 +140,14 @@ class SerialNode(Node):
         self.get_logger().info(f"  波特率: {self.baudrate}")
         self.get_logger().info(f"  超时设置: Read={self.timeout}s, Write={self.write_timeout}s")
         self.get_logger().info(f"  校验/流控: Parity={self.parity}, Flow={self.flow_control}")
+        if self.decision_input_mode == "serial":
+            self.get_logger().info(
+                "决策输入模式: serial，串口将发布 /nav/decision"
+            )
+        else:
+            self.get_logger().info(
+                "决策输入模式: mock，/nav/decision 由 RQT 或模拟节点发布"
+            )
         self.get_logger().info("-" * 30)
     def cmd_vel_callback(self,msg):
         with self.lock:
@@ -264,7 +280,8 @@ class SerialNode(Node):
                 serial_decision_msg.yaw = self.send_datas.yaw
                 serial_decision_msg.can_fire = self.send_datas.can_fire
                 serial_decision_msg.bullet_speed = bullet_speed
-                #self.pub_uart_receive_decision.publish(serial_decision_msg)
+                if self.decision_input_mode == "serial":
+                    self.pub_uart_receive_decision.publish(serial_decision_msg)
 
                 # 6.4 序号变化时发布一次受击事件；首帧只初始化
                 if last_armor_hit_seq is None:
