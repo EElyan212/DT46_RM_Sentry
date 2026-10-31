@@ -1,7 +1,6 @@
-import py_trees
-from py_trees.ports import BehaviourWithPorts, PortsMixin
-from rm_application.behavior_tree.core import Status
 from functools import partial
+import py_trees
+from py_trees.ports import PortsMixin
 from rm_application.behavior_tree.actions import (
     SetNavigationTask,
     SetPatrolRegion,
@@ -29,33 +28,6 @@ from rm_application.behavior_tree.nav_zone import (
     PatrolRegion,
 )
 from rm_application.behavior_tree.recovery import RecoveryNode
-
-# 将现有 Python 节点接入公共行为树库
-class NodeAdapter(BehaviourWithPorts):
-    # 当前通过 Python 回调读取共享数据，暂不使用 XML 数据端口
-    INPUT_PORTS = {}
-    OUTPUT_PORTS = {}
-
-    def __init__(self, name, node_factory, **kwargs):
-        super().__init__(name=name, **kwargs)
-
-        # 使用传入的创建方法，生成实际执行的原有节点
-        self.node = node_factory(name)
-
-    def update(self):
-        # 执行原有节点，并转换为公共库的节点状态
-        status = self.node.tick()
-
-        return {
-            Status.SUCCESS: py_trees.common.Status.SUCCESS,
-            Status.FAILURE: py_trees.common.Status.FAILURE,
-            Status.RUNNING: py_trees.common.Status.RUNNING,
-        }[status]
-
-    def terminate(self, new_status):
-        # 公共库打断节点时，调用原有停止逻辑
-        if new_status == py_trees.common.Status.INVALID:
-            self.node.halt()
 
 # 将 Groot 的反应式顺序节点接到公共库的顺序节点
 class ReactiveSequence(PortsMixin, py_trees.composites.Sequence):
@@ -209,33 +181,16 @@ class ContinuousParallel(PortsMixin, py_trees.composites.Composite):
 
 # 创建 XML 节点名称与 Python 节点之间的对应关系
 def create_node_registry(node):
-    # 为现有节点准备创建方法，并接入公共库
-    def adapt(node_class, *args):
-        return partial(
-            NodeAdapter,
-            node_factory=lambda name: node_class(name, *args),
-        )
-
-    # 本次加载共用一个巡逻实例，备用点交回该实例保存
-    patrol_action = PatrolZone(
-        "执行区域巡逻",
-        node.get_patrol_region,
-        node.start_patrol,
-        node.get_patrol_result,
-        node.stop_patrol,
-        get_patrol_area=node.get_patrol_area,
-        get_robot_position=node.get_robot_position,
-        patrol_min_goal_distance=node.patrol_min_goal_distance,
-        is_navigation_stopped=node.is_navigation_stopped,
-    )
+    # 保存本棵树实际创建的巡逻实例，备用点回调使用同一实例
+    patrol_action = {}
 
     return {
         # 正常回血动作，恢复流程由 XML 中的父节点管理
-        "GoResupply": adapt(
+        "GoResupply": partial(
             GoResupply,
-            node.start_resupply,
-            node.get_resupply_result,
-            node.stop_resupply,
+            start_resupply=node.start_resupply,
+            get_resupply_result=node.get_resupply_result,
+            stop_resupply=node.stop_resupply,
         ),
 
         # 追击恢复控制：额外重试一次，耗尽后通知上层进入冷却
@@ -246,60 +201,63 @@ def create_node_registry(node):
         ),
 
         # 正常追击动作，继续调用已有的追击服务接口
-        "ChaseEnemy": adapt(
+        "ChaseEnemy": partial(
             ChaseEnemy,
-            node.start_chase,
-            node.get_chase_result,
-            node.stop_chase,
+            start_chase=node.start_chase,
+            get_chase_result=node.get_chase_result,
+            stop_chase=node.stop_chase,
         ),
 
         # 占点、回血、巡逻共用的恢复控制
         "NavigationRecovery": partial(
             RecoveryNode,
             max_retries=node.recovery_max_retries,
-            # 读取正常动作的到达计数，用于清零连续失败次数
-            read_progress=lambda action: action.node.goal_reached_count,
+            # 三个动作都已迁移，直接读取动作自己的到达计数
+            read_progress=lambda action: action.goal_reached_count,
         ),
 
         # 正常占点动作，恢复流程交给 XML 中的父节点管理
-        "OccupyZone": adapt(
+        "OccupyZone": partial(
             OccupyZone,
-            node.start_occupy,
-            node.get_occupy_result,
-            node.stop_occupy,
+            start_occupy=node.start_occupy,
+            get_occupy_result=node.get_occupy_result,
+            stop_occupy=node.stop_occupy,
         ),
 
         # 导航失败后的等待动作，等待时间沿用配置
-        "WaitBeforeRetry": adapt(
+        "WaitBeforeRetry": partial(
             WaitBeforeRetry,
-            node.recovery_wait_seconds,
+            wait_seconds=node.recovery_wait_seconds,
         ),
 
-        # 正常巡逻动作，与备用点选择节点使用同一个巡逻实例
+        # 创建巡逻节点，并记录实际运行的实例
         "PatrolZone": partial(
-            NodeAdapter,
-            node_factory=lambda name: patrol_action,
+            PatrolZone,
+            get_patrol_region=node.get_patrol_region,
+            start_patrol=node.start_patrol,
+            get_patrol_result=node.get_patrol_result,
+            stop_patrol=node.stop_patrol,
+            get_patrol_area=node.get_patrol_area,
+            get_robot_position=node.get_robot_position,
+            patrol_min_goal_distance=node.patrol_min_goal_distance,
+            is_navigation_stopped=node.is_navigation_stopped,
+            on_created=lambda action: patrol_action.update(node=action),
         ),
 
         # 准备备用点，只保存坐标，由原巡逻动作发送导航
         "SelectAlternativeGoal": partial(
-            NodeAdapter,
-            node_factory=lambda name: SelectAlternativeGoal(
-                name,
-                get_area=lambda: node.get_patrol_area(
-                    node.get_patrol_region()
-                ),
-                get_failed_position=lambda: (
-                    node.get_last_navigation_target("patrol")
-                ),
-                save_target=patrol_action.save_recovery_target,
-                recovery_min_goal_distance=(
-                    node.recovery_min_goal_distance
-                ),
-                recovery_sample_attempts=(
-                    node.recovery_sample_attempts
-                ),
+            SelectAlternativeGoal,
+            get_area=lambda: node.get_patrol_area(
+                node.get_patrol_region()
             ),
+            get_failed_position=lambda: (
+                node.get_last_navigation_target("patrol")
+            ),
+            save_target=lambda target: (
+                patrol_action["node"].save_recovery_target(target)
+            ),
+            recovery_min_goal_distance=node.recovery_min_goal_distance,
+            recovery_sample_attempts=node.recovery_sample_attempts,
         ),
 
         # Groot 控制节点名称与公共库实现的对应关系
@@ -314,147 +272,146 @@ def create_node_registry(node):
             can_start=node.is_navigation_stopped,
         ),
 
-        # 判断比赛是否停止
-        "IsMatchStopped": adapt(
+        # 直接创建公共库节点，并提供读取比赛阶段的方法
+        "IsMatchStopped": partial(
             IsMatchStopped,
-            node.get_match_progress,
+            get_match_progress=node.get_match_progress,
         ),
 
-        # 判断是否需要回血，沿用原来的开始和结束阈值
-        "NeedResupply": adapt(
+        # 直接创建公共库回血条件，沿用原来的双阈值
+        "NeedResupply": partial(
             NeedResupply,
-            node.get_hp,
-            node.hp_limit,
-            node.hp_up,
+            get_hp=node.get_hp,
+            hp_limit=node.hp_limit,
+            hp_up=node.hp_up,
         ),
 
         # 将导航任务牌设置为停止
-        "SelectStop": adapt(
+        "SelectStop": partial(
             SetNavigationTask,
-            node.set_navigation_task,
-            NavigationTask.STOP,
+            set_navigation_task=node.set_navigation_task,
+            task=NavigationTask.STOP,
         ),
 
         # 将导航任务牌设置为回血
-        "SelectResupply": adapt(
+        "SelectResupply": partial(
             SetNavigationTask,
-            node.set_navigation_task,
-            NavigationTask.RESUPPLY,
+            set_navigation_task=node.set_navigation_task,
+            task=NavigationTask.RESUPPLY,
         ),
 
         # 将导航任务牌设置为占点
-        "SelectOccupy": adapt(
+        "SelectOccupy": partial(
             SetNavigationTask,
-            node.set_navigation_task,
-            NavigationTask.OCCUPY_CENTER,
+            set_navigation_task=node.set_navigation_task,
+            task=NavigationTask.OCCUPY_CENTER,
         ),
 
         # 判断当前是否使用防守模式
-        "IsDefenseMode": adapt(
+        "IsDefenseMode": partial(
             IsTacticalMode,
-            node.get_tactical_mode,
-            TacticalMode.DEFENSE,
+            get_tactical_mode=node.get_tactical_mode,
+            expected_mode=TacticalMode.DEFENSE,
         ),
 
         # 判断当前是否使用中立模式
-        "IsNeutralMode": adapt(
+        "IsNeutralMode": partial(
             IsTacticalMode,
-            node.get_tactical_mode,
-            TacticalMode.NEUTRAL,
+            get_tactical_mode=node.get_tactical_mode,
+            expected_mode=TacticalMode.NEUTRAL,
         ),
 
         # 判断当前是否使用前压模式
-        "IsPressureMode": adapt(
+        "IsPressureMode": partial(
             IsTacticalMode,
-            node.get_tactical_mode,
-            TacticalMode.PRESSURE,
+            get_tactical_mode=node.get_tactical_mode,
+            expected_mode=TacticalMode.PRESSURE,
         ),
 
-        # 判断是否需要返回中央控制区
-        "NeedEnterCenterZone": adapt(
+        # 直接创建公共库条件，判断是否需要返回控制区
+        "NeedEnterCenterZone": partial(
             NeedEnterCenterZone,
-            node.get_robot_position,
-            node.get_control_zone,
+            get_robot_position=node.get_robot_position,
+            get_control_zone=node.get_control_zone,
         ),
 
-        # 判断追击失败后的冷却是否已经结束
-        "IsChaseReady": adapt(
+        # 直接创建公共库条件，判断追击冷却是否结束
+        "IsChaseReady": partial(
             IsChaseReady,
-            node.is_chase_ready,
+            is_chase_ready=node.is_chase_ready,
         ),
-
         # 中立模式：判断是否允许在中央控制区内追击
-        "CanChaseInsideCenterZone": adapt(
+        "CanChaseInsideCenterZone": partial(
             CanChaseInsideCenterZone,
-            node.get_enemy_position,
-            node.get_robot_position,
-            node.get_control_zone,
-            node.is_enemy_within_lost_grace,
-            lambda: (
+            get_enemy_position=node.get_enemy_position,
+            get_robot_position=node.get_robot_position,
+            get_control_zone=node.get_control_zone,
+            is_enemy_within_lost_grace=node.is_enemy_within_lost_grace,
+            is_chasing=lambda: (
                 node.get_navigation_task()
                 == NavigationTask.CHASE
             ),
         ),
 
         # 前压模式：沿用原有追击开启条件和最大追击边界
-        "CanChase": adapt(
+        "CanChase": partial(
             CanChase,
-            node.get_enemy_position,
-            node.get_robot_position,
-            node.get_control_zone,
-            node.get_chase_boundary,
-            node.is_enemy_within_lost_grace,
-            lambda: (
+            get_enemy_position=node.get_enemy_position,
+            get_robot_position=node.get_robot_position,
+            get_control_zone=node.get_control_zone,
+            get_chase_boundary=node.get_chase_boundary,
+            is_enemy_within_lost_grace=node.is_enemy_within_lost_grace,
+            is_chasing=lambda: (
                 node.get_navigation_task()
                 == NavigationTask.CHASE
             ),
         ),
 
         # 将导航任务牌设置为追击
-        "SelectChase": adapt(
+        "SelectChase": partial(
             SetNavigationTask,
-            node.set_navigation_task,
-            NavigationTask.CHASE,
+            set_navigation_task=node.set_navigation_task,
+            task=NavigationTask.CHASE,
         ),
 
         # 将导航任务牌设置为巡逻
-        "SelectPatrol": adapt(
+        "SelectPatrol": partial(
             SetNavigationTask,
-            node.set_navigation_task,
-            NavigationTask.PATROL,
+            set_navigation_task=node.set_navigation_task,
+            task=NavigationTask.PATROL,
         ),
 
         # 防守模式使用中央控制区内偏己方的巡逻区域
-        "SetHomePatrolRegion": adapt(
+        "SetHomePatrolRegion": partial(
             SetPatrolRegion,
-            node.set_patrol_region,
-            PatrolRegion.HOME,
+            set_patrol_region=node.set_patrol_region,
+            patrol_region=PatrolRegion.HOME,
         ),
 
-        # 中立模式使用中央控制区内居中的巡逻区域
-        "SetCenterPatrolRegion": adapt(
+        # 中立模式使用中央控制区内中部的巡逻区域
+        "SetCenterPatrolRegion": partial(
             SetPatrolRegion,
-            node.set_patrol_region,
-            PatrolRegion.CENTER,
+            set_patrol_region=node.set_patrol_region,
+            patrol_region=PatrolRegion.CENTER,
         ),
 
         # 前压模式使用中央控制区内偏敌方的巡逻区域
-        "SetEnemyPatrolRegion": adapt(
+        "SetEnemyPatrolRegion": partial(
             SetPatrolRegion,
-            node.set_patrol_region,
-            PatrolRegion.ENEMY,
+            set_patrol_region=node.set_patrol_region,
+            patrol_region=PatrolRegion.ENEMY,
         ),
 
-        # 判断比赛是否正在进行
-        "IsMatchRunning": adapt(
+        # 直接创建公共库节点，并提供读取比赛阶段的方法
+        "IsMatchRunning": partial(
             IsMatchRunning,
-            node.get_match_progress,
+            get_match_progress=node.get_match_progress,
         ),
 
         # 比赛进行时持续开启小陀螺，被打断时关闭
-        "SpinChassis": adapt(
+        "SpinChassis": partial(
             SpinChassis,
-            node.start_spin,
-            node.stop_spin,
+            start_spin=node.start_spin,
+            stop_spin=node.stop_spin,
         ),
     }

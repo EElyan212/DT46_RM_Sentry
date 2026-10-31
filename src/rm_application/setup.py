@@ -12,8 +12,13 @@ setup(
         ('share/ament_index/resource_index/packages',
             ['resource/' + package_name]),
         ('share/' + package_name, ['package.xml']),
-        (os.path.join('share', package_name,'launch'), glob('launch/*.launch.py')),
-        (os.path.join('share', package_name,'config'), glob('config/*.yaml')),
+        (os.path.join('share', package_name, 'launch'),
+            glob('launch/*.launch.py')),
+        (os.path.join('share', package_name, 'config'),
+            glob('config/*.yaml')),
+        # 安装全部行为树 XML，保留同级文件间的引用关系
+        (os.path.join('share', package_name, 'tree'),
+            glob('rm_application/behavior_tree/tree/*.xml')),
     ],
     install_requires=[
     'setuptools',

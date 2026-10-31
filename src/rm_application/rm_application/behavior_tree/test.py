@@ -14,14 +14,13 @@ import py_trees
 from geometry_msgs.msg import PoseStamped
 from nav2_simple_commander.robot_navigator import TaskResult
 
-from rm_application.behavior_tree.actions import PatrolZone
+from rm_application.behavior_tree.actions import PatrolZone, WaitBeforeRetry
 from rm_application.behavior_tree.blackboard import Blackboard
-from rm_application.behavior_tree.builder import BehaviorTreeBuilder
-from rm_application.behavior_tree.core import Status
 from rm_application.behavior_tree.nav_zone import (
     NavigationResult,
     NavigationTask,
     PatrolRegion,
+    TacticalMode,
 )
 from rm_application.behavior_tree.ros_interface import RosInterface
 from rm_application.behavior_tree.xml_loader import load_behavior_tree
@@ -276,38 +275,54 @@ def test_chase_cooldown_state():
 
 
 def test_chase_selection_respects_cooldown():
-    state = SimpleNamespace(task=NavigationTask.CHASE, ready=False)
-    node = SimpleNamespace(
-        is_chase_ready=lambda: state.ready,
-        get_navigation_task=lambda: state.task,
-        set_navigation_task=lambda task: setattr(state, "task", task),
-        set_patrol_region=Mock(),
-        get_enemy_position=lambda: (1.0, 1.0),
-        get_robot_position=lambda: (1.0, 1.0),
-        get_control_zone=lambda: dict(
-            enabled=True, x_min=0.0, x_max=2.0, y_min=0.0, y_max=2.0
-        ),
-        get_chase_boundary=lambda: dict(
-            enabled=True, x_min=-10.0, x_max=10.0, y_min=-10.0, y_max=10.0
-        ),
-        is_enemy_within_lost_grace=lambda: False,
+    # 加载实际战术 XML，检查中立和前压是否遵守追击冷却。
+    blackboard = Blackboard()
+    state = SimpleNamespace(ready=False)
+    node = Mock(
+        patrol_min_goal_distance=0.5,
+        recovery_wait_seconds=0.5,
+        recovery_max_retries=2,
+        recovery_min_goal_distance=0.5,
+        recovery_sample_attempts=20,
     )
-    builder = BehaviorTreeBuilder(node)
-    # 目标始终有效；两个实际策略都必须在冷却期间选择巡逻。
-    for build in (
-        builder._build_neutral_task_selection,
-        builder._build_pressure_task_selection,
-    ):
-        state.task = NavigationTask.CHASE
-        state.ready = False
-        selection = build()
-        assert selection.tick() == Status.SUCCESS
-        assert state.task == NavigationTask.PATROL, (
-            f"{build.__name__} 冷却期间仍然选择追击"
-        )
-        state.ready = True
-        assert selection.tick() == Status.SUCCESS
-        assert state.task == NavigationTask.CHASE
+    node.get_tactical_mode.side_effect = lambda: blackboard.tactical_mode
+    node.is_chase_ready.side_effect = lambda: state.ready
+    node.get_navigation_task.side_effect = lambda: blackboard.navigation_task
+    node.set_navigation_task.side_effect = lambda task: setattr(
+        blackboard, "navigation_task", task
+    )
+    node.set_patrol_region.side_effect = lambda region: setattr(
+        blackboard, "patrol_region", region
+    )
+    node.get_enemy_position.return_value = (1.0, 1.0)
+    node.get_robot_position.return_value = (1.0, 1.0)
+    node.get_control_zone.return_value = dict(
+        enabled=True, x_min=0.0, x_max=2.0, y_min=0.0, y_max=2.0
+    )
+    node.get_chase_boundary.return_value = dict(
+        enabled=True, x_min=-10.0, x_max=10.0, y_min=-10.0, y_max=10.0
+    )
+    node.is_enemy_within_lost_grace.return_value = False
+    xml_path = Path(__file__).resolve().parent / "tree" / "tactical_tree.xml"
+
+    for mode in (TacticalMode.NEUTRAL, TacticalMode.PRESSURE):
+        blackboard.tactical_mode = mode
+        blackboard.navigation_task = NavigationTask.CHASE
+        selection = load_behavior_tree(node, xml_path)
+
+        # 冷却中选巡逻，冷却结束选追击，再次冷却时退出追击。
+        for ready, expected_task in (
+            (False, NavigationTask.PATROL),
+            (True, NavigationTask.CHASE),
+            (False, NavigationTask.PATROL),
+        ):
+            state.ready = ready
+            selection.tick_once()
+            assert selection.status == py_trees.common.Status.SUCCESS
+            assert blackboard.navigation_task == expected_task, mode.name
+
+        selection.stop(py_trees.common.Status.INVALID)
+
     print("中立和前压策略遵守追击冷却的测试通过\n")
 
 
@@ -331,28 +346,226 @@ def test_patrol_region_switch_waits_for_cancel():
         PatrolRegion.HOME: (-1.0, -1.0),
     }
     action.sample_patrol_target = lambda region: points[region]
-    assert action.tick() == Status.RUNNING
+    action.tick_once()
+    assert action.status == py_trees.common.Status.RUNNING
     state.region = PatrolRegion.ENEMY
-    assert action.tick() == Status.RUNNING
+    action.tick_once()
+    assert action.status == py_trees.common.Status.RUNNING
     stop.assert_called_once()
     assert start.call_count == 1
     # 等待期间再次换区，应等旧导航结束后直接使用最新区域。
     state.region = PatrolRegion.HOME
-    assert action.tick() == Status.RUNNING
+    action.tick_once()
+    assert action.status == py_trees.common.Status.RUNNING
     assert start.call_count == 1
     state.stopped = True
-    assert action.tick() == Status.RUNNING
+    action.tick_once()
+    assert action.status == py_trees.common.Status.RUNNING
     stop.assert_called_once()
     assert [call.args[0] for call in start.call_args_list] == [
         points[PatrolRegion.CENTER], points[PatrolRegion.HOME],
     ]
     assert action.active_region == PatrolRegion.HOME
     action.get_patrol_result.assert_not_called()
+
+    # 整个任务退出后，尚未使用的备用点也应丢弃。
+    action.save_recovery_target((99.0, 99.0))
+    action.stop(py_trees.common.Status.INVALID)
+    assert stop.call_count == 2
+    state.stopped = True
+    action.tick_once()
+    assert action.status == py_trees.common.Status.RUNNING
+    assert start.call_args.args[0] == points[PatrolRegion.HOME]
+    action.stop(py_trees.common.Status.INVALID)
     print("巡逻换区等待取消完成、等待中使用最新区域的测试通过\n")
 
 
+def test_xml_patrol_recovery_uses_alternative_goal():
+    # 用实际导航 XML 验证失败后的备用点确实交给原巡逻动作执行。
+    blackboard = Blackboard(
+        match_progress=4,
+        self_hp=300,
+        tactical_mode=TacticalMode.DEFENSE,
+    )
+    navigation = SimpleNamespace(
+        owner=None, target=None, result=NavigationResult.RUNNING,
+    )
+    node = Mock(
+        hp_limit=100,
+        hp_up=200,
+        patrol_min_goal_distance=0.5,
+        recovery_wait_seconds=0.0,
+        recovery_max_retries=2,
+        recovery_min_goal_distance=2.0,
+        recovery_sample_attempts=3,
+    )
+    node.get_match_progress.side_effect = lambda: blackboard.match_progress
+    node.get_hp.side_effect = lambda: blackboard.self_hp
+    node.get_tactical_mode.side_effect = lambda: blackboard.tactical_mode
+    node.get_navigation_task.side_effect = lambda: blackboard.navigation_task
+    node.set_navigation_task.side_effect = lambda task: setattr(
+        blackboard, "navigation_task", task
+    )
+    node.get_patrol_region.side_effect = lambda: blackboard.patrol_region
+    node.set_patrol_region.side_effect = lambda region: setattr(
+        blackboard, "patrol_region", region
+    )
+    node.get_control_zone.return_value = dict(
+        enabled=True, x_min=0.0, x_max=4.0, y_min=0.0, y_max=4.0
+    )
+    node.get_robot_position.return_value = (1.0, 1.0)
+    node.get_patrol_area.return_value = (0.0, 4.0, 0.0, 4.0)
+    node.is_navigation_stopped.side_effect = lambda: navigation.owner is None
+    node.get_last_navigation_target.side_effect = lambda owner: navigation.target
+    node.get_patrol_result.side_effect = lambda: navigation.result
+
+    def start(target):
+        assert navigation.owner is None
+        navigation.owner = "patrol"
+        navigation.target = target
+        navigation.result = NavigationResult.RUNNING
+        return True
+
+    node.start_patrol.side_effect = start
+    node.stop_patrol.side_effect = lambda: setattr(navigation, "owner", None)
+    xml_path = Path(__file__).resolve().parent / "tree" / "navigation_tree.xml"
+    root = load_behavior_tree(node, xml_path)
+
+    # 恢复选点先拒绝不满足配置距离的点，再由原巡逻动作发送备用点。
+    with patch(
+        "rm_application.behavior_tree.actions.random.uniform",
+        side_effect=[2.0, 2.0, 3.0, 3.0, 4.0, 4.0],
+    ) as sample:
+        root.tick_once()
+        assert blackboard.navigation_task == NavigationTask.PATROL
+        navigation.owner = None
+        navigation.result = NavigationResult.FAILED
+        root.tick_once()
+        assert node.start_patrol.call_count == 1
+        root.tick_once()
+        assert root.status == py_trees.common.Status.RUNNING
+        assert [call.args[0] for call in node.start_patrol.call_args_list] == [
+            (2.0, 2.0), (4.0, 4.0),
+        ]
+        assert sample.call_count == 6
+
+    # 所有候选点都等于失败点时，有限采样后报告失败，不发送坏目标。
+    navigation.owner = None
+    navigation.result = NavigationResult.FAILED
+    root.tick_once()
+    with patch(
+        "rm_application.behavior_tree.actions.random.uniform", return_value=4.0
+    ) as sample:
+        root.tick_once()
+        assert root.status == py_trees.common.Status.FAILURE
+        assert sample.call_count == 2 * node.recovery_sample_attempts
+        assert node.start_patrol.call_count == 2
+    root.stop(py_trees.common.Status.INVALID)
+    print("XML 巡逻失败后使用备用点、采样耗尽不发送目标的测试通过\n")
+
+
+def test_retry_wait_restarts_after_interrupt():
+    # 用模拟时间验证等待到期与抢占后的重新计时，不实际 sleep。
+    clock = SimpleNamespace(now=0.0)
+    wait = WaitBeforeRetry(
+        "恢复等待测试",
+        wait_seconds=0.5,
+        now_fn=lambda: clock.now,
+    )
+    running = py_trees.common.Status.RUNNING
+    success = py_trees.common.Status.SUCCESS
+    wait.tick_once()
+    assert wait.status == running
+    clock.now = 0.4
+    wait.tick_once()
+    assert wait.status == running
+
+    # 等待尚未到期就被高优先级任务抢占，下次进入应完整等待。
+    wait.stop(py_trees.common.Status.INVALID)
+    clock.now = 10.0
+    wait.tick_once()
+    assert wait.status == running
+    clock.now = 10.4
+    wait.tick_once()
+    assert wait.status == running
+    clock.now = 10.5
+    wait.tick_once()
+    assert wait.status == success
+
+    # 成功结束后的下一轮恢复也应重新计时。
+    clock.now = 20.0
+    wait.tick_once()
+    assert wait.status == running
+    clock.now = 20.5
+    wait.tick_once()
+    assert wait.status == success
+    print("恢复等待到期、抢占与新一轮重新计时测试通过\n")
+
+
+def test_xml_navigation_arrival_refreshes_retry_budget():
+    # 占点和回血都需要：到达后持续等待，并清除之前的连续失败预算。
+    xml_path = Path(__file__).resolve().parent / "tree" / "navigation_tree.xml"
+    running = py_trees.common.Status.RUNNING
+    for owner, hp in (("occupy", 300), ("resupply", 100)):
+        blackboard = Blackboard(match_progress=4, self_hp=hp)
+        node = Mock(
+            hp_limit=100,
+            hp_up=200,
+            recovery_wait_seconds=0.0,
+            recovery_max_retries=1,
+            recovery_min_goal_distance=0.5,
+            recovery_sample_attempts=20,
+            patrol_min_goal_distance=0.5,
+        )
+        node.get_match_progress.side_effect = lambda: blackboard.match_progress
+        node.get_hp.side_effect = lambda: blackboard.self_hp
+        node.get_tactical_mode.side_effect = lambda: blackboard.tactical_mode
+        node.get_control_zone.return_value = {"enabled": False}
+        node.get_navigation_task.side_effect = lambda: blackboard.navigation_task
+        node.set_navigation_task.side_effect = lambda task: setattr(
+            blackboard, "navigation_task", task
+        )
+        node.is_navigation_stopped.return_value = True
+        start = getattr(node, f"start_{owner}")
+        stop = getattr(node, f"stop_{owner}")
+        result = getattr(node, f"get_{owner}_result")
+        start.return_value = True
+        result.side_effect = [NavigationResult.FAILED, NavigationResult.SUCCEEDED]
+        root = load_behavior_tree(node, xml_path)
+
+        # 第一次失败后恢复重试，第二次成功到达。
+        root.tick_once()
+        assert root.status == running, owner
+        root.tick_once()
+        assert root.status == running, owner
+        for _ in range(3):
+            root.tick_once()
+            assert root.status == running, owner
+        assert start.call_count == 2, owner
+        assert result.call_count == 2, owner
+
+        # 到达后被抢占，再次执行时应拥有一轮完整的重试预算。
+        root.stop(py_trees.common.Status.INVALID)
+        stop.assert_called_once()
+        result.side_effect = None
+        result.return_value = NavigationResult.FAILED
+        root.tick_once()
+        assert root.status == running, owner
+        assert start.call_count == 3, owner
+        root.tick_once()
+        assert root.status == py_trees.common.Status.FAILURE, owner
+        assert start.call_count == 4, owner
+
+        # 本轮耗尽后仍可再次恢复重试，不永久停在 FAILURE。
+        root.tick_once()
+        assert root.status == running, owner
+        assert start.call_count == 5, owner
+        root.stop(py_trees.common.Status.INVALID)
+    print("XML 占点/回血到达保持、重试预算恢复和耗尽后下一轮测试通过\n")
+
+
 def test_xml_navigation_task_selection():
-    # 加载实际 XML 和已有执行树，仅模拟 ROS 数据及导航结果。
+    # 加载实际主 XML，检查导航交接与小陀螺并行，仅模拟外部接口。
     blackboard = Blackboard(self_hp=300)
     navigation = SimpleNamespace(owner=None)
     events = []
@@ -393,7 +606,8 @@ def test_xml_navigation_task_selection():
     node.start_resupply.side_effect = lambda: start("回血")
     node.stop_resupply.side_effect = lambda: stop("回血")
     node.get_resupply_result.return_value = NavigationResult.RUNNING
-    xml_path = Path(__file__).resolve().parent / "tree" / "navigation_tree.xml"
+    node.start_spin.return_value = True
+    xml_path = Path(__file__).resolve().parent / "tree" / "main_tree.xml"
     root = load_behavior_tree(node, xml_path)
 
     def tick(expected_task, expected_status):
@@ -405,11 +619,13 @@ def test_xml_navigation_task_selection():
     # 已确认停止时，沿用原执行器无活动任务返回 FAILURE 的约定。
     tick(NavigationTask.STOP, py_trees.common.Status.FAILURE)
     assert events == []
+    node.start_spin.assert_not_called()
 
     blackboard.match_progress = 4
     tick(NavigationTask.OCCUPY_CENTER, running)
     tick(NavigationTask.OCCUPY_CENTER, running)
     node.start_occupy.assert_called_once()
+    node.start_spin.assert_called_once()
 
     # 达到回血阈值后取消占点，等待期间不重复取消或启动回血。
     blackboard.self_hp = 100
@@ -432,12 +648,16 @@ def test_xml_navigation_task_selection():
     navigation.owner = None
     tick(NavigationTask.OCCUPY_CENTER, running)
     assert node.start_occupy.call_count == 2
+    # 导航任务切换期间，小陀螺持续运行且不重复开启。
+    node.start_spin.assert_called_once()
+    node.stop_spin.assert_not_called()
 
     # 比赛结束优先于低血回血，取消占点并等待最终停止。
     blackboard.match_progress = 5
     blackboard.self_hp = 50
     tick(NavigationTask.STOP, running)
     tick(NavigationTask.STOP, running)
+    node.stop_spin.assert_called_once()
     navigation.owner = None
     tick(NavigationTask.STOP, py_trees.common.Status.FAILURE)
     assert events == [
@@ -446,7 +666,44 @@ def test_xml_navigation_task_selection():
     ]
     node.start_chase.assert_not_called()
     node.start_patrol.assert_not_called()
-    print("XML 选择与执行、回血阈值保持及导航取消交接测试通过\n")
+
+    # 整棵主树被主动打断时，导航和小陀螺各停止一次。
+    blackboard.match_progress = 4
+    blackboard.self_hp = 300
+    tick(NavigationTask.OCCUPY_CENTER, running)
+    assert node.start_spin.call_count == 2
+    root.stop(py_trees.common.Status.INVALID)
+    assert node.stop_occupy.call_count == 3
+    assert node.stop_spin.call_count == 2
+    root.stop(py_trees.common.Status.INVALID)
+    assert node.stop_occupy.call_count == 3
+    assert node.stop_spin.call_count == 2
+
+    # 追击被低血任务抢占时，也必须等取消确认后才能开始回血。
+    navigation.owner = None
+    node.get_control_zone.return_value = dict(
+        enabled=True, x_min=0.0, x_max=2.0, y_min=0.0, y_max=2.0
+    )
+    node.get_robot_position.return_value = (1.0, 1.0)
+    node.get_enemy_position.return_value = (1.0, 1.0)
+    node.is_chase_ready.return_value = True
+    node.start_chase.side_effect = lambda: start("追击")
+    node.stop_chase.side_effect = lambda: stop("追击")
+    node.get_chase_result.return_value = None
+    tick(NavigationTask.CHASE, running)
+    tick(NavigationTask.CHASE, running)
+    node.start_chase.assert_called_once()
+    blackboard.self_hp = 100
+    tick(NavigationTask.RESUPPLY, running)
+    tick(NavigationTask.RESUPPLY, running)
+    node.stop_chase.assert_called_once()
+    assert node.start_resupply.call_count == 1
+    navigation.owner = None
+    tick(NavigationTask.RESUPPLY, running)
+    assert node.start_resupply.call_count == 2
+    root.stop(py_trees.common.Status.INVALID)
+    node.stop_chase.assert_called_once()
+    print("主 XML 导航交接、回血双阈值、小陀螺并行与停止测试通过\n")
 
 
 if __name__ == "__main__":
@@ -457,5 +714,8 @@ if __name__ == "__main__":
     test_chase_cooldown_state()
     test_chase_selection_respects_cooldown()
     test_patrol_region_switch_waits_for_cancel()
+    test_xml_patrol_recovery_uses_alternative_goal()
+    test_retry_wait_restarts_after_interrupt()
+    test_xml_navigation_arrival_refreshes_retry_budget()
     test_xml_navigation_task_selection()
-    print("当前导航收尾与 XML 导航流程的 8 项测试全部通过")
+    print("当前导航收尾与 XML 主树流程的 11 项测试全部通过")
