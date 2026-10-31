@@ -706,16 +706,391 @@ def test_xml_navigation_task_selection():
     print("主 XML 导航交接、回血双阈值、小陀螺并行与停止测试通过\n")
 
 
+class _GrootMonitor:
+    """按 Groot2 协议发布实际运行树，只提供实时观察功能。
+
+    协议依据 BehaviorTree.CPP 4.6.2 的 groot2_protocol.h 和
+    groot2_publisher.cpp；不实现断点、节点替换或日志录制。
+    """
+
+    def __init__(self, root, port=1667, tree_id="SentryMain"):
+        import struct
+        import uuid
+        import xml.etree.ElementTree as ET
+        from threading import Event, Thread
+
+        try:
+            import zmq
+        except ImportError as exc:
+            raise RuntimeError(
+                "Groot 监视需要 pyzmq，请先运行："
+                "python3 -m pip install --user pyzmq"
+            ) from exc
+
+        self._zmq = zmq
+        self._struct = struct
+        self._nodes = []
+        self._codes = []
+        self._uuid = uuid.uuid4().bytes
+        self._stop = Event()
+        self._ready = Event()
+        self._error = None
+        models = {}
+        document = ET.Element("root", BTCPP_format="4",
+                              main_tree_to_execute=tree_id)
+        tree = ET.SubElement(document, "BehaviorTree",
+                             ID=tree_id, _fullpath="")
+
+        def add_node(node, parent):
+            uid = len(self._nodes) + 1
+            if uid > 65535:
+                raise ValueError("Groot 节点编号超出协议范围")
+            self._nodes.append(node)
+            tag = type(node).__name__
+            if isinstance(node, py_trees.composites.Composite):
+                kind = "Control"
+            elif isinstance(node, py_trees.decorators.Decorator):
+                kind = "Decorator"
+            elif type(node).__module__.endswith(".conditions"):
+                kind = "Condition"
+            else:
+                kind = "Action"
+            models[tag] = kind
+            element = ET.SubElement(parent, tag, name=node.name,
+                                    _uid=str(uid))
+            for child in node.children:
+                add_node(child, element)
+
+        # 直接遍历正在 tick 的实例，不另建一棵执行树。
+        # py_trees 加载 XML 时已展开 SubTree，这里也发送展开后的结构。
+        add_node(root, tree)
+        model_root = ET.SubElement(document, "TreeNodesModel")
+        for tag, kind in sorted(models.items()):
+            ET.SubElement(model_root, kind, ID=tag)
+        self._xml = ET.tostring(document, encoding="utf-8")
+        self._codes = [0] * len(self._nodes)
+        self._snapshot = b""
+        self.update()
+        self._thread = Thread(target=self._serve, args=(port,),
+                              name="groot_monitor", daemon=True)
+        self._thread.start()
+        if not self._ready.wait(5.0):
+            self.close()
+            raise RuntimeError("Groot 监视端口启动超时")
+        if self._error is not None:
+            self.close()
+            raise RuntimeError(
+                f"Groot 监视端口启动失败：{self._error}"
+            ) from self._error
+        print(
+            f"[Groot] 监视地址 127.0.0.1:{port}，"
+            f"实际运行节点共 {len(self._nodes)} 个；"
+            "完整显示仍受 Groot 当前许可证限制。",
+            flush=True,
+        )
+
+    def update(self):
+        # 显式映射两个库的状态，不能直接使用 py_trees 的枚举数值。
+        states = {
+            py_trees.common.Status.INVALID: 0,
+            py_trees.common.Status.RUNNING: 1,
+            py_trees.common.Status.SUCCESS: 2,
+            py_trees.common.Status.FAILURE: 3,
+        }
+        codes = []
+        for previous, node in zip(self._codes, self._nodes):
+            code = states[node.status]
+            if code == 0:
+                # Groot 用 11/12/13 表示从运行/成功/失败回到空闲。
+                code = previous + 10 if previous in (1, 2, 3) else previous
+            codes.append(code)
+        snapshot = b"".join(
+            self._struct.pack("<HB", uid, code)
+            for uid, code in enumerate(codes, start=1)
+        )
+        self._codes = codes
+        # 不可变 bytes 整体替换，服务线程只读取完成的一轮快照。
+        self._snapshot = snapshot
+
+    def _serve(self, port):
+        zmq = self._zmq
+        context = zmq.Context()
+        server = context.socket(zmq.REP)
+        publisher = context.socket(zmq.PUB)
+        try:
+            for socket in (server, publisher):
+                socket.setsockopt(zmq.LINGER, 0)
+                socket.setsockopt(zmq.SNDTIMEO, 250)
+            server.bind(f"tcp://127.0.0.1:{port}")
+            publisher.bind(f"tcp://127.0.0.1:{port + 1}")
+            self._ready.set()
+            while not self._stop.is_set():
+                if not server.poll(100):
+                    continue
+                request = server.recv_multipart()
+                if not request or len(request[0]) != 6:
+                    server.send_multipart([b"error", b"wrong request header"])
+                    continue
+                protocol, kind, request_id = self._struct.unpack(
+                    "<BBI", request[0]
+                )
+                if protocol != 2:
+                    server.send_multipart([b"error", b"unsupported protocol"])
+                    continue
+                header = self._struct.pack(
+                    "<BBI", 2, kind, request_id
+                ) + self._uuid
+                if kind == ord("T"):
+                    reply = [header, self._xml]
+                elif kind == ord("S"):
+                    reply = [header, self._snapshot]
+                elif kind == ord("D"):
+                    reply = [header, b"[]"]
+                elif kind in (ord("A"), ord("X")):
+                    # 没有安装过断点，清空或禁用操作无需改变执行树。
+                    reply = [header]
+                elif kind == ord("B"):
+                    reply = [header, b"{}"]
+                else:
+                    reply = [
+                        b"error",
+                        b"read-only live monitor; hooks and recording unsupported",
+                    ]
+                server.send_multipart(reply)
+        except Exception as exc:
+            self._error = exc
+            self._stop.set()
+            print(f"[Groot] 监视服务停止：{exc}", flush=True)
+        finally:
+            self._ready.set()
+            server.close()
+            publisher.close()
+            context.term()
+
+    def close(self):
+        self._stop.set()
+        self._thread.join(timeout=2.0)
+        if self._thread.is_alive():
+            raise RuntimeError("Groot 监视线程尚未退出")
+
+
+def run_interactive_test(groot=False, groot_navigation=False, groot_view=None):
+    import time
+    import rm_application.behavior_tree_node as bt_module
+    import rm_application.behavior_tree.ros_interface as interface_module
+    from rm_application.behavior_tree.registry import NavigationSwitch
+    from std_msgs.msg import String
+
+    view_ids = {
+        "full": "SentryMain",
+        "navigation": "NavigationExecution",
+        "stop": "StopSelection",
+        "resupply": "ResupplySelection",
+        "defense": "DefenseStrategy",
+        "neutral": "NeutralStrategy",
+        "pressure": "PressureStrategy",
+        "stance": "StanceControl",
+    }
+    if groot_view is not None and groot_view not in view_ids:
+        raise ValueError(f"未知监视范围 {groot_view!r}，可选：{', '.join(view_ids)}")
+    monitoring_enabled = groot or groot_navigation or groot_view is not None
+    requested_view = groot_view or ("navigation" if groot_navigation else "full")
+
+    class FakeNavigator:
+        def __init__(self):
+            self.position = (0.0, 0.0)
+            self.target = None
+            self.deadline = 0.0
+            self.done = True
+            self.canceling = False
+            self.result = TaskResult.UNKNOWN
+
+        def waitUntilNav2Active(self):
+            # 离线测试不等待真实 Nav2。
+            pass
+
+        def goToPose(self, pose):
+            if not self.done:
+                return False
+            self.target = (
+                pose.pose.position.x,
+                pose.pose.position.y,
+            )
+            self.deadline = time.monotonic() + 2.0
+            self.done = False
+            self.canceling = False
+            self.result = TaskResult.UNKNOWN
+            print(f"[假导航] 开始前往 {self.target}", flush=True)
+            return True
+
+        def isTaskComplete(self):
+            if not self.done and time.monotonic() >= self.deadline:
+                self.done = True
+                if self.canceling:
+                    self.result = TaskResult.CANCELED
+                else:
+                    self.position = self.target
+                    self.result = TaskResult.SUCCEEDED
+            return self.done
+
+        def getResult(self):
+            return self.result
+
+        def cancelTask(self):
+            if not self.done and not self.canceling:
+                # 留出取消确认时间，检查任务切换时的等待逻辑。
+                self.canceling = True
+                self.deadline = time.monotonic() + 0.3
+                print("[假导航] 请求取消，等待确认", flush=True)
+
+        def destroy_node(self):
+            pass
+
+    navigator = FakeNavigator()
+    original_tick = bt_module.BehaviorTreeNode.tick_behavior_tree
+    previous_output = None
+    monitor = None
+    active_view = None
+    views = None
+    view_subscription = None
+
+    def select_view(message):
+        nonlocal requested_view
+        if message.data not in view_ids:
+            print(
+                f"[Groot] 未知监视范围 {message.data!r}，"
+                f"可选：{', '.join(view_ids)}",
+                flush=True,
+            )
+            return
+        # 只更改监视范围，不修改战术模式、任务牌或树的执行状态。
+        requested_view = message.data
+
+    def tick_and_display(node):
+        nonlocal previous_output, monitor, active_view, views, view_subscription
+        if monitoring_enabled and views is None:
+            behaviors = list(node.behavior_tree.iterate())
+
+            def find_view(name):
+                matches = [
+                    behavior for behavior in behaviors
+                    if behavior.name.rsplit(".", 1)[-1] == name
+                ]
+                if len(matches) != 1:
+                    raise RuntimeError(f"监视范围 {name!r} 必须唯一，实际找到 {len(matches)} 个")
+                return matches[0]
+
+            switches = [
+                behavior for behavior in behaviors
+                if isinstance(behavior, NavigationSwitch)
+            ]
+            if len(switches) != 1:
+                raise RuntimeError("导航执行树必须有且只有一个任务切换节点")
+            views = {
+                "full": node.behavior_tree,
+                "navigation": switches[0],
+                "stop": find_view("停止分支"),
+                "resupply": find_view("回血分支"),
+                "defense": find_view("防守模式"),
+                "neutral": find_view("中立模式"),
+                "pressure": find_view("前压模式"),
+                "stance": find_view("姿态控制"),
+            }
+            view_subscription = node.create_subscription(
+                String, "/behavior_tree/test/monitor_view", select_view, 10
+            )
+            sizes = ", ".join(
+                f"{name}={sum(1 for _ in root.iterate())}"
+                for name, root in views.items()
+            )
+            print(f"[Groot] 各监视范围的节点数：{sizes}", flush=True)
+        if monitoring_enabled and active_view != requested_view:
+            if monitor is not None:
+                monitor.close()
+                monitor = None
+            # 同一时刻只发布所选范围；全部范围仍属于同一棵执行树。
+            monitor = _GrootMonitor(
+                views[requested_view], tree_id=view_ids[requested_view]
+            )
+            active_view = requested_view
+            print(
+                f"[Groot] 当前监视范围：{active_view}。"
+                "切换后请在 Groot 中重新 Connect，执行树无需重启。",
+                flush=True,
+            )
+        original_tick(node)
+        if monitor is not None:
+            monitor.update()
+        summary = (
+            f"比赛阶段={node.get_match_progress()} "
+            f"血量={node.get_hp()} "
+            f"策略={node.get_tactical_mode().value} "
+            f"任务={node.get_navigation_task().value}"
+        )
+        tree_text = py_trees.display.unicode_tree(
+            node.behavior_tree,
+            show_status=True,
+        )
+        output = summary + "\n" + tree_text
+        # 状态变化时才打印，避免每秒打印十遍同样的树。
+        if output != previous_output:
+            print("\n" + output, flush=True)
+            previous_output = output
+
+    # 保留真实 ROS 订阅、黑板、XML 和行为节点。
+    # 只替换本进程的 Nav2 客户端、位置查询和 tick 显示。
+    with patch.object(
+        interface_module, "BasicNavigator", return_value=navigator
+    ), patch.object(
+        interface_module.RosInterface,
+        "get_robot_position",
+        lambda self: navigator.position,
+    ), patch.object(
+        bt_module.BehaviorTreeNode,
+        "tick_behavior_tree",
+        tick_and_display,
+    ):
+        try:
+            bt_module.main()
+        finally:
+            if monitor is not None:
+                monitor.close()
+
+
 if __name__ == "__main__":
-    test_chase_cancel_confirmation()
-    test_chase_server_waits_for_navigation_cancel()
-    test_chase_reports_navigation_failure()
-    test_chase_navigation_success_continues()
-    test_chase_cooldown_state()
-    test_chase_selection_respects_cooldown()
-    test_patrol_region_switch_waits_for_cancel()
-    test_xml_patrol_recovery_uses_alternative_goal()
-    test_retry_wait_restarts_after_interrupt()
-    test_xml_navigation_arrival_refreshes_retry_budget()
-    test_xml_navigation_task_selection()
-    print("当前导航收尾与 XML 主树流程的 11 项测试全部通过")
+    import sys
+
+    if "--interactive" in sys.argv:
+        # 这是测试入口的选项，不传给 rclpy 的 ROS 参数解析器。
+        sys.argv.remove("--interactive")
+        groot_enabled = "--groot" in sys.argv
+        if groot_enabled:
+            sys.argv.remove("--groot")
+        groot_navigation = "--groot-navigation" in sys.argv
+        if groot_navigation:
+            sys.argv.remove("--groot-navigation")
+        groot_view = None
+        if "--groot-view" in sys.argv:
+            option_index = sys.argv.index("--groot-view")
+            if option_index + 1 >= len(sys.argv):
+                raise SystemExit("--groot-view 后面需要指定监视范围")
+            groot_view = sys.argv.pop(option_index + 1)
+            sys.argv.pop(option_index)
+        run_interactive_test(
+            groot=groot_enabled,
+            groot_navigation=groot_navigation,
+            groot_view=groot_view,
+        )
+    else:
+        test_chase_cancel_confirmation()
+        test_chase_server_waits_for_navigation_cancel()
+        test_chase_reports_navigation_failure()
+        test_chase_navigation_success_continues()
+        test_chase_cooldown_state()
+        test_chase_selection_respects_cooldown()
+        test_patrol_region_switch_waits_for_cancel()
+        test_xml_patrol_recovery_uses_alternative_goal()
+        test_retry_wait_restarts_after_interrupt()
+        test_xml_navigation_arrival_refreshes_retry_budget()
+        test_xml_navigation_task_selection()
+        print("当前导航收尾与 XML 主树流程的 11 项测试全部通过")
