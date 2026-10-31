@@ -29,7 +29,7 @@ behavior_tree_node:
 
     # 回补给血量阈值
     hp_limit: 150
-    hp_up: 380
+    hp_up: 400
   
     # 占点目标和补给点，使用 map 坐标，单位：米
     center: [4.86, -2.39]

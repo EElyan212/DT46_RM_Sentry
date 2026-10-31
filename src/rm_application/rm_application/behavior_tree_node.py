@@ -39,7 +39,7 @@ class BehaviorTreeNode(Node):
         self.declare_parameter("chase_failure_cooldown_seconds", 3.0)
         
         self.declare_parameter("hp_limit", 150)
-        self.declare_parameter("hp_up", 380)
+        self.declare_parameter("hp_up", 400)
 
         # 保存参数，供后续控制区判断使用
         self.control_zone_enabled = self.get_parameter(
