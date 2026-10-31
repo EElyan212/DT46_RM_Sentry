@@ -1,8 +1,14 @@
+import time
+from pathlib import Path
+
 import rclpy
+import py_trees
 from rclpy.node import Node
+from ament_index_python.packages import get_package_share_directory
+
 from rm_application.behavior_tree.ros_interface import RosInterface
-from rm_application.behavior_tree.builder import BehaviorTreeBuilder
 from rm_application.behavior_tree.blackboard import Blackboard
+from rm_application.behavior_tree.xml_loader import load_behavior_tree
 
 class BehaviorTreeNode(Node):
     def __init__(self):
@@ -29,9 +35,11 @@ class BehaviorTreeNode(Node):
         self.declare_parameter("chase_boundary_y_max", 0.0)
         # 追击过程中允许短暂丢失目标的时间
         self.declare_parameter("target_lost_grace_time", 0.5)
-
+        # 追击恢复耗尽后，多久允许再次选择追击，单位：秒
+        self.declare_parameter("chase_failure_cooldown_seconds", 3.0)
+        
         self.declare_parameter("hp_limit", 150)
-        self.declare_parameter("hp_up", 380)
+        self.declare_parameter("hp_up", 400)
 
         # 保存参数，供后续控制区判断使用
         self.control_zone_enabled = self.get_parameter(
@@ -71,14 +79,14 @@ class BehaviorTreeNode(Node):
             self.get_parameter("target_lost_grace_time").value
         )
 
-        # 读取回补给和攻击距离参数，供 builder 使用
+        # 读取回血阈值，供节点注册和行为判断使用
         self.hp_limit = self.get_parameter("hp_limit").value
         self.hp_up = self.get_parameter("hp_up").value
 
         self.patrol_min_goal_distance = (
             self.ros_interface.patrol_min_goal_distance
         )
-        # 提供恢复参数，供 builder 组装恢复流程
+        # 提供恢复参数，供节点注册表创建恢复节点
         self.recovery_wait_seconds = (
             self.ros_interface.recovery_wait_seconds
         )
@@ -91,8 +99,13 @@ class BehaviorTreeNode(Node):
         self.recovery_sample_attempts = (
             self.ros_interface.recovery_sample_attempts
         )
-        # 使用当前 ROS 节点提供的数据和通信方法构建行为树
-        self.behavior_tree = BehaviorTreeBuilder(self).build()
+        # 从 ROS 包安装目录加载主树，子树由 XML 内部引用
+        tree_path = (
+            Path(get_package_share_directory("rm_application"))
+            / "tree"
+            / "main_tree.xml"
+        )
+        self.behavior_tree = load_behavior_tree(self, tree_path)
 
         # 每 0.1 秒运行一次行为树，即 10 Hz
         self.behavior_tree_timer = self.create_timer(
@@ -101,8 +114,8 @@ class BehaviorTreeNode(Node):
         )
 
     def tick_behavior_tree(self):
-        # 每次 tick 都会重新检查优先级和当前条件
-        self.behavior_tree.tick()
+        # 执行完整一轮 tick，重新检查优先级和当前条件
+        self.behavior_tree.tick_once()
     
     def set_navigation_task(self, task):
         # 任务选择树把当前导航任务写入共享黑板
@@ -111,6 +124,26 @@ class BehaviorTreeNode(Node):
     def get_navigation_task(self):
         # 导航执行树从共享黑板读取当前导航任务
         return self.blackboard.navigation_task
+
+    def is_chase_ready(self):
+        # 冷却结束后，还需要由追击条件节点检查敌人和边界
+        return time.monotonic() >= self.blackboard.chase_retry_after
+
+    def report_chase_exhausted(self):
+        # 追击恢复耗尽时，暂时关闭追击资格
+        cooldown_seconds = float(
+            self.get_parameter(
+                "chase_failure_cooldown_seconds"
+            ).value
+        )
+
+        self.blackboard.chase_retry_after = (
+            time.monotonic() + cooldown_seconds
+        )
+
+        self.get_logger().warn(
+            "追击恢复耗尽，暂时禁止选择追击"
+        )    
     
     def set_tactical_mode(self, tactical_mode):
         # 战术选择结果写入共享黑板
@@ -180,6 +213,14 @@ class BehaviorTreeNode(Node):
         return self.ros_interface.get_last_navigation_target(
             owner
         )
+
+    def is_navigation_stopped(self):
+        # 普通 Nav2 导航必须已经结束并释放
+        if not self.ros_interface.is_navigation_stopped():
+            return False
+
+        # 追击服务也必须已结束，才能启动新的平移任务
+        return self.ros_interface.is_chase_stopped()
 
     def start_spin(self):
         # 把开启小陀螺的请求交给统一通信接口
@@ -265,8 +306,8 @@ def main(args=None):
         node.get_logger().info("行为树节点正在关闭")
 
     finally:
-        # 停止正在运行的追击、导航和小陀螺
-        node.behavior_tree.halt()
+        # 打断整棵树，触发活动节点的取消与停止逻辑
+        node.behavior_tree.stop(py_trees.common.Status.INVALID)
 
         # 销毁 BehaviorTreeNode 内部使用的 Nav2 节点
         node.ros_interface.destroy()

@@ -137,6 +137,8 @@ class RosInterface:
 
         # 记录当前 Nav2 导航属于哪个行为
         self.navigation_owner = None
+        # 已请求取消，但尚未确认旧导航结束
+        self.navigation_cancel_pending = False
 
         # 保存各行为最近尝试的导航目标
         # 导航失败后，恢复选点需要避开这个位置
@@ -411,6 +413,7 @@ class RosInterface:
 
         result = self.navigator.getResult()
         self.navigation_owner = None
+        self.navigation_cancel_pending = False
 
         if result == TaskResult.SUCCEEDED:
             return NavigationResult.SUCCEEDED
@@ -434,13 +437,38 @@ class RosInterface:
         return self.get_navigation_result("patrol")
 
     def stop_navigation(self, owner):
-        # 只允许当前导航的所属行为取消它
+        # 只允许当前导航所属的行为取消它
         if self.navigation_owner != owner:
             return
 
-        self.navigator.cancelTask()
-        self.navigation_owner = None
+        # 同一次取消只请求一次，后续通过查询确认是否结束
+        if self.navigation_cancel_pending:
+            return
 
+        self.navigation_cancel_pending = True
+        self.navigator.cancelTask()
+
+        # 此时只请求了取消，保留 owner，直到确认旧任务结束
+
+    def is_navigation_stopped(self):
+        # 没有尚未释放的普通导航任务
+        if self.navigation_owner is None:
+            return True
+
+        # 当前导航没有被要求取消，仍由原行为负责读取结果
+        if not self.navigation_cancel_pending:
+            return False
+
+        # 取消请求发出后，继续检查旧导航是否真正结束
+        if not self.navigator.isTaskComplete():
+            return False
+
+        # 旧任务可能已取消，也可能恰好成功或失败
+        # 这些终态都表示旧导航已经结束，可以释放归属
+        self.navigator.getResult()
+        self.navigation_owner = None
+        self.navigation_cancel_pending = False
+        return True
     def stop_occupy(self):
         # 只取消属于占点的导航
         self.stop_navigation("occupy")
@@ -573,9 +601,21 @@ class RosInterface:
             )
             self.chase_result = False
 
+            # 读取结果异常，无法确认追击已经结束
+            # 保留句柄，不能继续释放控制权
+            return
+
         # 本次追击已经结束，清理运行状态
         self.chase_goal_handle = None
         self.chase_cancel_pending = False
+
+    def is_chase_stopped(self):
+        # 请求还在等待接受，或已经接受但尚未返回最终结果
+        # 都不能认为追击已经结束
+        return (
+            not self.chase_goal_pending
+            and self.chase_goal_handle is None
+        )
 
     def get_chase_result(self):
         # None 表示仍在追击，True/False 表示已经结束

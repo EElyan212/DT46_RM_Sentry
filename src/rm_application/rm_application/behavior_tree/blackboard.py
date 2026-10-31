@@ -24,3 +24,6 @@ class Blackboard:
 
     # 导航树当前应当执行的任务
     navigation_task: NavigationTask = NavigationTask.STOP
+
+    # 追击失败冷却结束的时间；0 表示尚未进入冷却
+    chase_retry_after: float = 0.0
