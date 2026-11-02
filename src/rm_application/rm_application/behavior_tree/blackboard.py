@@ -16,8 +16,23 @@ class Blackboard:
     # 当前哨兵血量；尚未收到裁判数据时为 0
     self_hp: int = 0
 
+    # 我方重装血量；尚未收到数据时为 None
+    heavy_hp: int | None = None
+
+    # 我方步兵血量
+    infantry_hp: int | None = None
+
+    # 哨兵剩余允许发弹量
+    remain_bullet: int | None = None
+
     # 当前采用的全局策略
     tactical_mode: TacticalMode = TacticalMode.NEUTRAL
+
+    # 条件节点确认后，交给动作节点应用的战术候选
+    pending_tactical_mode: TacticalMode | None = None
+
+    # 当前正式战术模式的开始时间，使用单调时钟
+    tactical_mode_since: float = 0.0
 
     # 当前策略允许巡逻的区域
     patrol_region: PatrolRegion = PatrolRegion.CENTER

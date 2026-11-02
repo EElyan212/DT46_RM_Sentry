@@ -1,4 +1,4 @@
-"""导航收尾和 XML 导航流程测试。
+"""导航收尾、XML 导航流程和战术模式切换测试。
 
 使用模拟对象调用实际回调，不连接 Nav2，不代替仿真或实车联调。
 """
@@ -14,8 +14,13 @@ import py_trees
 from geometry_msgs.msg import PoseStamped
 from nav2_simple_commander.robot_navigator import TaskResult
 
-from rm_application.behavior_tree.actions import PatrolZone, WaitBeforeRetry
+from rm_application.behavior_tree.actions import (
+    PatrolZone,
+    ApplyTacticalMode,
+    WaitBeforeRetry,
+)
 from rm_application.behavior_tree.blackboard import Blackboard
+from rm_application.behavior_tree.conditions import ShouldSwitchTacticalMode
 from rm_application.behavior_tree.nav_zone import (
     NavigationResult,
     NavigationTask,
@@ -27,6 +32,19 @@ from rm_application.behavior_tree.xml_loader import load_behavior_tree
 from rm_application.behavior_tree_node import BehaviorTreeNode
 from rm_application.chase_client import ChaseClient
 
+
+
+def _tactical_score_config(**changes):
+    # 测试配置不依赖未确认的队友血量上限，默认全部不参与评分。
+    config = {
+        "factors": ["self_hp", "heavy_hp", "infantry_hp", "remain_bullet"],
+        "weights": [0.0, 0.0, 0.0, 0.0],
+        "maxima": [400.0, 0.0, 0.0, 750.0],
+        "defense_enter": 0.35, "defense_exit": 0.45,
+        "pressure_exit": 0.65, "pressure_enter": 0.75,
+    }
+    config.update(changes)
+    return config
 
 
 def test_chase_cancel_confirmation():
@@ -279,6 +297,10 @@ def test_chase_selection_respects_cooldown():
     blackboard = Blackboard()
     state = SimpleNamespace(ready=False)
     node = Mock(
+        tactical_mode_source="manual",
+        tactical_score_config=_tactical_score_config(),
+        tactical_confirm_seconds=2.0,
+        tactical_min_hold_seconds=0.0,
         patrol_min_goal_distance=0.5,
         recovery_wait_seconds=0.5,
         recovery_max_retries=2,
@@ -286,6 +308,11 @@ def test_chase_selection_respects_cooldown():
         recovery_sample_attempts=20,
     )
     node.get_tactical_mode.side_effect = lambda: blackboard.tactical_mode
+    node.get_tactical_mode_since.side_effect = lambda: blackboard.tactical_mode_since
+    node.get_tactical_candidate.side_effect = lambda: blackboard.pending_tactical_mode
+    node.set_tactical_candidate.side_effect = lambda candidate: setattr(
+        blackboard, "pending_tactical_mode", candidate
+    )
     node.is_chase_ready.side_effect = lambda: state.ready
     node.get_navigation_task.side_effect = lambda: blackboard.navigation_task
     node.set_navigation_task.side_effect = lambda task: setattr(
@@ -393,6 +420,10 @@ def test_xml_patrol_recovery_uses_alternative_goal():
     node = Mock(
         hp_limit=100,
         hp_up=200,
+        tactical_mode_source="manual",
+        tactical_score_config=_tactical_score_config(),
+        tactical_confirm_seconds=2.0,
+        tactical_min_hold_seconds=0.0,
         patrol_min_goal_distance=0.5,
         recovery_wait_seconds=0.0,
         recovery_max_retries=2,
@@ -402,6 +433,11 @@ def test_xml_patrol_recovery_uses_alternative_goal():
     node.get_match_progress.side_effect = lambda: blackboard.match_progress
     node.get_hp.side_effect = lambda: blackboard.self_hp
     node.get_tactical_mode.side_effect = lambda: blackboard.tactical_mode
+    node.get_tactical_mode_since.side_effect = lambda: blackboard.tactical_mode_since
+    node.get_tactical_candidate.side_effect = lambda: blackboard.pending_tactical_mode
+    node.set_tactical_candidate.side_effect = lambda candidate: setattr(
+        blackboard, "pending_tactical_mode", candidate
+    )
     node.get_navigation_task.side_effect = lambda: blackboard.navigation_task
     node.set_navigation_task.side_effect = lambda task: setattr(
         blackboard, "navigation_task", task
@@ -511,6 +547,10 @@ def test_xml_navigation_arrival_refreshes_retry_budget():
         node = Mock(
             hp_limit=100,
             hp_up=200,
+            tactical_mode_source="manual",
+            tactical_score_config=_tactical_score_config(),
+            tactical_confirm_seconds=2.0,
+            tactical_min_hold_seconds=0.0,
             recovery_wait_seconds=0.0,
             recovery_max_retries=1,
             recovery_min_goal_distance=0.5,
@@ -520,6 +560,11 @@ def test_xml_navigation_arrival_refreshes_retry_budget():
         node.get_match_progress.side_effect = lambda: blackboard.match_progress
         node.get_hp.side_effect = lambda: blackboard.self_hp
         node.get_tactical_mode.side_effect = lambda: blackboard.tactical_mode
+        node.get_tactical_mode_since.side_effect = lambda: blackboard.tactical_mode_since
+        node.get_tactical_candidate.side_effect = lambda: blackboard.pending_tactical_mode
+        node.set_tactical_candidate.side_effect = lambda candidate: setattr(
+            blackboard, "pending_tactical_mode", candidate
+        )
         node.get_control_zone.return_value = {"enabled": False}
         node.get_navigation_task.side_effect = lambda: blackboard.navigation_task
         node.set_navigation_task.side_effect = lambda task: setattr(
@@ -584,6 +629,10 @@ def test_xml_navigation_task_selection():
     node = Mock(
         hp_limit=100,
         hp_up=200,
+        tactical_mode_source="manual",
+        tactical_score_config=_tactical_score_config(),
+        tactical_confirm_seconds=2.0,
+        tactical_min_hold_seconds=0.0,
         recovery_wait_seconds=0.5,
         recovery_max_retries=2,
         recovery_min_goal_distance=0.5,
@@ -593,6 +642,11 @@ def test_xml_navigation_task_selection():
     node.get_match_progress.side_effect = lambda: blackboard.match_progress
     node.get_hp.side_effect = lambda: blackboard.self_hp
     node.get_tactical_mode.side_effect = lambda: blackboard.tactical_mode
+    node.get_tactical_mode_since.side_effect = lambda: blackboard.tactical_mode_since
+    node.get_tactical_candidate.side_effect = lambda: blackboard.pending_tactical_mode
+    node.set_tactical_candidate.side_effect = lambda candidate: setattr(
+        blackboard, "pending_tactical_mode", candidate
+    )
     # 本用例专门验证占点与回血交接，未配置控制区时继续选择占点。
     node.get_control_zone.return_value = {"enabled": False}
     node.get_navigation_task.side_effect = lambda: blackboard.navigation_task
@@ -704,6 +758,391 @@ def test_xml_navigation_task_selection():
     root.stop(py_trees.common.Status.INVALID)
     node.stop_chase.assert_called_once()
     print("主 XML 导航交接、回血双阈值、小陀螺并行与停止测试通过\n")
+
+
+def _create_tactical_test_tree(
+    mode_source="auto", min_hold_seconds=0.0, score_config=None
+):
+    # 加载实际导航 XML，仅模拟外部接口；评分候选由各测试明确提供。
+    blackboard = Blackboard(match_progress=4, self_hp=300)
+    node = Mock(
+        hp_limit=100,
+        hp_up=200,
+        tactical_mode_source=mode_source,
+        tactical_score_config=(
+            _tactical_score_config() if score_config is None else score_config
+        ),
+        tactical_confirm_seconds=2.0,
+        tactical_min_hold_seconds=min_hold_seconds,
+        patrol_min_goal_distance=0.5,
+        recovery_wait_seconds=0.5,
+        recovery_max_retries=2,
+        recovery_min_goal_distance=0.5,
+        recovery_sample_attempts=20,
+    )
+    node.blackboard = blackboard
+    node.get_tactical_inputs.side_effect = lambda: (
+        BehaviorTreeNode.get_tactical_inputs(node)
+    )
+    node.get_match_progress.side_effect = lambda: blackboard.match_progress
+    node.get_hp.side_effect = lambda: blackboard.self_hp
+    node.get_tactical_mode.side_effect = lambda: blackboard.tactical_mode
+    node.get_tactical_mode_since.side_effect = lambda: blackboard.tactical_mode_since
+    node.get_tactical_candidate.side_effect = lambda: blackboard.pending_tactical_mode
+    node.set_tactical_candidate.side_effect = lambda candidate: setattr(
+        blackboard, "pending_tactical_mode", candidate
+    )
+    node.set_tactical_mode.side_effect = lambda mode: (
+        BehaviorTreeNode.set_tactical_mode(node, mode)
+    )
+    node.get_navigation_task.side_effect = lambda: blackboard.navigation_task
+    node.set_navigation_task.side_effect = lambda task: setattr(
+        blackboard, "navigation_task", task
+    )
+    # 三种策略都选择占点，单独检查模式更新，不引入追击位置条件。
+    node.get_control_zone.return_value = {"enabled": False}
+    node.is_chase_ready.return_value = False
+    node.is_navigation_stopped.return_value = True
+    node.start_occupy.return_value = True
+    node.get_occupy_result.return_value = NavigationResult.RUNNING
+    node.start_resupply.return_value = True
+    node.get_resupply_result.return_value = NavigationResult.RUNNING
+    xml_path = Path(__file__).resolve().parent / "tree" / "navigation_tree.xml"
+    root = load_behavior_tree(node, xml_path)
+    updates = [item for item in root.iterate()
+               if isinstance(item, ShouldSwitchTacticalMode)]
+    assert len(updates) == 1, "战术 XML 必须包含一个实际的切换条件节点"
+    return blackboard, node, root, updates[0]
+
+
+def test_xml_tactical_mode_confirmation():
+    blackboard, node, root, update = _create_tactical_test_tree(
+        min_hold_seconds=5.0
+    )
+    candidate = SimpleNamespace(mode=TacticalMode.DEFENSE)
+    update.evaluate_candidate = Mock(
+        side_effect=lambda current, inputs: candidate.mode
+    )
+    clock = SimpleNamespace(now=0.0)
+
+    def tick(at, expected):
+        clock.now = at
+        root.tick_once()
+        assert blackboard.tactical_mode == expected, at
+        assert blackboard.navigation_task == NavigationTask.OCCUPY_CENTER
+
+    with patch(
+        "rm_application.behavior_tree.conditions.time.monotonic",
+        side_effect=lambda: clock.now,
+    ):
+        # 真实 XML 每轮复位成功的顺序节点，但候选时间必须连续累计。
+        tick(0.0, TacticalMode.NEUTRAL)
+        tick(1.0, TacticalMode.NEUTRAL)
+        tick(2.0, TacticalMode.NEUTRAL)  # 候选已确认，最短保持尚未到期。
+        tick(5.0, TacticalMode.DEFENSE)
+
+        # 候选变化后重新确认；同时满足确认与最短保持才切换。
+        candidate.mode = TacticalMode.PRESSURE
+        tick(6.0, TacticalMode.DEFENSE)
+        candidate.mode = TacticalMode.NEUTRAL
+        tick(6.5, TacticalMode.DEFENSE)
+        candidate.mode = TacticalMode.PRESSURE
+        tick(7.0, TacticalMode.DEFENSE)
+        tick(9.0, TacticalMode.DEFENSE)
+        tick(10.0, TacticalMode.PRESSURE)
+
+        # 暂无候选时保持原模式，数据恢复后重新计时。
+        candidate.mode = TacticalMode.DEFENSE
+        tick(11.0, TacticalMode.PRESSURE)
+        candidate.mode = None
+        tick(12.0, TacticalMode.PRESSURE)
+        candidate.mode = TacticalMode.DEFENSE
+        tick(13.0, TacticalMode.PRESSURE)
+        tick(14.9, TacticalMode.PRESSURE)
+        tick(15.0, TacticalMode.DEFENSE)
+
+        # 返回当前模式或错误类型都不应启动新的模式切换。
+        tick(16.0, TacticalMode.DEFENSE)
+        candidate.mode = "PRESSURE"
+        tick(20.0, TacticalMode.DEFENSE)
+        assert update.candidate_mode is None
+        assert node.set_tactical_mode.call_count == 3
+
+        # 无确认延时、无最短保持限制时，可在首次得到候选时切换。
+        update.confirm_seconds = 0.0
+        update.min_hold_seconds = 0.0
+        candidate.mode = TacticalMode.NEUTRAL
+        tick(21.0, TacticalMode.NEUTRAL)
+
+    root.stop(py_trees.common.Status.INVALID)
+    print("战术 XML 连续确认、最短保持、候选变化和缺失输入测试通过\n")
+
+
+def test_xml_tactical_confirmation_after_preemption():
+    blackboard, _, root, update = _create_tactical_test_tree()
+    candidate = SimpleNamespace(mode=TacticalMode.DEFENSE)
+    update.evaluate_candidate = Mock(
+        side_effect=lambda current, inputs: candidate.mode
+    )
+    clock = SimpleNamespace(now=0.0)
+
+    def tick(at, expected_task, expected_mode):
+        clock.now = at
+        root.tick_once()
+        assert blackboard.navigation_task == expected_task
+        assert blackboard.tactical_mode == expected_mode
+
+    with patch(
+        "rm_application.behavior_tree.conditions.time.monotonic",
+        side_effect=lambda: clock.now,
+    ):
+        tick(0.0, NavigationTask.OCCUPY_CENTER, TacticalMode.NEUTRAL)
+        # 回血期间不评分，等待时间不能算进普通模式的连续确认。
+        blackboard.self_hp = 100
+        tick(1.0, NavigationTask.RESUPPLY, TacticalMode.NEUTRAL)
+        assert update.evaluate_candidate.call_count == 1
+        blackboard.self_hp = 200
+        tick(20.0, NavigationTask.OCCUPY_CENTER, TacticalMode.NEUTRAL)
+        tick(21.9, NavigationTask.OCCUPY_CENTER, TacticalMode.NEUTRAL)
+        tick(22.0, NavigationTask.OCCUPY_CENTER, TacticalMode.DEFENSE)
+
+        # 比赛停止同样抢占普通模式选择，恢复后需要重新确认。
+        candidate.mode = TacticalMode.PRESSURE
+        tick(23.0, NavigationTask.OCCUPY_CENTER, TacticalMode.DEFENSE)
+        blackboard.match_progress = 5
+        calls_before_stop = update.evaluate_candidate.call_count
+        tick(24.0, NavigationTask.STOP, TacticalMode.DEFENSE)
+        assert update.evaluate_candidate.call_count == calls_before_stop
+        blackboard.match_progress = 4
+        tick(50.0, NavigationTask.OCCUPY_CENTER, TacticalMode.DEFENSE)
+        tick(51.9, NavigationTask.OCCUPY_CENTER, TacticalMode.DEFENSE)
+        tick(52.0, NavigationTask.OCCUPY_CENTER, TacticalMode.PRESSURE)
+
+    root.stop(py_trees.common.Status.INVALID)
+    print("回血与比赛停止抢占后，战术候选重新确认测试通过\n")
+
+
+def test_tactical_manual_and_auto_control():
+    blackboard, node, root, update = _create_tactical_test_tree("manual")
+    interface = RosInterface.__new__(RosInterface)
+    interface.node = node
+    interface.blackboard = blackboard
+    update.evaluate_candidate = Mock(return_value=TacticalMode.PRESSURE)
+    defense = SimpleNamespace(defense=True, neutral=False, pressure=False)
+
+    # 手动模式接受 RQT 选择，普通 tick 不用评分覆盖它。
+    interface.tactical_mode_callback(defense)
+    root.tick_once()
+    assert blackboard.tactical_mode == TacticalMode.DEFENSE
+    update.evaluate_candidate.assert_not_called()
+    node.get_tactical_inputs.assert_not_called()
+    node.set_tactical_mode.assert_called_once_with(TacticalMode.DEFENSE)
+    interface.tactical_mode_callback(defense)
+    for message in (
+        SimpleNamespace(defense=False, neutral=False, pressure=False),
+        SimpleNamespace(defense=True, neutral=True, pressure=False),
+    ):
+        interface.tactical_mode_callback(message)
+    assert node.set_tactical_mode.call_count == 1
+    root.stop(py_trees.common.Status.INVALID)
+
+    # 自动模式忽略手动选择；默认全部零权重时保持当前模式。
+    blackboard, node, root, update = _create_tactical_test_tree("auto")
+    interface.node = node
+    interface.blackboard = blackboard
+    interface.tactical_mode_callback(defense)
+    node.set_tactical_mode.assert_not_called()
+    root.tick_once()  # 实际零权重评分返回 None，通过保持分支继续任务。
+    assert blackboard.tactical_mode == TacticalMode.NEUTRAL
+    assert blackboard.navigation_task == NavigationTask.OCCUPY_CENTER
+    root.stop(py_trees.common.Status.INVALID)
+    print("RQT 手动控制、自动控制隔离和空评分保持模式测试通过\n")
+
+
+def test_tactical_input_delivery():
+    # 验证真实消息回调、黑板读取和实际 XML 节点之间的数据传递。
+    blackboard, node, root, update = _create_tactical_test_tree()
+    interface = RosInterface.__new__(RosInterface)
+    interface.blackboard = blackboard
+    update.evaluate_candidate = Mock(return_value=None)
+
+    root.tick_once()
+    first_inputs = update.evaluate_candidate.call_args.args[1]
+    assert first_inputs == {
+        "self_hp": 300,
+        "heavy_hp": None,
+        "infantry_hp": None,
+        "remain_bullet": None,
+    }
+
+    # 旧消息字段映射为内部重装命名；收到的 0 与尚未收到的 None 区分。
+    interface.decision_callback(SimpleNamespace(
+        match_progress=4, self_sentry_hp=400,
+        self_hero_hp=0, self_infantry_hp=210, remain_bullet=0,
+    ))
+    root.tick_once()
+    update.evaluate_candidate.assert_called_with(TacticalMode.NEUTRAL, {
+        "self_hp": 400,
+        "heavy_hp": 0,
+        "infantry_hp": 210,
+        "remain_bullet": 0,
+    })
+    assert first_inputs["heavy_hp"] is None
+
+    # 后续每轮读取最新数值，不能一直使用节点创建时的输入。
+    interface.decision_callback(SimpleNamespace(
+        match_progress=4, self_sentry_hp=350,
+        self_hero_hp=170, self_infantry_hp=199, remain_bullet=640,
+    ))
+    root.tick_once()
+    update.evaluate_candidate.assert_called_with(TacticalMode.NEUTRAL, {
+        "self_hp": 350,
+        "heavy_hp": 170,
+        "infantry_hp": 199,
+        "remain_bullet": 640,
+    })
+    assert blackboard.tactical_mode == TacticalMode.NEUTRAL
+    root.stop(py_trees.common.Status.INVALID)
+    print("裁判消息到实际评分节点的数据传递、缺失值和零值保留测试通过\n")
+
+
+def test_tactical_score_calculation():
+    _, _, root, condition = _create_tactical_test_tree(
+        score_config=_tactical_score_config(
+            weights=[1.0, 3.0, 0.0, 0.0],
+            maxima=[400.0, 200.0, 0.0, 750.0],
+        )
+    )
+    assert condition.calculate_score({"self_hp": 200, "heavy_hp": 200}) == 0.875
+    assert condition.calculate_score({"self_hp": 800, "heavy_hp": 400}) == 1.0
+    assert condition.calculate_score({"self_hp": -1, "heavy_hp": -1}) == 0.0
+    for bad in (None, float("nan"), float("inf"), True, "bad"):
+        assert condition.calculate_score({"self_hp": 200, "heavy_hp": bad}) is None
+    root.stop(py_trees.common.Status.INVALID)
+
+    _, _, root, condition = _create_tactical_test_tree(
+        score_config=_tactical_score_config(weights=[1.0, 0.0, 0.0, 0.0])
+    )
+    # 关闭的因子无需提供数据；阈值相等时保留迟滞一侧的模式。
+    for current, hp, expected in (
+        (TacticalMode.NEUTRAL, 136, TacticalMode.DEFENSE),
+        (TacticalMode.NEUTRAL, 140, TacticalMode.NEUTRAL),
+        (TacticalMode.NEUTRAL, 300, TacticalMode.NEUTRAL),
+        (TacticalMode.NEUTRAL, 304, TacticalMode.PRESSURE),
+        (TacticalMode.DEFENSE, 180, TacticalMode.DEFENSE),
+        (TacticalMode.DEFENSE, 184, TacticalMode.NEUTRAL),
+        (TacticalMode.PRESSURE, 260, TacticalMode.PRESSURE),
+        (TacticalMode.PRESSURE, 256, TacticalMode.NEUTRAL),
+    ):
+        assert condition.evaluate_candidate(current, {"self_hp": hp}) == expected
+    root.stop(py_trees.common.Status.INVALID)
+    print("加权归一化、缺失输入、零权重和迟滞阈值测试通过\n")
+
+
+def test_tactical_condition_and_action():
+    blackboard, node, root, condition = _create_tactical_test_tree(
+        score_config=_tactical_score_config(weights=[1.0, 0.0, 0.0, 0.0])
+    )
+    action = next(item for item in root.iterate()
+                  if isinstance(item, ApplyTacticalMode))
+    blackboard.navigation_task = NavigationTask.OCCUPY_CENTER
+    blackboard.self_hp = 360
+    condition.confirm_seconds = 0.0
+    with patch(
+        "rm_application.behavior_tree.conditions.time.monotonic",
+        return_value=5.0,
+    ):
+        # 仅执行条件：可以发布候选，但不能修改正式模式。
+        condition.tick_once()
+        assert condition.status == py_trees.common.Status.SUCCESS
+        assert blackboard.pending_tactical_mode == TacticalMode.PRESSURE
+        assert blackboard.tactical_mode == TacticalMode.NEUTRAL
+        node.set_tactical_mode.assert_not_called()
+
+        # 仅执行动作：消费已确认候选，按实际写入时刻记录保持时间。
+        action.tick_once()
+        assert action.status == py_trees.common.Status.SUCCESS
+        assert blackboard.tactical_mode == TacticalMode.PRESSURE
+        assert blackboard.tactical_mode_since == 5.0
+        assert blackboard.pending_tactical_mode is None
+
+    with patch(
+        "rm_application.behavior_tree.conditions.time.monotonic",
+        return_value=8.0,
+    ):
+        BehaviorTreeNode.set_tactical_mode(node, TacticalMode.PRESSURE)
+        assert blackboard.tactical_mode_since == 5.0
+        calls = node.set_tactical_mode.call_count
+        action.tick_once()
+        assert action.status == py_trees.common.Status.FAILURE
+        assert node.set_tactical_mode.call_count == calls
+    root.stop(py_trees.common.Status.INVALID)
+    print("条件只确认、动作应用、重复设置保持时间和空候选保护测试通过\n")
+
+
+def test_xml_weighted_mode_transitions():
+    blackboard, _, root, condition = _create_tactical_test_tree(
+        score_config=_tactical_score_config(weights=[1.0, 0.0, 0.0, 0.0])
+    )
+    clock = SimpleNamespace(now=0.0)
+
+    def tick(at, hp, expected):
+        clock.now = at
+        blackboard.self_hp = hp
+        root.tick_once()
+        assert blackboard.tactical_mode == expected
+        assert blackboard.navigation_task == NavigationTask.OCCUPY_CENTER
+        assert blackboard.pending_tactical_mode is None
+        assert root.status == py_trees.common.Status.RUNNING
+
+    with patch(
+        "rm_application.behavior_tree.conditions.time.monotonic",
+        side_effect=lambda: clock.now,
+    ):
+        tick(0.0, 320, TacticalMode.NEUTRAL)
+        tick(1.0, 320, TacticalMode.NEUTRAL)
+        tick(2.0, 320, TacticalMode.PRESSURE)
+        tick(3.0, 280, TacticalMode.PRESSURE)
+        tick(4.0, 256, TacticalMode.PRESSURE)
+        tick(6.0, 256, TacticalMode.NEUTRAL)
+        tick(7.0, 136, TacticalMode.NEUTRAL)
+        tick(9.0, 136, TacticalMode.DEFENSE)
+        tick(10.0, 160, TacticalMode.DEFENSE)
+        tick(11.0, 184, TacticalMode.DEFENSE)
+        tick(13.0, 184, TacticalMode.NEUTRAL)
+    root.stop(py_trees.common.Status.INVALID)
+    print("实际 XML 的真实评分、条件失败兜底和三档模式切换测试通过\n")
+
+
+def test_tactical_score_config_validation():
+    for changes in (
+        {"weights": [-1.0, 0.0, 0.0, 0.0]},
+        {"weights": [float("nan"), 0.0, 0.0, 0.0]},
+        {"weights": [1.0]},
+        {"factors": ["self_hp"] * 4},
+        {"weights": [0.0, 1.0, 0.0, 0.0]},
+        {"maxima": [float("inf"), 0.0, 0.0, 750.0]},
+        {"defense_enter": 0.5},
+        {"pressure_enter": float("nan")},
+    ):
+        try:
+            ShouldSwitchTacticalMode(
+                name="invalid-config",
+                get_tactical_mode=lambda: TacticalMode.NEUTRAL,
+                get_tactical_mode_since=lambda: 0.0,
+                set_tactical_candidate=Mock(),
+                get_navigation_task=lambda: NavigationTask.OCCUPY_CENTER,
+                get_tactical_inputs=lambda: {},
+                mode_source="auto",
+                confirm_seconds=2.0,
+                min_hold_seconds=0.0,
+                score_config=_tactical_score_config(**changes),
+            )
+        except ValueError:
+            pass
+        else:
+            raise AssertionError(changes)
+    print("评分权重、上限和阈值配置检查测试通过\n")
 
 
 class _GrootMonitor:
@@ -1093,4 +1532,12 @@ if __name__ == "__main__":
         test_retry_wait_restarts_after_interrupt()
         test_xml_navigation_arrival_refreshes_retry_budget()
         test_xml_navigation_task_selection()
-        print("当前导航收尾与 XML 主树流程的 11 项测试全部通过")
+        test_xml_tactical_mode_confirmation()
+        test_xml_tactical_confirmation_after_preemption()
+        test_tactical_manual_and_auto_control()
+        test_tactical_input_delivery()
+        test_tactical_score_calculation()
+        test_tactical_condition_and_action()
+        test_xml_weighted_mode_transitions()
+        test_tactical_score_config_validation()
+        print("当前导航、XML 主树与战术条件／动作的 19 项测试全部通过")

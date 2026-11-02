@@ -2,7 +2,10 @@ import random
 import time
 import py_trees
 from py_trees.ports import BehaviourWithPorts
-from rm_application.behavior_tree.nav_zone import NavigationResult
+from rm_application.behavior_tree.nav_zone import (
+    NavigationResult,
+    TacticalMode,
+)
 
 
 # 把任务选择结果写入共享黑板
@@ -44,6 +47,27 @@ class SetPatrolRegion(BehaviourWithPorts):
 
     def update(self):
         self.set_patrol_region(self.patrol_region)
+        return py_trees.common.Status.SUCCESS
+
+# 应用条件节点已经确认的战术候选
+class ApplyTacticalMode(BehaviourWithPorts):
+    INPUT_PORTS = {}
+    OUTPUT_PORTS = {}
+
+    def __init__(
+        self, name, get_tactical_candidate, set_tactical_mode, **kwargs
+    ):
+        super().__init__(name=name, **kwargs)
+        self.get_tactical_candidate = get_tactical_candidate
+        self.set_tactical_mode = set_tactical_mode
+
+    def update(self):
+        candidate = self.get_tactical_candidate()
+        if not isinstance(candidate, TacticalMode):
+            return py_trees.common.Status.FAILURE
+
+        # 统一写入模式、记录实际切换时间，并消费待应用候选
+        self.set_tactical_mode(candidate)
         return py_trees.common.Status.SUCCESS
 
 # 前往并守住控制区

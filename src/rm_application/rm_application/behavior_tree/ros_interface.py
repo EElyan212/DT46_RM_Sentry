@@ -219,11 +219,20 @@ class RosInterface:
         )
 
     def decision_callback(self, msg):
-        # 只把当前行为树已经使用的数据写入共享黑板
+        # 保存比赛阶段和哨兵血量
         self.blackboard.match_progress = msg.match_progress
         self.blackboard.self_hp = msg.self_sentry_hp
 
+        # 现有消息沿用 self_hero_hp 字段名，内部统一按重装命名
+        self.blackboard.heavy_hp = msg.self_hero_hp
+        self.blackboard.infantry_hp = msg.self_infantry_hp
+        self.blackboard.remain_bullet = msg.remain_bullet
+
     def tactical_mode_callback(self, msg):
+        # 自动模式由评分节点更新战术，忽略手动选择消息
+        if self.node.tactical_mode_source != "manual":
+            return
+
         # 收集消息中被勾选的战术模式
         selected_modes = []
 

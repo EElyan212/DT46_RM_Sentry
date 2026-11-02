@@ -3,7 +3,16 @@
       main_tree_to_execute="TacticalTaskSelection">
 
     <BehaviorTree ID="TacticalTaskSelection">
-        <ReactiveFallback name="根据战术模式选择任务">
+        <ReactiveSequence name="战术模式更新与任务选择">
+            <!-- 不需要切换时也继续执行当前策略 -->
+            <ReactiveFallback name="尝试更新战术模式">
+                <ReactiveSequence name="判断并应用战术切换">
+                    <ShouldSwitchTacticalMode name="是否需要切换战术模式" />
+                    <ApplyTacticalMode name="应用已确认的战术模式" />
+                </ReactiveSequence>
+                <AlwaysSuccess name="保持当前战术模式" />
+            </ReactiveFallback>
+            <ReactiveFallback name="根据战术模式选择任务">
 
             <!-- 防守：优先回点，区内偏己方巡逻 -->
             <ReactiveSequence name="防守模式">
@@ -68,11 +77,14 @@
                 </ReactiveFallback>
             </ReactiveSequence>
 
-        </ReactiveFallback>
+            </ReactiveFallback>
+        </ReactiveSequence>
     </BehaviorTree>
 
     <!-- 供 Groot 识别自定义节点 -->
     <TreeNodesModel>
+        <Condition ID="ShouldSwitchTacticalMode" />
+        <Action ID="ApplyTacticalMode" />
         <Condition ID="IsDefenseMode" />
         <Condition ID="IsNeutralMode" />
         <Condition ID="IsPressureMode" />

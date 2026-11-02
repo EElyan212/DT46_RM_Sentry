@@ -4,6 +4,7 @@ from py_trees.ports import PortsMixin
 from rm_application.behavior_tree.actions import (
     SetNavigationTask,
     SetPatrolRegion,
+    ApplyTacticalMode,
     OccupyZone,
     GoResupply,
     ChaseEnemy,
@@ -13,6 +14,7 @@ from rm_application.behavior_tree.actions import (
     SpinChassis,
 )
 from rm_application.behavior_tree.conditions import (
+    ShouldSwitchTacticalMode,
     IsMatchStopped,
     IsMatchRunning,    
     NeedResupply,
@@ -28,6 +30,14 @@ from rm_application.behavior_tree.nav_zone import (
     PatrolRegion,
 )
 from rm_application.behavior_tree.recovery import RecoveryNode
+
+# 为 XML 的保持分支复用公共库 Success 行为
+class AlwaysSuccess(PortsMixin, py_trees.behaviours.Success):
+    INPUT_PORTS = {}
+    OUTPUT_PORTS = {}
+
+    def __init__(self, name, **kwargs):
+        super().__init__(name=name, **kwargs)
 
 # 将 Groot 的反应式顺序节点接到公共库的顺序节点
 class ReactiveSequence(PortsMixin, py_trees.composites.Sequence):
@@ -185,6 +195,29 @@ def create_node_registry(node):
     patrol_action = {}
 
     return {
+        # 条件只确认候选，不直接修改正式战术模式
+        "ShouldSwitchTacticalMode": partial(
+            ShouldSwitchTacticalMode,
+            get_tactical_mode=node.get_tactical_mode,
+            get_tactical_mode_since=node.get_tactical_mode_since,
+            set_tactical_candidate=node.set_tactical_candidate,
+            get_navigation_task=node.get_navigation_task,
+            get_tactical_inputs=node.get_tactical_inputs,
+            mode_source=node.tactical_mode_source,
+            confirm_seconds=node.tactical_confirm_seconds,
+            min_hold_seconds=node.tactical_min_hold_seconds,
+            score_config=node.tactical_score_config,
+        ),
+
+        # 条件成立后应用候选，记录实际切换时间
+        "ApplyTacticalMode": partial(
+            ApplyTacticalMode,
+            get_tactical_candidate=node.get_tactical_candidate,
+            set_tactical_mode=node.set_tactical_mode,
+        ),
+
+        # 无须切换时继续后续任务选择
+        "AlwaysSuccess": AlwaysSuccess,
         # 正常回血动作，恢复流程由 XML 中的父节点管理
         "GoResupply": partial(
             GoResupply,

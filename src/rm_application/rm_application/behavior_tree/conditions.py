@@ -1,5 +1,8 @@
+import math
+import time
 import py_trees
 from py_trees.ports import BehaviourWithPorts
+from rm_application.behavior_tree.nav_zone import NavigationTask, TacticalMode
 
 # 判断共享黑板中的战术模式是否为指定模式
 class IsTacticalMode(BehaviourWithPorts):
@@ -319,4 +322,198 @@ class IsChaseReady(BehaviourWithPorts):
             return py_trees.common.Status.SUCCESS
 
         # 冷却期间，让任务选择树继续检查占点或巡逻
+        return py_trees.common.Status.FAILURE
+
+# 判断是否需要切换战术模式，成立时发布待应用候选
+class ShouldSwitchTacticalMode(BehaviourWithPorts):
+    INPUT_PORTS = {}
+    OUTPUT_PORTS = {}
+
+    def __init__(
+        self,
+        name,
+        get_tactical_mode,
+        get_tactical_mode_since,
+        set_tactical_candidate,
+        get_navigation_task,
+        get_tactical_inputs,
+        mode_source,
+        confirm_seconds,
+        min_hold_seconds,
+        score_config,
+        **kwargs,
+    ):
+        super().__init__(name=name, **kwargs)
+
+        # 读取正式模式及其开始时间，只发布候选，不修改正式模式
+        self.get_tactical_mode = get_tactical_mode
+        self.get_tactical_mode_since = get_tactical_mode_since
+        self.set_tactical_candidate = set_tactical_candidate
+        self.get_navigation_task = get_navigation_task
+        self.get_tactical_inputs = get_tactical_inputs
+        self.mode_source = mode_source
+        self.confirm_seconds = float(confirm_seconds)
+        self.min_hold_seconds = float(min_hold_seconds)
+
+        # 因子、权重和归一化上限按相同顺序对应
+        self.score_factors = list(score_config["factors"])
+        self.score_weights = list(map(float, score_config["weights"]))
+        self.score_maxima = list(map(float, score_config["maxima"]))
+
+        # 防守和前压采用不同的进入、退出阈值
+        self.defense_enter = float(score_config["defense_enter"])
+        self.defense_exit = float(score_config["defense_exit"])
+        self.pressure_exit = float(score_config["pressure_exit"])
+        self.pressure_enter = float(score_config["pressure_enter"])
+        self.validate_config()
+
+        # 候选确认计时，以及最近观察到的正式模式
+        self.candidate_mode = None
+        self.candidate_since = None
+        self.observed_mode = None
+        self.observed_mode_since = None
+
+        # 保存最近一次计算结果，None 表示本轮无法评分
+        self.last_score = None
+
+    def validate_config(self):
+        # 时间必须是有限的非负数
+        for value in (self.confirm_seconds, self.min_hold_seconds):
+            if not math.isfinite(value) or value < 0.0:
+                raise ValueError("战术确认时间和保持时间必须是有限非负数")
+
+        # 每个因子只能出现一次，且三个配置列表长度一致
+        if (
+            not self.score_factors
+            or not all(isinstance(key, str) and key for key in self.score_factors)
+            or len(set(self.score_factors)) != len(self.score_factors)
+            or len(self.score_factors) != len(self.score_weights)
+            or len(self.score_factors) != len(self.score_maxima)
+        ):
+            raise ValueError("评分因子须非空且不重复，因子、权重、上限数量须一致")
+
+        for weight, maximum in zip(self.score_weights, self.score_maxima):
+            if not math.isfinite(weight) or weight < 0.0:
+                raise ValueError("评分权重必须是有限非负数")
+            if not math.isfinite(maximum) or maximum < 0.0:
+                raise ValueError("归一化上限必须是有限非负数")
+            if weight > 0.0 and maximum <= 0.0:
+                raise ValueError("参与评分的因子必须配置正数上限")
+
+        self.total_weight = sum(self.score_weights)
+        if not math.isfinite(self.total_weight):
+            raise ValueError("评分权重总和必须是有限数")
+
+        if not (
+            0.0 <= self.defense_enter < self.defense_exit
+            <= self.pressure_exit < self.pressure_enter <= 1.0
+        ):
+            raise ValueError(
+                "阈值须满足 0 <= 防守进入 < 防守退出"
+                " <= 前压退出 < 前压进入 <= 1"
+            )
+
+    def clear_candidate(self):
+        # 只清除候选，不修改正在采用的战术模式
+        self.candidate_mode = None
+        self.candidate_since = None
+
+    def calculate_score(self, inputs):
+        # 全部权重为 0 时，不产生评分
+        if self.total_weight == 0.0:
+            return None
+
+        weighted_sum = 0.0
+        for key, weight, maximum in zip(
+            self.score_factors, self.score_weights, self.score_maxima
+        ):
+            # 权重为 0 的输入不参与，也不要求它已有数据
+            if weight == 0.0:
+                continue
+
+            value = inputs.get(key)
+            if value is None or isinstance(value, bool):
+                return None
+            try:
+                value = float(value)
+            except (TypeError, ValueError, OverflowError):
+                return None
+            if not math.isfinite(value):
+                return None
+
+            # 先换算到 0～1，再按权重求平均
+            normalized = min(1.0, max(0.0, value / maximum))
+            weighted_sum += weight * normalized
+
+        return weighted_sum / self.total_weight
+
+    def evaluate_candidate(self, current_mode, inputs):
+        self.last_score = self.calculate_score(inputs)
+        if self.last_score is None:
+            self.feedback_message = "暂无评分：权重未配置或启用项缺少有效数值"
+            return None
+
+        score = self.last_score
+        self.feedback_message = f"战术评分={score:.3f}"
+
+        # 超过两端进入阈值时，直接产生对应候选
+        if score < self.defense_enter:
+            return TacticalMode.DEFENSE
+        if score > self.pressure_enter:
+            return TacticalMode.PRESSURE
+
+        # 处于迟滞区间时保留原模式，避免边界附近反复切换
+        if current_mode == TacticalMode.DEFENSE and score <= self.defense_exit:
+            return TacticalMode.DEFENSE
+        if current_mode == TacticalMode.PRESSURE and score >= self.pressure_exit:
+            return TacticalMode.PRESSURE
+
+        return TacticalMode.NEUTRAL
+
+    def update(self):
+        # 每轮先清除旧的待应用结果，避免使用过期候选
+        self.set_tactical_candidate(None)
+        now = time.monotonic()
+        current_mode = self.get_tactical_mode()
+        mode_since = self.get_tactical_mode_since()
+
+        # 正式模式或其时间戳改变后，重新确认候选
+        if (
+            current_mode != self.observed_mode
+            or mode_since != self.observed_mode_since
+        ):
+            self.observed_mode = current_mode
+            self.observed_mode_since = mode_since
+            self.clear_candidate()
+
+        # 手动模式不产生自动切换请求
+        if self.mode_source != "auto":
+            self.clear_candidate()
+            self.last_score = None
+            return py_trees.common.Status.FAILURE
+
+        # 从停止或回血任务恢复后，重新累计确认时间
+        if self.get_navigation_task() in (
+            NavigationTask.STOP, NavigationTask.RESUPPLY,
+        ):
+            self.clear_candidate()
+
+        candidate = self.evaluate_candidate(
+            current_mode, self.get_tactical_inputs()
+        )
+        if not isinstance(candidate, TacticalMode) or candidate == current_mode:
+            self.clear_candidate()
+            return py_trees.common.Status.FAILURE
+
+        if candidate != self.candidate_mode:
+            self.candidate_mode = candidate
+            self.candidate_since = now
+
+        confirmed = now - self.candidate_since >= self.confirm_seconds
+        held_long_enough = now - mode_since >= self.min_hold_seconds
+        if confirmed and held_long_enough:
+            # 条件成立，只交出候选；正式模式由后续 Action 修改
+            self.set_tactical_candidate(candidate)
+            return py_trees.common.Status.SUCCESS
+
         return py_trees.common.Status.FAILURE

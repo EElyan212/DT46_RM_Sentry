@@ -15,7 +15,7 @@ class BehaviorTreeNode(Node):
         super().__init__("behavior_tree_node")
 
         # 创建整棵行为树共用的唯一黑板
-        self.blackboard = Blackboard()
+        self.blackboard = Blackboard(tactical_mode_since=time.monotonic())
 
         # 创建行为树与 ROS 系统之间的统一通信接口
         self.ros_interface = RosInterface(self,self.blackboard,)
@@ -40,6 +40,11 @@ class BehaviorTreeNode(Node):
         
         self.declare_parameter("hp_limit", 150)
         self.declare_parameter("hp_up", 400)
+
+        # 战术选择来源和模式切换防抖参数
+        self.declare_parameter("tactical_mode_source", "manual")
+        self.declare_parameter("tactical_confirm_seconds", 2.0)
+        self.declare_parameter("tactical_min_hold_seconds", 0.0)
 
         # 保存参数，供后续控制区判断使用
         self.control_zone_enabled = self.get_parameter(
@@ -86,6 +91,52 @@ class BehaviorTreeNode(Node):
         self.patrol_min_goal_distance = (
             self.ros_interface.patrol_min_goal_distance
         )
+
+        # 读取战术模式来源
+        self.tactical_mode_source = str(
+            self.get_parameter("tactical_mode_source").value
+        ).strip().lower()
+
+        # 只允许手动选择或自动评分两种来源
+        if self.tactical_mode_source not in ("manual", "auto"):
+            raise ValueError(
+                "tactical_mode_source 只能填写 manual 或 auto"
+            )
+
+        # 读取候选确认时间和当前模式最短保持时间
+        self.tactical_confirm_seconds = float(
+            self.get_parameter("tactical_confirm_seconds").value
+        )
+        self.tactical_min_hold_seconds = float(
+            self.get_parameter("tactical_min_hold_seconds").value
+        )
+
+        # 时间配置不能为负数
+        if (
+            self.tactical_confirm_seconds < 0.0
+            or self.tactical_min_hold_seconds < 0.0
+        ):
+            raise ValueError("战术确认时间和最短保持时间不能为负数")
+
+        # 统一声明和读取评分配置，后续调整比例只修改 YAML
+        score_defaults = {
+            "factors": ["self_hp", "heavy_hp", "infantry_hp", "remain_bullet"],
+            "weights": [0.0, 0.0, 0.0, 0.0],
+            "maxima": [400.0, 0.0, 0.0, 750.0],
+            "defense_enter": 0.35,
+            "defense_exit": 0.45,
+            "pressure_exit": 0.65,
+            "pressure_enter": 0.75,
+        }
+        self.tactical_score_config = {}
+        for key, default in score_defaults.items():
+            parameter_name = f"tactical_score_{key}"
+            self.declare_parameter(parameter_name, default)
+            self.tactical_score_config[key] = self.get_parameter(
+                parameter_name
+            ).value
+
+
         # 提供恢复参数，供节点注册表创建恢复节点
         self.recovery_wait_seconds = (
             self.ros_interface.recovery_wait_seconds
@@ -146,12 +197,35 @@ class BehaviorTreeNode(Node):
         )    
     
     def set_tactical_mode(self, tactical_mode):
-        # 战术选择结果写入共享黑板
-        self.blackboard.tactical_mode = tactical_mode
+        # 模式确实改变时才更新保持时间，重复设置不重新计时
+        if tactical_mode != self.blackboard.tactical_mode:
+            self.blackboard.tactical_mode = tactical_mode
+            self.blackboard.tactical_mode_since = time.monotonic()
+
+        # 手动选择或自动应用后，待应用候选均已失效
+        self.blackboard.pending_tactical_mode = None
 
     def get_tactical_mode(self):
-        # 行为树读取当前采用的战术模式
         return self.blackboard.tactical_mode
+
+    def get_tactical_mode_since(self):
+        return self.blackboard.tactical_mode_since
+
+    def get_tactical_candidate(self):
+        return self.blackboard.pending_tactical_mode
+
+    def set_tactical_candidate(self, candidate):
+        # 条件节点只发布待应用结果，不修改正式模式
+        self.blackboard.pending_tactical_mode = candidate
+
+    def get_tactical_inputs(self):
+        # 提供本轮战术评分使用的原始数据，保留 None 表示尚未收到
+        return {
+            "self_hp": self.blackboard.self_hp,
+            "heavy_hp": self.blackboard.heavy_hp,
+            "infantry_hp": self.blackboard.infantry_hp,
+            "remain_bullet": self.blackboard.remain_bullet,
+        }
 
 
     def set_patrol_region(self, patrol_region):

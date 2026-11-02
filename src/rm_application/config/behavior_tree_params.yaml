@@ -62,3 +62,23 @@ behavior_tree_node:
     # 初次导航之外最多额外尝试多少次
     # 2 表示初次导航加两次恢复，共最多尝试三次
     recovery_max_retries: 2
+
+    # 战术模式来源：manual 为 RQT 手动选择，auto 为自动评分
+    tactical_mode_source: "manual"
+    # 候选战术连续满足条件多久后才允许切换，单位：秒
+    tactical_confirm_seconds: 2.0
+    # 当前战术最短保持时间，单位：秒；0 表示暂不限制
+    tactical_min_hold_seconds: 0.0
+
+      # 评分因子、权重和上限按相同顺序对应
+    tactical_score_factors: ["self_hp", "heavy_hp", "infantry_hp", "remain_bullet"]
+    # 比例尚未确定，先全部关闭；0 表示该项不参与评分
+    tactical_score_weights: [0.0, 0.0, 0.0, 0.0]
+    # 队友血量上限未确认，先用 0 占位；启用其权重前必须填写正数上限
+    tactical_score_maxima: [400.0, 0.0, 0.0, 750.0]
+
+    # 临时测试阈值；模式保持和候选确认时间继续使用现有配置
+    tactical_score_defense_enter: 0.35
+    tactical_score_defense_exit: 0.45
+    tactical_score_pressure_exit: 0.65
+    tactical_score_pressure_enter: 0.75
