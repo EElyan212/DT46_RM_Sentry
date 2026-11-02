@@ -15,9 +15,15 @@
   <!-- 虚拟的 base_footprint，代表机器人在地面的投影 -->
   <link name="base_footprint"/>
 
-  <!-- livox_frame -> base_footprint（雷达倒置，中心与 base_footprint 重合，离地 0.6m） -->
+  <!-- livox_frame -> base_footprint
+       以 livox_frame 与 base_footprint 重合为初始状态：
+       livox_frame 相对 base_footprint：y=+0.17761, z=+0.35191，
+       绕 x 轴 roll=-55°（y 轴朝斜下方）。
+       因 parent=livox_frame, child=base_footprint，此处写逆变换：
+       xyz = (0, 0.186369, -0.347337)
+       rpy = (0.959931, 0, 0) -->
   <joint name="livox_frame_joint" type="fixed">
-    <origin xyz="0 0 0.6" rpy="3.14159 0 0"/>
+    <origin xyz="0 0.186369 -0.347337" rpy="0.959931 0 0"/>
     <parent link="livox_frame"/>
     <child link="base_footprint"/>
     <axis xyz="0 0 0"/>

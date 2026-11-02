@@ -28,6 +28,7 @@ class SerialNode(Node):
         self.get_logger().info("启动Serial node !!!")
 
         self.send_datas = Senddata()
+        self.send_datas.cliss_mode = 1
         self.lock = threading.Lock()
         # 新增：串口重连专用的锁和标志位
         self.serial_lock = threading.Lock()
@@ -394,6 +395,7 @@ class SerialNode(Node):
                 can_fire = self.send_datas.can_fire
                 gimbal_mode = self.send_datas.gimbal_mode
                 yaw_rate = self.send_datas.yaw_rate
+                cliss_mode = self.send_datas.cliss_mode
                 # yaw = 0
                 # pitch = 0
                 # can_fire = 0
@@ -410,7 +412,7 @@ class SerialNode(Node):
 
             #帧头，x线速度，y线速度，小陀螺模式， 云台yaw，云台pitc，开火，前馈角速度，帧尾
             data_payload = struct.pack(
-                '<Bffiffif',
+                '<Bffiffifi',
                 header,
                 linear_velocity_x,
                 # 0.0,
@@ -419,7 +421,8 @@ class SerialNode(Node):
                 yaw,
                 pitch,
                 can_fire,
-                yaw_rate
+                yaw_rate,
+                cliss_mode
                 )
 
             checksum = get_crc16_check_sum(data_payload)
@@ -428,7 +431,7 @@ class SerialNode(Node):
 
             self.serial.write(packet)
             # print(linear_velocity_x,linear_velocity_y)
-            print(packet)
+            print(linear_velocity_x, linear_velocity_y )
         except Exception as e:
             self.get_logger().error(f"发送数据时出错: {str(e)}")
 
