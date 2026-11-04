@@ -28,7 +28,8 @@ class SerialNode(Node):
         self.get_logger().info("启动Serial node !!!")
 
         self.send_datas = Senddata()
-        self.send_datas.cliss_mode = 1
+        self.send_datas.cliss_mode = 0
+        self.send_datas.gimbal_speed = 10
         self.lock = threading.Lock()
         # 新增：串口重连专用的锁和标志位
         self.serial_lock = threading.Lock()
@@ -396,6 +397,7 @@ class SerialNode(Node):
                 gimbal_mode = self.send_datas.gimbal_mode
                 yaw_rate = self.send_datas.yaw_rate
                 cliss_mode = self.send_datas.cliss_mode
+                gimbal_speed = self.send_datas.gimbal_speed
                 # yaw = 0
                 # pitch = 0
                 # can_fire = 0
@@ -412,7 +414,7 @@ class SerialNode(Node):
 
             #帧头，x线速度，y线速度，小陀螺模式， 云台yaw，云台pitc，开火，前馈角速度，帧尾
             data_payload = struct.pack(
-                '<Bffiffifi',
+                '<Bffiffifii',
                 header,
                 linear_velocity_x,
                 # 0.0,
@@ -422,7 +424,8 @@ class SerialNode(Node):
                 pitch,
                 can_fire,
                 yaw_rate,
-                cliss_mode
+                cliss_mode,
+                gimbal_speed
                 )
 
             checksum = get_crc16_check_sum(data_payload)
