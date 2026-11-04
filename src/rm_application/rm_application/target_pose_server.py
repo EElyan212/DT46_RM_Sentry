@@ -50,7 +50,7 @@ class TargetPoseServer(Node):
 
         # ==================== 参数声明 ====================
         # 默认偏移距离（米）：当 Goal 中 offset_distance=0 时使用此值
-        self.declare_parameter('default_offset_distance', 1.5)
+        self.declare_parameter('default_offset_distance', 0.5)
         self.default_offset_distance = self.get_parameter('default_offset_distance').value
 
         # 路径偏移模式开关（false 时退回旧的直线偏移逻辑）
@@ -58,7 +58,7 @@ class TargetPoseServer(Node):
         self.use_path_offset = self.get_parameter('use_path_offset').value
 
         # 敌人位姿相对上次规划移动超过该距离（米）才重新全局规划
-        self.declare_parameter('enemy_replan_threshold', 0.3)
+        self.declare_parameter('enemy_replan_threshold', 0.1)
         self.enemy_replan_threshold = self.get_parameter('enemy_replan_threshold').value
 
         # Nav2 全局规划器 action 名称

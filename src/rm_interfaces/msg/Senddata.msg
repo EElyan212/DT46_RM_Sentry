@@ -6,3 +6,6 @@ int32   gimbal_mode
 float32 yaw
 float32 pitch
 int32   can_fire
+float32 yaw_rate
+int32   cliss_mode
+int32   gimbal_speed

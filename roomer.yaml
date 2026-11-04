@@ -1,7 +1,6 @@
 image: roomer.pgm
-mode: trinary
 resolution: 0.05
-origin: [-5.38, -2.46, 0]
+origin: [-28.116552352905273, -8.710163116455078, 0.0]
 negate: 0
 occupied_thresh: 0.65
-free_thresh: 0.25
+free_thresh: 0.196

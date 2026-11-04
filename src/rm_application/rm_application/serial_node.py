@@ -28,6 +28,8 @@ class SerialNode(Node):
         self.get_logger().info("启动Serial node !!!")
 
         self.send_datas = Senddata()
+        self.send_datas.cliss_mode = 0
+        self.send_datas.gimbal_speed = 10
         self.lock = threading.Lock()
         # 新增：串口重连专用的锁和标志位
         self.serial_lock = threading.Lock()
@@ -98,7 +100,7 @@ class SerialNode(Node):
         self.declare_parameters(
             namespace='',
             parameters=[
-                ('port_name', '/dev/ttyACM0'),
+                ('port_name', '/dev/ttyPortMCU'),
                 ('baudrate', 115200),
                 ('timeout', 1.0),            # 对应 YAML 中的 timeout
                 ('write_timeout', 1.0),      # 对应 YAML 中的 write_timeout
@@ -132,6 +134,7 @@ class SerialNode(Node):
                 "decision_input_mode 只能填写 'serial' 或 'mock'，"
                 f"当前值为: {self.decision_input_mode}"
             )
+        self.last_gimbal_time = 0.0
 
         # 3. 打印当前生效的配置信息，方便在终端确认 YAML 是否加载成功
         self.get_logger().info("-" * 30)
@@ -149,6 +152,7 @@ class SerialNode(Node):
                 "决策输入模式: mock，/nav/decision 由 RQT 或模拟节点发布"
             )
         self.get_logger().info("-" * 30)
+
     def cmd_vel_callback(self,msg):
         with self.lock:
             self.send_datas.linear_velocity_x = msg.linear.x
@@ -162,6 +166,8 @@ class SerialNode(Node):
             self.send_datas.pitch = msg.pitch
             self.send_datas.yaw = msg.yaw
             self.send_datas.can_fire = msg.can_fire
+            self.send_datas.yaw_rate = msg.yaw_rate
+            self.last_gimbal_time = time.monotonic()
 
     def receive_data(self):
         serial_decision_msg = Decision()
@@ -172,6 +178,7 @@ class SerialNode(Node):
         last_armor_hit_seq = None
         serial_decision_msg.header.frame_id = 'serial_receive_frame'
         serial_decision_msg.color = 10
+
 
         # 53 字节固定长帧，小端，float 为 IEEE-754 单精度：
         # 0 sof, 1 detect_color, 2 reserved, 3..22 IMU/速度，
@@ -200,7 +207,7 @@ class SerialNode(Node):
                 if header[0] != self.serial_receive_header:
                     continue
 
-                # print("帧头已找到")
+                print("帧头已找到")
                 # 2. 读取剩余数据 (52字节)
                 remaining_data = self.serial.read(packet_length - 1)
                 if len(remaining_data) != packet_length - 1:
@@ -335,55 +342,6 @@ class SerialNode(Node):
                     self.pub_serial_debug_publisher.publish(
                         serial_debug_msg
                     )
-
-
-                # 6.4 受击事件(仅在受击时发送，即armor_hit_seq 变化时发布一次)
-                if last_armor_hit_seq is None:
-                    last_armor_hit_seq = armor_hit_seq      # 首帧只记录，不误报
-                elif armor_hit_seq != last_armor_hit_seq:
-                    last_armor_hit_seq = armor_hit_seq
-                    serial_hit_msg.header.stamp = self.get_clock().now().to_msg()
-                    serial_hit_msg.header.frame_id = 'serial_receive_frame'
-                    serial_hit_msg.armor_id = armor_id
-                    serial_hit_msg.armor_reason = armor_reason
-                    serial_hit_msg.armor_hit_cnt = armor_hit_cnt
-                    serial_hit_msg.armor_hit_seq = armor_hit_seq
-                    serial_hit_msg.armor_angle_chassis = armor_angle_chassis
-                    serial_hit_msg.armor_angle_world = armor_angle_world
-                    self.pub_armor_hit.publish(serial_hit_msg)
-
-                # 6.5 测试用：整帧解包结果 + CRC 状态
-                if self.pub_serial_debug:
-                    serial_debug_msg.header.stamp = self.get_clock().now().to_msg()
-                    serial_debug_msg.sof = sof
-                    serial_debug_msg.detect_color = detect_color
-                    serial_debug_msg.reserved = reserved
-                    serial_debug_msg.roll = roll
-                    serial_debug_msg.pitch = pitch
-                    serial_debug_msg.yaw = yaw
-                    serial_debug_msg.vx = vx
-                    serial_debug_msg.vy = vy
-                    serial_debug_msg.self_sentry_hp = self_sentry_hp
-                    serial_debug_msg.self_heavy_hp = self_heavy_hp
-                    serial_debug_msg.self_infantry_hp = self_infantry_hp
-                    serial_debug_msg.remain_time = remain_time
-                    serial_debug_msg.remain_bullet = remain_bullet
-                    serial_debug_msg.match_progress = match_progress
-                    serial_debug_msg.occupation = occupation
-                    serial_debug_msg.bullet_speed = bullet_speed
-                    serial_debug_msg.armor_id = armor_id
-                    serial_debug_msg.armor_reason = armor_reason
-                    serial_debug_msg.armor_hit_cnt = armor_hit_cnt
-                    serial_debug_msg.armor_hit_seq = armor_hit_seq
-                    serial_debug_msg.armor_angle_chassis = armor_angle_chassis
-                    serial_debug_msg.armor_angle_world = armor_angle_world
-                    serial_debug_msg.crc_received = received_crc
-                    serial_debug_msg.crc_calculated = calculated_crc
-                    serial_debug_msg.crc_ok = (calculated_crc == received_crc)
-                    self.pub_serial_debug_pub.publish(serial_debug_msg)
-
-
-
             except (serial.SerialException, struct.error, ValueError) as e:
                 self.get_logger().error(f"接收数据异常: {str(e)}")
                 self.reopen_port()
@@ -402,6 +360,9 @@ class SerialNode(Node):
                 pitch = self.send_datas.pitch
                 can_fire = self.send_datas.can_fire
                 gimbal_mode = self.send_datas.gimbal_mode
+                yaw_rate = self.send_datas.yaw_rate
+                cliss_mode = self.send_datas.cliss_mode
+                gimbal_speed = self.send_datas.gimbal_speed
                 # yaw = 0
                 # pitch = 0
                 # can_fire = 0
@@ -409,18 +370,27 @@ class SerialNode(Node):
             #帧头，帧尾赋值
             # self.send_datas.header = b'\xA5'
             # self.send_datas.ender  = b'\x2b'
+
+            if time.monotonic() - self.last_gimbal_time > 0.15:
+                yaw_rate = 0.0
+                can_fire = 0
+
             header = self.serial_send_header
 
-            #帧头，x线速度，y线速度，小陀螺模式， 云台yaw，云台pitc，开火，帧尾
+            #帧头，x线速度，y线速度，小陀螺模式， 云台yaw，云台pitc，开火，前馈角速度，帧尾
             data_payload = struct.pack(
-                '<Bffiffi',
+                '<Bffiffifii',
                 header,
                 linear_velocity_x,
+                # 0.0,
                 linear_velocity_y,
                 gimbal_mode,
                 yaw,
                 pitch,
                 can_fire,
+                yaw_rate,
+                cliss_mode,
+                gimbal_speed
                 )
 
             checksum = get_crc16_check_sum(data_payload)
@@ -429,7 +399,7 @@ class SerialNode(Node):
 
             self.serial.write(packet)
             # print(linear_velocity_x,linear_velocity_y)
-            # print(packet)
+            print(linear_velocity_x, linear_velocity_y )
         except Exception as e:
             self.get_logger().error(f"发送数据时出错: {str(e)}")
 

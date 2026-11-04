@@ -3,6 +3,7 @@
 ros2 launch livox_ros_driver2 rviz_MID360_launch.py
 ros2 launch livox_ros_driver2 msg_MID360_launch.py
 ros2 launch point_lio mapping_mid360.launch.py
+
 #pointclound2 to laserscan
 ros2 launch pointcloud_to_laserscan pointcloud_to_laserscan_launch.py
 # 重新编译
@@ -18,8 +19,9 @@ ros2 launch slam_toolbox online_async_launch.py use_sim_time:=True
 # 键盘控制节点
 ros2 run teleop_twist_keyboard teleop_twist_keyboard
 
-# 存地图到当前目录
-ros2 run nav2_map_server map_saver_cli -f roomer
+
+#保存地图到当前目录
+ros2 run nav2_map_server map_saver_cli -f room_19
 
 # 代价地图清理
 ros2 run rm_navigation2 map_clear
@@ -42,5 +44,13 @@ ros2 run rm_application rm_decision --ros-args --params-file src/rm_application/
 # 清空 Fast-DDS 残留的共享内存文件
 rm -rf /dev/shm/fastrtps*
 
+
+export XDG_SESSION_TYPE=x11
+uv run pointcloud-map-gui
 # 启动urdf
 ros2 launch rm_description urdf2tf.launch.py
+
+ros2 run rm_application serial_node --ros-args --params-file
+
+# 一键启动
+ros2 launch rm_application part1.launch.py
