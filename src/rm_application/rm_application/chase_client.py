@@ -32,7 +32,7 @@ from rm_interfaces.msg import EnemyCenter
 from std_msgs.msg import Bool
 
 # Nav2
-from nav2_simple_commander.robot_navigator import BasicNavigator
+from nav2_simple_commander.robot_navigator import BasicNavigator, TaskResult
 
 # QoS 配置（与视觉方 BEST_EFFORT 匹配）
 from rclpy.qos import QoSProfile, ReliabilityPolicy, HistoryPolicy, DurabilityPolicy
@@ -192,7 +192,7 @@ class ChaseClient(Node):
             result.success = False
             result.message = '敌人未被跟踪 (tracked=false)'
             self.get_logger().warn(result.message)
-            goal_handle.abort(result)
+            goal_handle.abort()
             return result
 
         # 等待 GetTargetPose Server 就绪
@@ -201,7 +201,7 @@ class ChaseClient(Node):
             result.success = False
             result.message = 'target_pose_server 未就绪'
             self.get_logger().warn(result.message)
-            goal_handle.abort(result)
+            goal_handle.abort()
             return result
 
         # 启动后台目标点更新线程
@@ -210,13 +210,24 @@ class ChaseClient(Node):
         # 追击循环
         last_sent_pose = None  # 上次发送给 Nav2 的目标点
 
+        # 本次追击退出时，是否已经请求取消导航
+        nav_cancel_requested = False
         try:
             while rclpy.ok():
                 # 检查取消请求
                 if goal_handle.is_cancel_requested:
-                    # 停止追击创建的 Nav2 导航任务
-                    self.navigator.cancelTask()
+                    # 同一次停止只发出一次 Nav2 取消请求
+                    if not nav_cancel_requested:
+                        self.navigator.cancelTask()
+                        nav_cancel_requested = True
 
+                    # 旧导航还没结束时，继续等待
+                    # continue 会跳过下面发送追击目标的代码
+                    if not self.navigator.isTaskComplete():
+                        time.sleep(0.1)
+                        continue
+
+                    # 只有旧导航确认结束，才报告追击取消完成
                     result = Chase.Result()
                     result.success = False
                     result.message = "追击已取消"
@@ -224,6 +235,24 @@ class ChaseClient(Node):
                     self.get_logger().info(result.message)
                     goal_handle.canceled()
                     return result
+
+                # 先检查已发送目标的结果，避免更新目标时漏掉失败
+                if (
+                    last_sent_pose is not None
+                    and self.navigator.isTaskComplete()
+                ):
+                    nav_result = self.navigator.getResult()
+
+                    if nav_result in (TaskResult.FAILED, TaskResult.UNKNOWN):
+                        result = Chase.Result()
+                        result.success = False
+                        result.message = f"追击导航未成功: {nav_result}"
+                        self.get_logger().warn(result.message)
+                        goal_handle.abort()
+                        return result
+
+                    # 其他结束情况沿用当前逻辑，继续处理最新目标
+                    last_sent_pose = None
 
                 # 检查 tracked 状态
                 if not self.is_enemy_tracked():
@@ -233,6 +262,7 @@ class ChaseClient(Node):
                     goal_handle.publish_feedback(feedback)
                     time.sleep(0.1)
                     continue
+
 
                 # 从后台线程获取最新目标点
                 with self.target_pose_lock:
@@ -265,15 +295,18 @@ class ChaseClient(Node):
                     feedback.status = f'导航到 ({current_target_pose.pose.position.x:.2f}, {current_target_pose.pose.position.y:.2f})'
                     goal_handle.publish_feedback(feedback)
 
-                    # 发送新的导航任务
-                    self.navigator.goToPose(current_target_pose)
-                    last_sent_pose = current_target_pose
+                    # 目标被拒绝时，报告失败，交给行为树恢复
+                    if not self.navigator.goToPose(current_target_pose):
+                        result = Chase.Result()
+                        result.success = False
+                        result.message = "Nav2 拒绝追击目标"
+                        self.get_logger().warn(result.message)
+                        goal_handle.abort()
+                        return result
 
-                # 检查导航是否完成
-                if self.navigator.isTaskComplete():
-                    # 导航完成，检查是否有新目标点（下一轮循环会处理）
-                    self.get_logger().info('导航任务已完成')
-                    last_sent_pose = None
+                    # 只有目标被接受，才记录为已发送目标
+                    last_sent_pose = current_target_pose
+                
 
                 time.sleep(0.1)
 

@@ -32,6 +32,11 @@
                 </material>
             </visual>
         </link>
+        <joint name="${name}_joint" type="fixed">
+            <xacro:insert_block name="origin"/>
+            <parent link="${parent}"/>
+            <child link="mid360"/>
+        </joint>
         <!-- 仿真雷达插件部分 -->
         <gazebo reference="mid360">
             <sensor name="mid360" type="ray">

@@ -1,0 +1,92 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<root BTCPP_format="4"
+      main_tree_to_execute="NavigationTaskSelection">
+    <!-- 加载战术选择子树所在文件 -->
+    <include path="tactical_tree.xml"
+             file="tactical_tree.xml" />
+
+    <BehaviorTree ID="NavigationTaskSelection">
+
+        <!-- 每轮先选择任务，再执行当前任务 -->
+        <ReactiveSequence name="导航任务选择与执行">
+
+            <!-- 按停止、回血、正常任务的优先级选择 -->
+            <ReactiveFallback name="导航任务选择">
+
+                <ReactiveSequence name="停止分支">
+                    <IsMatchStopped name="判断比赛是否停止" />
+                    <SelectStop name="选择停止任务" />
+                </ReactiveSequence>
+
+                <ReactiveSequence name="回血分支">
+                    <NeedResupply name="判断是否需要回血" />
+                    <SelectResupply name="选择回血任务" />
+                </ReactiveSequence>
+
+                <!-- 根据当前战术模式选择正常导航任务 -->
+                <SubTree ID="TacticalTaskSelection"
+                         name="战术任务选择" />
+
+            </ReactiveFallback>
+
+            <!-- 按任务牌选择分支，启动前等待旧导航释放 -->
+            <NavigationSwitch
+                name="执行当前导航任务"
+                cases="RESUPPLY,CHASE,OCCUPY_CENTER,PATROL">
+
+                <!-- 回血导航失败后等待，再重试补给目标 -->
+                <NavigationRecovery name="回血恢复控制">
+                    <GoResupply name="执行前往补给区" />
+                    <WaitBeforeRetry name="回血失败后等待" />
+                </NavigationRecovery>
+                <!-- 追击失败后等待，额外重试一次 -->
+                <ChaseRecovery name="追击恢复控制">
+                    <ChaseEnemy name="执行追击" />
+                    <WaitBeforeRetry name="追击失败后等待" />
+                </ChaseRecovery>
+                <!-- 第一个子节点是正常动作，第二个是恢复步骤 -->
+                <NavigationRecovery name="占点恢复控制">
+                    <OccupyZone name="执行中央占点" />
+                    <WaitBeforeRetry name="占点失败后等待" />
+                </NavigationRecovery>
+                <!-- 巡逻失败后等待，再准备远离失败坐标的备用点 -->
+                <NavigationRecovery name="巡逻恢复控制">
+                    <PatrolZone name="执行区域巡逻" />
+
+                    <ReactiveSequence name="巡逻恢复步骤">
+                        <WaitBeforeRetry name="巡逻失败后等待" />
+                        <SelectAlternativeGoal name="准备巡逻备用点" />
+                    </ReactiveSequence>
+                </NavigationRecovery>
+
+            </NavigationSwitch>
+        </ReactiveSequence>
+
+    </BehaviorTree>
+
+    <!-- 供 Groot 识别自定义控制节点、条件和动作 -->
+    <TreeNodesModel>
+        <Control ID="NavigationSwitch">
+            <input_port name="cases" type="std::string">
+                按子节点顺序填写对应的导航任务
+            </input_port>
+        </Control>
+
+        <Condition ID="IsMatchStopped" />
+        <Condition ID="NeedResupply" />
+
+        <Action ID="SelectStop" />
+        <Action ID="SelectResupply" />
+        <Action ID="SelectOccupy" />
+
+        <Action ID="GoResupply" />
+        <Control ID="ChaseRecovery" />
+        <Action ID="ChaseEnemy" />
+        <Control ID="NavigationRecovery" />
+        <Action ID="OccupyZone" />
+        <Action ID="WaitBeforeRetry" />
+        <Action ID="PatrolZone" />
+        <Action ID="SelectAlternativeGoal" />
+    </TreeNodesModel>
+
+</root>

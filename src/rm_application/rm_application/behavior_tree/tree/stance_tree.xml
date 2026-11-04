@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<root BTCPP_format="4"
+      main_tree_to_execute="StanceControl">
+
+    <BehaviorTree ID="StanceControl">
+        <!-- 每轮检查比赛状态，比赛结束时打断小陀螺动作 -->
+        <ReactiveSequence name="姿态控制">
+            <IsMatchRunning name="判断比赛是否正在进行" />
+            <SpinChassis name="持续开启小陀螺" />
+        </ReactiveSequence>
+    </BehaviorTree>
+
+    <!-- 供 Groot 识别自定义条件和动作 -->
+    <TreeNodesModel>
+        <Condition ID="IsMatchRunning" />
+        <Action ID="SpinChassis" />
+    </TreeNodesModel>
+
+</root>

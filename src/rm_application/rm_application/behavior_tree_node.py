@@ -1,15 +1,21 @@
+import time
+from pathlib import Path
+
 import rclpy
+import py_trees
 from rclpy.node import Node
+from ament_index_python.packages import get_package_share_directory
+
 from rm_application.behavior_tree.ros_interface import RosInterface
-from rm_application.behavior_tree.builder import BehaviorTreeBuilder
 from rm_application.behavior_tree.blackboard import Blackboard
+from rm_application.behavior_tree.xml_loader import load_behavior_tree
 
 class BehaviorTreeNode(Node):
     def __init__(self):
         super().__init__("behavior_tree_node")
 
         # 创建整棵行为树共用的唯一黑板
-        self.blackboard = Blackboard()
+        self.blackboard = Blackboard(tactical_mode_since=time.monotonic())
 
         # 创建行为树与 ROS 系统之间的统一通信接口
         self.ros_interface = RosInterface(self,self.blackboard,)
@@ -29,9 +35,16 @@ class BehaviorTreeNode(Node):
         self.declare_parameter("chase_boundary_y_max", 0.0)
         # 追击过程中允许短暂丢失目标的时间
         self.declare_parameter("target_lost_grace_time", 0.5)
-
+        # 追击恢复耗尽后，多久允许再次选择追击，单位：秒
+        self.declare_parameter("chase_failure_cooldown_seconds", 3.0)
+        
         self.declare_parameter("hp_limit", 150)
-        self.declare_parameter("hp_up", 380)
+        self.declare_parameter("hp_up", 400)
+
+        # 战术选择来源和模式切换防抖参数
+        self.declare_parameter("tactical_mode_source", "manual")
+        self.declare_parameter("tactical_confirm_seconds", 2.0)
+        self.declare_parameter("tactical_min_hold_seconds", 0.0)
 
         # 保存参数，供后续控制区判断使用
         self.control_zone_enabled = self.get_parameter(
@@ -71,14 +84,66 @@ class BehaviorTreeNode(Node):
             self.get_parameter("target_lost_grace_time").value
         )
 
-        # 读取回补给和攻击距离参数，供 builder 使用
+        # 读取回血阈值，供节点注册和行为判断使用
         self.hp_limit = self.get_parameter("hp_limit").value
         self.hp_up = self.get_parameter("hp_up").value
 
         self.patrol_min_goal_distance = (
             self.ros_interface.patrol_min_goal_distance
         )
-        # 提供恢复参数，供 builder 组装恢复流程
+
+        # 读取战术模式来源
+        self.tactical_mode_source = str(
+            self.get_parameter("tactical_mode_source").value
+        ).strip().lower()
+
+        # 只允许手动选择或自动评分两种来源
+        if self.tactical_mode_source not in ("manual", "auto"):
+            raise ValueError(
+                "tactical_mode_source 只能填写 manual 或 auto"
+            )
+
+        # 读取候选确认时间和当前模式最短保持时间
+        self.tactical_confirm_seconds = float(
+            self.get_parameter("tactical_confirm_seconds").value
+        )
+        self.tactical_min_hold_seconds = float(
+            self.get_parameter("tactical_min_hold_seconds").value
+        )
+
+        # 时间配置不能为负数
+        if (
+            self.tactical_confirm_seconds < 0.0
+            or self.tactical_min_hold_seconds < 0.0
+        ):
+            raise ValueError("战术确认时间和最短保持时间不能为负数")
+
+        # 统一声明和读取评分配置，后续调整比例只修改 YAML
+        score_defaults = {
+            "factors": [
+                "self_hp", "heavy_hp", "infantry_hp",
+                "remain_bullet", "damage_safety",
+            ],
+            "weights": [0.6, 0.0, 0.3, 0.0, 0.1],
+            "maxima": [400.0, 0.0, 350.0, 750.0, 1.0],
+            "damage_window_seconds": 2.0,
+            "damage_full_rate": 50.0,
+            "damage_input_timeout": 1.0,
+            "defense_enter": 0.35,
+            "defense_exit": 0.45,
+            "pressure_exit": 0.65,
+            "pressure_enter": 0.75,
+        }
+        self.tactical_score_config = {}
+        for key, default in score_defaults.items():
+            parameter_name = f"tactical_score_{key}"
+            self.declare_parameter(parameter_name, default)
+            self.tactical_score_config[key] = self.get_parameter(
+                parameter_name
+            ).value
+
+
+        # 提供恢复参数，供节点注册表创建恢复节点
         self.recovery_wait_seconds = (
             self.ros_interface.recovery_wait_seconds
         )
@@ -91,8 +156,13 @@ class BehaviorTreeNode(Node):
         self.recovery_sample_attempts = (
             self.ros_interface.recovery_sample_attempts
         )
-        # 使用当前 ROS 节点提供的数据和通信方法构建行为树
-        self.behavior_tree = BehaviorTreeBuilder(self).build()
+        # 从 ROS 包安装目录加载主树，子树由 XML 内部引用
+        tree_path = (
+            Path(get_package_share_directory("rm_application"))
+            / "tree"
+            / "main_tree.xml"
+        )
+        self.behavior_tree = load_behavior_tree(self, tree_path)
 
         # 每 0.1 秒运行一次行为树，即 10 Hz
         self.behavior_tree_timer = self.create_timer(
@@ -101,8 +171,8 @@ class BehaviorTreeNode(Node):
         )
 
     def tick_behavior_tree(self):
-        # 每次 tick 都会重新检查优先级和当前条件
-        self.behavior_tree.tick()
+        # 执行完整一轮 tick，重新检查优先级和当前条件
+        self.behavior_tree.tick_once()
     
     def set_navigation_task(self, task):
         # 任务选择树把当前导航任务写入共享黑板
@@ -111,14 +181,58 @@ class BehaviorTreeNode(Node):
     def get_navigation_task(self):
         # 导航执行树从共享黑板读取当前导航任务
         return self.blackboard.navigation_task
+
+    def is_chase_ready(self):
+        # 冷却结束后，还需要由追击条件节点检查敌人和边界
+        return time.monotonic() >= self.blackboard.chase_retry_after
+
+    def report_chase_exhausted(self):
+        # 追击恢复耗尽时，暂时关闭追击资格
+        cooldown_seconds = float(
+            self.get_parameter(
+                "chase_failure_cooldown_seconds"
+            ).value
+        )
+
+        self.blackboard.chase_retry_after = (
+            time.monotonic() + cooldown_seconds
+        )
+
+        self.get_logger().warn(
+            "追击恢复耗尽，暂时禁止选择追击"
+        )    
     
     def set_tactical_mode(self, tactical_mode):
-        # 战术选择结果写入共享黑板
-        self.blackboard.tactical_mode = tactical_mode
+        # 模式确实改变时才更新保持时间，重复设置不重新计时
+        if tactical_mode != self.blackboard.tactical_mode:
+            self.blackboard.tactical_mode = tactical_mode
+            self.blackboard.tactical_mode_since = time.monotonic()
+
+        # 手动选择或自动应用后，待应用候选均已失效
+        self.blackboard.pending_tactical_mode = None
 
     def get_tactical_mode(self):
-        # 行为树读取当前采用的战术模式
         return self.blackboard.tactical_mode
+
+    def get_tactical_mode_since(self):
+        return self.blackboard.tactical_mode_since
+
+    def get_tactical_candidate(self):
+        return self.blackboard.pending_tactical_mode
+
+    def set_tactical_candidate(self, candidate):
+        # 条件节点只发布待应用结果，不修改正式模式
+        self.blackboard.pending_tactical_mode = candidate
+
+    def get_tactical_inputs(self):
+        # 提供本轮评分的数据和真实收到的血量历史
+        return {
+            "self_hp": self.blackboard.self_hp,
+            "heavy_hp": self.blackboard.heavy_hp,
+            "infantry_hp": self.blackboard.infantry_hp,
+            "remain_bullet": self.blackboard.remain_bullet,
+            "hp_samples": self.ros_interface.get_hp_samples(),
+        }
 
 
     def set_patrol_region(self, patrol_region):
@@ -180,6 +294,14 @@ class BehaviorTreeNode(Node):
         return self.ros_interface.get_last_navigation_target(
             owner
         )
+
+    def is_navigation_stopped(self):
+        # 普通 Nav2 导航必须已经结束并释放
+        if not self.ros_interface.is_navigation_stopped():
+            return False
+
+        # 追击服务也必须已结束，才能启动新的平移任务
+        return self.ros_interface.is_chase_stopped()
 
     def start_spin(self):
         # 把开启小陀螺的请求交给统一通信接口
@@ -265,8 +387,8 @@ def main(args=None):
         node.get_logger().info("行为树节点正在关闭")
 
     finally:
-        # 停止正在运行的追击、导航和小陀螺
-        node.behavior_tree.halt()
+        # 打断整棵树，触发活动节点的取消与停止逻辑
+        node.behavior_tree.stop(py_trees.common.Status.INVALID)
 
         # 销毁 BehaviorTreeNode 内部使用的 Nav2 节点
         node.ros_interface.destroy()
