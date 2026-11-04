@@ -231,7 +231,7 @@ class SerialNode(Node):
                     vx,
                     vy,
                     self_sentry_hp,
-                    self_hero_hp,
+                    self_heavy_hp,
                     self_infantry_hp,
                     remain_time,
                     remain_bullet,
@@ -271,7 +271,7 @@ class SerialNode(Node):
                 serial_decision_msg.header.stamp = self.get_clock().now().to_msg()
                 serial_decision_msg.color = detect_color
                 serial_decision_msg.self_sentry_hp = self_sentry_hp
-                serial_decision_msg.self_hero_hp = self_hero_hp
+                serial_decision_msg.self_heavy_hp = self_heavy_hp
                 serial_decision_msg.self_infantry_hp = self_infantry_hp
                 serial_decision_msg.remain_time = remain_time
                 serial_decision_msg.remain_bullet = remain_bullet
@@ -314,7 +314,7 @@ class SerialNode(Node):
                     serial_debug_msg.vx = vx
                     serial_debug_msg.vy = vy
                     serial_debug_msg.self_sentry_hp = self_sentry_hp
-                    serial_debug_msg.self_hero_hp = self_hero_hp
+                    serial_debug_msg.self_heavy_hp = self_heavy_hp
                     serial_debug_msg.self_infantry_hp = self_infantry_hp
                     serial_debug_msg.remain_time = remain_time
                     serial_debug_msg.remain_bullet = remain_bullet
@@ -364,7 +364,7 @@ class SerialNode(Node):
                     serial_debug_msg.vx = vx
                     serial_debug_msg.vy = vy
                     serial_debug_msg.self_sentry_hp = self_sentry_hp
-                    serial_debug_msg.self_hero_hp = self_hero_hp
+                    serial_debug_msg.self_heavy_hp = self_heavy_hp
                     serial_debug_msg.self_infantry_hp = self_infantry_hp
                     serial_debug_msg.remain_time = remain_time
                     serial_debug_msg.remain_bullet = remain_bullet

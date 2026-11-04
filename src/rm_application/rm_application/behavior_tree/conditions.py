@@ -360,6 +360,17 @@ class ShouldSwitchTacticalMode(BehaviourWithPorts):
         self.score_weights = list(map(float, score_config["weights"]))
         self.score_maxima = list(map(float, score_config["maxima"]))
 
+        # 掉血统计窗口、满压力速率和消息接收超时
+        self.damage_window_seconds = float(
+            score_config.get("damage_window_seconds", 2.0)
+        )
+        self.damage_full_rate = float(
+            score_config.get("damage_full_rate", 50.0)
+        )
+        self.damage_input_timeout = float(
+            score_config.get("damage_input_timeout", 1.0)
+        )
+
         # 防守和前压采用不同的进入、退出阈值
         self.defense_enter = float(score_config["defense_enter"])
         self.defense_exit = float(score_config["defense_exit"])
@@ -400,6 +411,17 @@ class ShouldSwitchTacticalMode(BehaviourWithPorts):
             if weight > 0.0 and maximum <= 0.0:
                 raise ValueError("参与评分的因子必须配置正数上限")
 
+        # 掉血统计参数必须是有限正数
+        for value in (
+            self.damage_window_seconds,
+            self.damage_full_rate,
+            self.damage_input_timeout,
+        ):
+            if not math.isfinite(value) or value <= 0.0:
+                raise ValueError(
+                    "掉血统计窗口、满压力速率和消息超时必须为有限正数"
+                )
+
         self.total_weight = sum(self.score_weights)
         if not math.isfinite(self.total_weight):
             raise ValueError("评分权重总和必须是有限数")
@@ -418,6 +440,55 @@ class ShouldSwitchTacticalMode(BehaviourWithPorts):
         self.candidate_mode = None
         self.candidate_since = None
 
+    def calculate_damage_safety(self, samples):
+        # 首次接收前或样本不足时，保留未知
+        if not isinstance(samples, (tuple, list)) or len(samples) < 2:
+            return None
+
+        now = time.monotonic()
+        cutoff = now - self.damage_window_seconds
+        latest_time = samples[-1][0]
+
+        # 接收中断或时间异常时，不把旧血量当成当前安全
+        if not 0.0 <= now - latest_time <= self.damage_input_timeout:
+            return None
+
+        # 寻找窗口开始前最近的一个样本，作为计算掉血的基准
+        start = None
+        for index, (sample_time, _, _) in enumerate(samples):
+            if sample_time > now:
+                return None
+            if sample_time <= cutoff:
+                start = index
+        if start is None:
+            return None
+
+        recent = samples[start:]
+        lost_hp = 0.0
+
+        # 只使用比赛进行中、血量为正的连续记录
+        # 0 血在这里表示不能继续比较，不据此判定战亡
+        for sample_time, hp, progress in recent:
+            if (
+                not math.isfinite(sample_time)
+                or not math.isfinite(hp)
+                or hp <= 0
+                or progress != 4
+            ):
+                return None
+
+        for previous, current in zip(recent, recent[1:]):
+            interval = current[0] - previous[0]
+            if not 0.0 < interval <= self.damage_input_timeout:
+                return None
+
+            # 累计每次下降量，期间回血不会抵消已观察到的掉血
+            lost_hp += max(previous[1] - current[1], 0.0)
+
+        loss_rate = lost_hp / self.damage_window_seconds
+        pressure = min(loss_rate / self.damage_full_rate, 1.0)
+        return 1.0 - pressure
+
     def calculate_score(self, inputs):
         # 全部权重为 0 时，不产生评分
         if self.total_weight == 0.0:
@@ -431,7 +502,14 @@ class ShouldSwitchTacticalMode(BehaviourWithPorts):
             if weight == 0.0:
                 continue
 
-            value = inputs.get(key)
+            # 掉血越快越危险，先转换成越大越安全的 0～1 分数
+            if key == "damage_safety":
+                value = self.calculate_damage_safety(
+                    inputs.get("hp_samples")
+                )
+            else:
+                value = inputs.get(key)
+                
             if value is None or isinstance(value, bool):
                 return None
             try:

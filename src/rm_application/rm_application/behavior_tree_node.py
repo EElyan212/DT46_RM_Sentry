@@ -120,9 +120,15 @@ class BehaviorTreeNode(Node):
 
         # 统一声明和读取评分配置，后续调整比例只修改 YAML
         score_defaults = {
-            "factors": ["self_hp", "heavy_hp", "infantry_hp", "remain_bullet"],
-            "weights": [0.0, 0.0, 0.0, 0.0],
-            "maxima": [400.0, 0.0, 0.0, 750.0],
+            "factors": [
+                "self_hp", "heavy_hp", "infantry_hp",
+                "remain_bullet", "damage_safety",
+            ],
+            "weights": [0.6, 0.0, 0.3, 0.0, 0.1],
+            "maxima": [400.0, 0.0, 350.0, 750.0, 1.0],
+            "damage_window_seconds": 2.0,
+            "damage_full_rate": 50.0,
+            "damage_input_timeout": 1.0,
             "defense_enter": 0.35,
             "defense_exit": 0.45,
             "pressure_exit": 0.65,
@@ -219,12 +225,13 @@ class BehaviorTreeNode(Node):
         self.blackboard.pending_tactical_mode = candidate
 
     def get_tactical_inputs(self):
-        # 提供本轮战术评分使用的原始数据，保留 None 表示尚未收到
+        # 提供本轮评分的数据和真实收到的血量历史
         return {
             "self_hp": self.blackboard.self_hp,
             "heavy_hp": self.blackboard.heavy_hp,
             "infantry_hp": self.blackboard.infantry_hp,
             "remain_bullet": self.blackboard.remain_bullet,
+            "hp_samples": self.ros_interface.get_hp_samples(),
         }
 
 

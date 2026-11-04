@@ -10,7 +10,7 @@ float32 yaw               # 11 IMU 偏航 (绝对角, 度)
 float32 vx                # 15 底盘 x 指令速度 (云台系)
 float32 vy                # 19 底盘 y 指令速度
 uint16 self_sentry_hp     # 23 己方哨兵血量
-uint16 self_hero_hp       # 25 己方英雄血量
+uint16 self_heavy_hp      # 25 己方重装血量
 uint16 self_infantry_hp   # 27 己方步兵血量
 uint16 remain_time        # 29 剩余时间 (s)
 uint16 remain_bullet      # 31 剩余允许发弹量

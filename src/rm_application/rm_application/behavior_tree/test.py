@@ -3,16 +3,20 @@
 使用模拟对象调用实际回调，不连接 Nav2，不代替仿真或实车联调。
 """
 
+from collections import deque
 from concurrent.futures import Future
+from contextlib import contextmanager
 from pathlib import Path
 from threading import Lock
 from types import SimpleNamespace
 from unittest.mock import Mock, patch
 
 import py_trees
+import yaml
 
 from geometry_msgs.msg import PoseStamped
 from nav2_simple_commander.robot_navigator import TaskResult
+from rm_interfaces.msg import Decision, SerialDebug
 
 from rm_application.behavior_tree.actions import (
     PatrolZone,
@@ -761,13 +765,14 @@ def test_xml_navigation_task_selection():
 
 
 def _create_tactical_test_tree(
-    mode_source="auto", min_hold_seconds=0.0, score_config=None
+    mode_source="auto", min_hold_seconds=0.0, score_config=None,
+    hp_limit=100, hp_up=200,
 ):
     # 加载实际导航 XML，仅模拟外部接口；评分候选由各测试明确提供。
     blackboard = Blackboard(match_progress=4, self_hp=300)
     node = Mock(
-        hp_limit=100,
-        hp_up=200,
+        hp_limit=hp_limit,
+        hp_up=hp_up,
         tactical_mode_source=mode_source,
         tactical_score_config=(
             _tactical_score_config() if score_config is None else score_config
@@ -781,6 +786,7 @@ def _create_tactical_test_tree(
         recovery_sample_attempts=20,
     )
     node.blackboard = blackboard
+    node.ros_interface.get_hp_samples.return_value = ()
     node.get_tactical_inputs.side_effect = lambda: (
         BehaviorTreeNode.get_tactical_inputs(node)
     )
@@ -964,7 +970,13 @@ def test_tactical_input_delivery():
     blackboard, node, root, update = _create_tactical_test_tree()
     interface = RosInterface.__new__(RosInterface)
     interface.blackboard = blackboard
+    interface.hp_samples = deque(maxlen=256)
+    node.ros_interface.get_hp_samples.side_effect = interface.get_hp_samples
     update.evaluate_candidate = Mock(return_value=None)
+    for message_type in (Decision, SerialDebug):
+        fields = message_type.get_fields_and_field_types()
+        assert fields["self_heavy_hp"] == "uint16"
+        assert "self_hero_hp" not in fields
 
     root.tick_once()
     first_inputs = update.evaluate_candidate.call_args.args[1]
@@ -973,35 +985,47 @@ def test_tactical_input_delivery():
         "heavy_hp": None,
         "infantry_hp": None,
         "remain_bullet": None,
+        "hp_samples": (),
     }
 
-    # 旧消息字段映射为内部重装命名；收到的 0 与尚未收到的 None 区分。
-    interface.decision_callback(SimpleNamespace(
-        match_progress=4, self_sentry_hp=400,
-        self_hero_hp=0, self_infantry_hp=210, remain_bullet=0,
-    ))
+    # 使用重新生成的真实消息；收到的 0 与尚未收到的 None 区分。
+    with patch(
+        "rm_application.behavior_tree.ros_interface.time.monotonic",
+        return_value=1.0,
+    ):
+        interface.decision_callback(Decision(
+            match_progress=4, self_sentry_hp=400,
+            self_heavy_hp=0, self_infantry_hp=210, remain_bullet=0,
+        ))
     root.tick_once()
     update.evaluate_candidate.assert_called_with(TacticalMode.NEUTRAL, {
         "self_hp": 400,
         "heavy_hp": 0,
         "infantry_hp": 210,
         "remain_bullet": 0,
+        "hp_samples": ((1.0, 400, 4),),
     })
     assert first_inputs["heavy_hp"] is None
 
     # 后续每轮读取最新数值，不能一直使用节点创建时的输入。
-    interface.decision_callback(SimpleNamespace(
-        match_progress=4, self_sentry_hp=350,
-        self_hero_hp=170, self_infantry_hp=199, remain_bullet=640,
-    ))
+    with patch(
+        "rm_application.behavior_tree.ros_interface.time.monotonic",
+        return_value=2.0,
+    ):
+        interface.decision_callback(Decision(
+            match_progress=4, self_sentry_hp=350,
+            self_heavy_hp=170, self_infantry_hp=199, remain_bullet=640,
+        ))
     root.tick_once()
     update.evaluate_candidate.assert_called_with(TacticalMode.NEUTRAL, {
         "self_hp": 350,
         "heavy_hp": 170,
         "infantry_hp": 199,
         "remain_bullet": 640,
+        "hp_samples": ((1.0, 400, 4), (2.0, 350, 4)),
     })
     assert blackboard.tactical_mode == TacticalMode.NEUTRAL
+    assert first_inputs["hp_samples"] == (), "历史快照不能随后续回调改变"
     root.stop(py_trees.common.Status.INVALID)
     print("裁判消息到实际评分节点的数据传递、缺失值和零值保留测试通过\n")
 
@@ -1124,6 +1148,11 @@ def test_tactical_score_config_validation():
         {"maxima": [float("inf"), 0.0, 0.0, 750.0]},
         {"defense_enter": 0.5},
         {"pressure_enter": float("nan")},
+        {"damage_window_seconds": 0.0},
+        {"damage_window_seconds": float("inf")},
+        {"damage_full_rate": -1.0},
+        {"damage_full_rate": float("nan")},
+        {"damage_input_timeout": 0.0},
     ):
         try:
             ShouldSwitchTacticalMode(
@@ -1145,6 +1174,241 @@ def test_tactical_score_config_validation():
     print("评分权重、上限和阈值配置检查测试通过\n")
 
 
+def _configured_damage_score():
+    # 从实际 YAML 读取配置，覆盖本轮使用的权重、上限及统计参数。
+    config_path = (
+        Path(__file__).resolve().parents[2]
+        / "config" / "behavior_tree_params.yaml"
+    )
+    parameters = yaml.safe_load(config_path.read_text())["behavior_tree_node"]["ros__parameters"]
+    score_config = {
+        key.removeprefix("tactical_score_"): value
+        for key, value in parameters.items()
+        if key.startswith("tactical_score_")
+    }
+    return parameters, score_config
+
+
+def test_damage_safety_window():
+    _, config = _configured_damage_score()
+    _, _, root, condition = _create_tactical_test_tree(score_config=config)
+
+    def safety(at, samples):
+        with patch(
+            "rm_application.behavior_tree.conditions.time.monotonic",
+            return_value=at,
+        ):
+            return condition.calculate_damage_safety(samples)
+
+    steady = tuple((t, 400, 4) for t in (0.0, 0.5, 1.0, 1.5, 2.0))
+    assert safety(2.0, steady) == 1.0
+    loss = ((0.0, 400, 4), (0.5, 350, 4), (1.0, 325, 4),
+            (1.5, 300, 4), (2.0, 300, 4))
+    assert safety(2.0, loss) == 0.0
+
+    # 总共下降 75、回复 25：应统计 75，而不是净下降的 50。
+    healing = ((0.0, 400, 4), (0.5, 350, 4), (1.0, 375, 4),
+               (1.5, 350, 4), (2.0, 350, 4))
+    assert safety(2.0, healing) == 0.25
+    later = healing + tuple((t, 350, 4) for t in (2.5, 3.0, 3.5, 4.0))
+    assert safety(4.0, later) == 1.0
+
+    with patch(
+        "rm_application.behavior_tree.conditions.time.monotonic",
+        return_value=2.0,
+    ):
+        score = condition.calculate_score({
+            "self_hp": 200, "infantry_hp": 350, "hp_samples": healing,
+        })
+        assert abs(score - 0.625) < 1e-9
+        # 零权重的重装和发弹量无需提供数据。
+    root.stop(py_trees.common.Status.INVALID)
+    print("实际 YAML 的掉血速率、回血不抵消、窗口过期和 60/30/10 评分测试通过\n")
+
+
+def test_damage_input_validity():
+    _, config = _configured_damage_score()
+    _, _, root, condition = _create_tactical_test_tree(score_config=config)
+    steady = tuple((t, 400, 4) for t in (0.0, 0.5, 1.0, 1.5, 2.0))
+    cases = (
+        (2.0, ()),                         # 未收到数据
+        (1.0, steady[:3]),                # 未积累完整窗口
+        (3.01, steady),                   # 最新消息过期
+        (2.0, ((0.0, 400, 4), (2.0, 300, 4))),  # 中间接收中断
+        (1.0, steady),                    # 时间异常
+        (2.0, ((0.0, 400, 0),) + steady[1:]),   # 窗口包含非比赛阶段
+        (2.0, steady[:-1] + ((2.0, 0, 4),)),    # 零血不能当成有效掉血趋势
+    )
+    for at, samples in cases:
+        with patch(
+            "rm_application.behavior_tree.conditions.time.monotonic",
+            return_value=at,
+        ):
+            assert condition.calculate_damage_safety(samples) is None
+            assert condition.calculate_score({
+                "self_hp": 400, "infantry_hp": 350, "hp_samples": samples,
+            }) is None
+
+    reconnect = steady + tuple((t, 300, 4) for t in (10.0, 10.5, 11.0, 11.5, 12.0))
+    with patch(
+        "rm_application.behavior_tree.conditions.time.monotonic",
+        return_value=11.0,
+    ):
+        assert condition.calculate_damage_safety(reconnect[:-2]) is None
+    with patch(
+        "rm_application.behavior_tree.conditions.time.monotonic",
+        return_value=12.0,
+    ):
+        assert condition.calculate_damage_safety(reconnect) == 1.0
+    root.stop(py_trees.common.Status.INVALID)
+    print("掉血样本不足、接收中断、阶段变化、零血和恢复后重新累计测试通过\n")
+
+
+def test_xml_damage_score_and_resupply():
+    parameters, config = _configured_damage_score()
+    blackboard, node, root, condition = _create_tactical_test_tree(
+        score_config=config,
+        hp_limit=parameters["hp_limit"], hp_up=parameters["hp_up"],
+    )
+    interface = RosInterface.__new__(RosInterface)
+    interface.blackboard = blackboard
+    interface.hp_samples = deque(maxlen=256)
+    node.ros_interface.get_hp_samples.side_effect = interface.get_hp_samples
+    clock = SimpleNamespace(now=0.0)
+
+    def tick(at, hp, mode, task):
+        clock.now = at
+        interface.decision_callback(SimpleNamespace(
+            match_progress=4, self_sentry_hp=hp, self_heavy_hp=0,
+            self_infantry_hp=350, remain_bullet=0,
+        ))
+        root.tick_once()
+        assert blackboard.tactical_mode == mode
+        assert blackboard.navigation_task == task
+        assert root.status == py_trees.common.Status.RUNNING
+
+    occupy, resupply = NavigationTask.OCCUPY_CENTER, NavigationTask.RESUPPLY
+    neutral, pressure = TacticalMode.NEUTRAL, TacticalMode.PRESSURE
+    with patch(
+        "rm_application.behavior_tree.conditions.time.monotonic",
+        side_effect=lambda: clock.now,
+    ):
+        # 两秒积累样本，再连续确认两秒，才应用前压。
+        for at in (0.0, 0.5, 1.0, 1.5, 2.0, 2.5, 3.0, 3.5):
+            tick(at, 400, neutral, occupy)
+        tick(4.0, 400, pressure, occupy)
+
+        # 短时掉血后停在 220：压力消退早于连续确认完成，仍保留前压。
+        tick(4.5, 240, pressure, occupy)
+        tick(5.0, 220, pressure, occupy)
+        for at in (5.5, 6.0, 6.5, 7.0):
+            tick(at, 220, pressure, occupy)
+
+        # 160 尚未触发回血，但总分持续低于退出前压阈值，切到中立。
+        for at in (7.5, 8.0, 8.5, 9.0):
+            tick(at, 160, pressure, occupy)
+        tick(9.5, 160, neutral, occupy)
+
+        # 实际 150/400 双阈值：低血抢占，200 血仍继续补给。
+        tick(10.0, 150, neutral, resupply)
+        tick(10.5, 200, neutral, resupply)
+        tick(11.0, 400, neutral, occupy)
+        for at in (11.5, 12.0, 12.5):
+            tick(at, 400, neutral, occupy)
+        tick(13.0, 400, pressure, occupy)
+
+        # 消息超时保留当前策略，同时清除待应用候选。
+        clock.now = 14.5
+        root.tick_once()
+        assert condition.last_score is None
+        assert blackboard.tactical_mode == pressure
+        assert blackboard.pending_tactical_mode is None
+    root.stop(py_trees.common.Status.INVALID)
+    print("血量消息到实际 XML 评分、模式切换、150/400 回血抢占与消息超时测试通过\n")
+
+
+@contextmanager
+def _rqt_readonly_types():
+    """本次调试进程内锁定字段类型，避免 RQT 的类型编辑异常。"""
+    from python_qt_binding.QtCore import Qt
+    from rqt_publisher.publisher_tree_model import PublisherTreeModel
+
+    original_flags = PublisherTreeModel.flags
+    original_set_data = PublisherTreeModel.setData
+
+    def flags(model, index):
+        result = original_flags(model, index)
+        if index.column() == model._column_index["type"]:
+            result &= ~Qt.ItemIsEditable
+        return result
+
+    def set_data(model, index, value, role=Qt.EditRole):
+        if role == Qt.EditRole and index.column() == model._column_index["type"]:
+            return False
+        return original_set_data(model, index, value, role)
+
+    with patch.object(PublisherTreeModel, "flags", flags), patch.object(
+        PublisherTreeModel, "setData", set_data
+    ):
+        yield
+
+
+def run_rqt():
+    """启动本轮调试使用的 RQT，不修改系统安装的插件文件。"""
+    from rqt_gui.main import Main
+
+    print("[RQT] 字段类型栏已锁定；请在 expression 栏编辑消息内容。", flush=True)
+    with _rqt_readonly_types():
+        return Main().main()
+
+
+def test_rqt_expression_editing():
+    from types import MethodType
+    from python_qt_binding.QtCore import QCoreApplication, Qt
+    from rqt_publisher.publisher import Publisher
+    from rqt_publisher.publisher_tree_model import PublisherTreeModel
+    from std_msgs.msg import String
+
+    # 只检查 Qt 表格编辑模型，无需桌面窗口和 ROS 网络。
+    app = QCoreApplication.instance() or QCoreApplication([])
+    model = PublisherTreeModel()
+    info = {
+        "publisher_id": 0, "topic_name": "/behavior_tree/test/monitor_view",
+        "message_instance": String(), "enabled": False,
+        "expressions": {}, "rate": 1.0, "counter": 0,
+    }
+    model.add_publisher(info)
+    parent = model.index(0, 0)
+    type_index = model.index(0, 1, parent)
+    expression_index = model.index(0, 3, parent)
+    original_type = model.data(type_index, Qt.DisplayRole)
+    publisher = SimpleNamespace(_eval_locals={})
+    for name in ("_extract_array_info", "_evaluate_expression", "_fill_message_slots"):
+        setattr(publisher, name, MethodType(getattr(Publisher, name), publisher))
+    columns = []
+
+    def change(_publisher_id, topic, column, value, setter):
+        columns.append(column)
+        assert column == "expression", "不能进入会导致崩溃的类型修改处理"
+        result = Publisher._change_publisher_expression(publisher, info, topic, value)
+        if result is not None:
+            setter(result)
+
+    model.item_value_changed.connect(change)
+    with _rqt_readonly_types():
+        assert not model.flags(type_index) & Qt.ItemIsEditable
+        assert model.setData(type_index, "navigation", Qt.EditRole) is False
+        assert model.data(type_index, Qt.DisplayRole) == original_type
+        assert model.flags(expression_index) & Qt.ItemIsEditable
+        assert model.setData(expression_index, "'navigation'", Qt.EditRole)
+        assert info["message_instance"].data == "navigation"
+        assert columns == ["expression"]
+        assert model.setData(expression_index, "'strategy'", Qt.EditRole)
+        assert info["message_instance"].data == "strategy"
+    assert app is not None
+    print("RQT 类型栏保护、实际 Expression 编辑和 String 消息内容更新测试通过\n")
+
+
 class _GrootMonitor:
     """按 Groot2 协议发布实际运行树，只提供实时观察功能。
 
@@ -1152,7 +1416,7 @@ class _GrootMonitor:
     groot2_publisher.cpp；不实现断点、节点替换或日志录制。
     """
 
-    def __init__(self, root, port=1667, tree_id="SentryMain"):
+    def __init__(self, root, port=1667, tree_id="SentryMain", max_depth=None):
         import struct
         import uuid
         import xml.etree.ElementTree as ET
@@ -1180,13 +1444,18 @@ class _GrootMonitor:
         tree = ET.SubElement(document, "BehaviorTree",
                              ID=tree_id, _fullpath="")
 
-        def add_node(node, parent):
+        def add_node(node, parent, depth=0):
             uid = len(self._nodes) + 1
             if uid > 65535:
                 raise ValueError("Groot 节点编号超出协议范围")
             self._nodes.append(node)
             tag = type(node).__name__
-            if isinstance(node, py_trees.composites.Composite):
+            collapsed = bool(node.children) and max_depth is not None and depth >= max_depth
+            if collapsed:
+                # 总览只折叠显示后续任务，状态仍读取同一个运行实例。
+                tag = "CollapsedSubtree"
+                kind = "Action"
+            elif isinstance(node, py_trees.composites.Composite):
                 kind = "Control"
             elif isinstance(node, py_trees.decorators.Decorator):
                 kind = "Decorator"
@@ -1195,10 +1464,11 @@ class _GrootMonitor:
             else:
                 kind = "Action"
             models[tag] = kind
-            element = ET.SubElement(parent, tag, name=node.name,
+            element = ET.SubElement(parent, tag, name=node.name.rsplit(".", 1)[-1],
                                     _uid=str(uid))
-            for child in node.children:
-                add_node(child, element)
+            if not collapsed:
+                for child in node.children:
+                    add_node(child, element, depth + 1)
 
         # 直接遍历正在 tick 的实例，不另建一棵执行树。
         # py_trees 加载 XML 时已展开 SubTree，这里也发送展开后的结构。
@@ -1322,6 +1592,9 @@ def run_interactive_test(groot=False, groot_navigation=False, groot_view=None):
 
     view_ids = {
         "full": "SentryMain",
+        "overview": "SentryOverview",
+        "strategy": "TacticalOverview",
+        "switching": "TacticalModeSwitching",
         "navigation": "NavigationExecution",
         "stop": "StopSelection",
         "resupply": "ResupplySelection",
@@ -1330,6 +1603,7 @@ def run_interactive_test(groot=False, groot_navigation=False, groot_view=None):
         "pressure": "PressureStrategy",
         "stance": "StanceControl",
     }
+    view_depths = {"overview": 2, "strategy": 3}
     if groot_view is not None and groot_view not in view_ids:
         raise ValueError(f"未知监视范围 {groot_view!r}，可选：{', '.join(view_ids)}")
     monitoring_enabled = groot or groot_navigation or groot_view is not None
@@ -1427,6 +1701,9 @@ def run_interactive_test(groot=False, groot_navigation=False, groot_view=None):
                 raise RuntimeError("导航执行树必须有且只有一个任务切换节点")
             views = {
                 "full": node.behavior_tree,
+                "overview": node.behavior_tree,
+                "strategy": find_view("战术模式更新与任务选择"),
+                "switching": find_view("尝试更新战术模式"),
                 "navigation": switches[0],
                 "stop": find_view("停止分支"),
                 "resupply": find_view("回血分支"),
@@ -1438,8 +1715,13 @@ def run_interactive_test(groot=False, groot_navigation=False, groot_view=None):
             view_subscription = node.create_subscription(
                 String, "/behavior_tree/test/monitor_view", select_view, 10
             )
+            def visible_size(root, limit=None, depth=0):
+                if limit is not None and depth >= limit:
+                    return 1
+                return 1 + sum(visible_size(child, limit, depth + 1) for child in root.children)
+
             sizes = ", ".join(
-                f"{name}={sum(1 for _ in root.iterate())}"
+                f"{name}={visible_size(root, view_depths.get(name))}"
                 for name, root in views.items()
             )
             print(f"[Groot] 各监视范围的节点数：{sizes}", flush=True)
@@ -1449,7 +1731,8 @@ def run_interactive_test(groot=False, groot_navigation=False, groot_view=None):
                 monitor = None
             # 同一时刻只发布所选范围；全部范围仍属于同一棵执行树。
             monitor = _GrootMonitor(
-                views[requested_view], tree_id=view_ids[requested_view]
+                views[requested_view], tree_id=view_ids[requested_view],
+                max_depth=view_depths.get(requested_view),
             )
             active_view = requested_view
             print(
@@ -1460,9 +1743,20 @@ def run_interactive_test(groot=False, groot_navigation=False, groot_view=None):
         original_tick(node)
         if monitor is not None:
             monitor.update()
+        score_condition = next(
+            item for item in node.behavior_tree.iterate()
+            if isinstance(item, ShouldSwitchTacticalMode)
+        )
+        if node.get_navigation_task() in (NavigationTask.STOP, NavigationTask.RESUPPLY):
+            score_text = "暂停"
+        elif score_condition.last_score is None:
+            score_text = "暂无有效评分"
+        else:
+            score_text = f"{score_condition.last_score:.3f}"
         summary = (
             f"比赛阶段={node.get_match_progress()} "
             f"血量={node.get_hp()} "
+            f"评分={score_text} "
             f"策略={node.get_tactical_mode().value} "
             f"任务={node.get_navigation_task().value}"
         )
@@ -1499,7 +1793,10 @@ def run_interactive_test(groot=False, groot_navigation=False, groot_view=None):
 if __name__ == "__main__":
     import sys
 
-    if "--interactive" in sys.argv:
+    if "--rqt" in sys.argv:
+        sys.argv.remove("--rqt")
+        raise SystemExit(run_rqt())
+    elif "--interactive" in sys.argv:
         # 这是测试入口的选项，不传给 rclpy 的 ROS 参数解析器。
         sys.argv.remove("--interactive")
         groot_enabled = "--groot" in sys.argv
@@ -1540,4 +1837,8 @@ if __name__ == "__main__":
         test_tactical_condition_and_action()
         test_xml_weighted_mode_transitions()
         test_tactical_score_config_validation()
-        print("当前导航、XML 主树与战术条件／动作的 19 项测试全部通过")
+        test_damage_safety_window()
+        test_damage_input_validity()
+        test_xml_damage_score_and_resupply()
+        test_rqt_expression_editing()
+        print("当前导航、XML 主树、战术评分与 RQT 编辑的 23 项测试全部通过")

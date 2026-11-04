@@ -1,3 +1,5 @@
+import time
+from collections import deque
 from geometry_msgs.msg import PoseStamped
 from nav2_simple_commander.robot_navigator import (
     BasicNavigator,
@@ -31,6 +33,9 @@ class RosInterface:
     def __init__(self, node, blackboard):
         self.node = node
         self.blackboard = blackboard
+        # 保存最近收到的血量样本：接收时间、哨兵血量、比赛阶段
+        # 只记录数据，掉血速率由评分条件计算
+        self.hp_samples = deque(maxlen=256)
 
         # 声明占点和补给点的 map 坐标
         # 启动时加载的 YAML 会覆盖默认值
@@ -219,15 +224,26 @@ class RosInterface:
         )
 
     def decision_callback(self, msg):
+        # 记录真实收到的样本，不把黑板默认血量当成历史数据
+        self.hp_samples.append((
+            time.monotonic(),
+            msg.self_sentry_hp,
+            msg.match_progress,
+        ))
+
         # 保存比赛阶段和哨兵血量
         self.blackboard.match_progress = msg.match_progress
         self.blackboard.self_hp = msg.self_sentry_hp
 
-        # 现有消息沿用 self_hero_hp 字段名，内部统一按重装命名
-        self.blackboard.heavy_hp = msg.self_hero_hp
+        # 接收统一命名后的重装血量
+        self.blackboard.heavy_hp = msg.self_heavy_hp
         self.blackboard.infantry_hp = msg.self_infantry_hp
         self.blackboard.remain_bullet = msg.remain_bullet
 
+    def get_hp_samples(self):
+        # 返回快照，评分过程不直接修改通信层的缓存
+        return tuple(self.hp_samples)
+        
     def tactical_mode_callback(self, msg):
         # 自动模式由评分节点更新战术，忽略手动选择消息
         if self.node.tactical_mode_source != "manual":
