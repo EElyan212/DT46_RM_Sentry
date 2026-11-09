@@ -154,7 +154,7 @@ controller_server:
     progress_checker:
       plugin: "nav2_controller::SimpleProgressChecker"  # 进度检查器插件，简单的进度检查器
       required_movement_radius: 0.1  # 必须达到的最小移动半径（米），用于判断是否完成目标的进度
-      movement_time_allowance: 1.0  # 允许的最大时间（秒）来完成进度
+      movement_time_allowance: 5.0  # 允许的最大时间（秒）来完成进度
 
     # General goal checker parameters
     general_goal_checker:
@@ -321,13 +321,13 @@ local_costmap:
       width: 10  # 局部代价地图的宽度，单位为米
       height: 5  # 局部代价地图的高度，单位为米
       resolution: 0.05  # 局部代价地图的分辨率，单位为米，表示每个网格的大小
-      robot_radius: 0.35  # 机器人半径，单位为米，用于在代价地图中考虑机器人的尺寸
+      robot_radius: 0.25  # 机器人半径，单位为米，用于在代价地图中考虑机器人的尺寸
       plugins: ["voxel_layer", "denoise_layer", "inflation_layer"]
 
       inflation_layer:
         plugin: "nav2_costmap_2d::InflationLayer"
-        inflation_radius: 0.3
-        cost_scaling_factor: 10.0
+        inflation_radius: 0.4
+        cost_scaling_factor: 1.0
 
       denoise_layer:
         plugin: "nav2_costmap_2d::DenoiseLayer"
@@ -410,7 +410,7 @@ global_costmap:
       global_frame: map  # 全局坐标系，这里设置为"map"表示全局地图坐标系
       robot_base_frame: base_footprint  # 机器人本体坐标系，这里使用"base_footprint"s
       use_sim_time: False  # 使用仿真时间，在仿真环境中通常为True
-      robot_radius: 0.35  # 机器人半径，单位为米，用于考虑机器人的尺寸
+      robot_radius: 0.25  # 机器人半径，单位为米，用于考虑机器人的尺寸
       resolution: 0.05  # 全局代价地图的分辨率，单位为米，表示每个网格的大小
       track_unknown_space: false  # 是否跟踪未知空间，启用时代价地图会填充未知空间
       plugins: ["static_layer", "obstacle_layer", "voxel_layer", "inflation_layer"]  # 使用的插件列表，包含静态层、障碍物层、体素层和膨胀层
@@ -463,8 +463,8 @@ global_costmap:
       # InflationLayer插件，用于扩展障碍物的影响区域
       inflation_layer:
         plugin: "nav2_costmap_2d::InflationLayer"  # 使用的插件类型
-        cost_scaling_factor: 3.0 # 代价扩展因子，控制障碍物周围区域的代价值
-        inflation_radius: 0.3  # 膨胀半径，用于控制障碍物周围区域的扩展距离
+        cost_scaling_factor: 1.0 # 代价扩展因子，控制障碍物周围区域的代价值
+        inflation_radius: 0.4  # 膨胀半径，用于控制障碍物周围区域的扩展距离
 
       always_send_full_costmap: True  # 是否总是发送完整的代价地图，通常为了减少传输的频率
 
@@ -481,7 +481,7 @@ global_costmap:
 map_server:
   ros__parameters:
     use_sim_time: False
-    yaml_filename: "/home/kie-dt46/DT46_RM_Sentry/src/rm_navigation2/maps/room_1.yaml"             # 地图文件路径 (通常在 Launch 中指定)
+    yaml_filename: "/home/kie-dt46/DT46_RM_Sentry/src/rm_navigation2/maps/room_19floor.yaml"             # 地图文件路径 (通常在 Launch 中指定)
 
 map_saver:
   ros__parameters:
@@ -521,7 +521,7 @@ recoveries_server:
     costmap_topic: local_costmap/costmap_raw  # 代价地图的主题
     footprint_topic: local_costmap/published_footprint  # 机器人足迹的主题
     cycle_frequency: 100.0  # 恢复周期频率，单位为Hz
-    recovery_plugins: ["clear_costmap"]  # 只使用清除代价地图插件
+    recovery_plugins: ["clear_costmap"]  # 只使用清除代价地图插件'
     clear_costmap:
       plugin: "nav2_recoveries/ClearCostmapRecovery"  # 清除代价地图插件
     global_frame: odom  # 全局坐标系设置为"odom"

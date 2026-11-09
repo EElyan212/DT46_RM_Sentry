@@ -28,8 +28,8 @@ class SerialNode(Node):
         self.get_logger().info("启动Serial node !!!")
 
         self.send_datas = Senddata()
-        self.send_datas.cliss_mode = 0
-        self.send_datas.gimbal_speed = 10
+        self.send_datas.cliss_mode = 1
+        self.send_datas.gimbal_speed = 100
         self.lock = threading.Lock()
         # 新增：串口重连专用的锁和标志位
         self.serial_lock = threading.Lock()
