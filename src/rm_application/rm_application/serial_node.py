@@ -182,7 +182,7 @@ class SerialNode(Node):
 
         # 53 字节固定长帧，小端，float 为 IEEE-754 单精度：
         # 0 sof, 1 detect_color, 2 reserved, 3..22 IMU/速度，
-        # 23..38 裁判数据（34 为位域：bit0-1 中心增益点占领状态，bit2 RFID），
+         # 23..38 裁判数据（34 为位域：bit0-1 中心增益点占领状态，bit2 RFID），
         # 39..50 受击数据，51..52 CRC16。
         packet_length = 53
 
