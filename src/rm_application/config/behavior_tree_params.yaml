@@ -1,7 +1,7 @@
 behavior_tree_node:
   ros__parameters:
     # 调试阶段先关闭控制区限制，边界确定后再开启
-    control_zone_enabled: false
+    control_zone_enabled: true
 
     # 控制区在 map 坐标系下的矩形边界，单位：米
     # 当前数值仅占位
