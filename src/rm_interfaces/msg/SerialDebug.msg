@@ -15,7 +15,9 @@ uint16 self_infantry_hp   # 27 己方步兵血量
 uint16 remain_time        # 29 剩余时间 (s)
 uint16 remain_bullet      # 31 剩余允许发弹量
 uint8 match_progress      # 33 比赛进度
-uint8 occupation          # 34 占领状态
+uint8 occupation          # 34 bit0-1 中心增益点占领状态: 0未占领 1己方 2对方 3双方
+bool center_rfid          # 34 bit2 本车是否检测到中心增益点 RFID 卡
+uint8 occupation_raw      # 34 原始字节 (含保留位，调试用)
 float32 bullet_speed      # 35 弹速 (m/s)
 uint8 armor_id            # 39 最近一次受击装甲板 ID (0~15)
 uint8 armor_reason        # 40 扣血原因 (0=弹丸命中,1=撞击,4=超射速...)

@@ -182,7 +182,8 @@ class SerialNode(Node):
 
         # 53 字节固定长帧，小端，float 为 IEEE-754 单精度：
         # 0 sof, 1 detect_color, 2 reserved, 3..22 IMU/速度，
-        # 23..38 裁判数据，39..50 受击数据，51..52 CRC16。
+        # 23..38 裁判数据（34 为位域：bit0-1 中心增益点占领状态，bit2 RFID），
+        # 39..50 受击数据，51..52 CRC16。
         packet_length = 53
 
         self.get_logger().info(
@@ -274,6 +275,11 @@ class SerialNode(Node):
                 serial_odo_msg.yaw = yaw
                 self.pub_uart_receive_odo.publish(serial_odo_msg)
 
+                # 字节34为位域：bit0-1 中心增益点占领状态，bit2 本车检测到 RFID 卡
+                occupation_raw = occupation
+                occupation = occupation_raw & 0x03
+                center_rfid = bool(occupation_raw & 0x04)
+
                 # 6.3 发布 Decision 消息，保持行为树现有接口不变
                 serial_decision_msg.header.stamp = self.get_clock().now().to_msg()
                 serial_decision_msg.color = detect_color
@@ -284,6 +290,7 @@ class SerialNode(Node):
                 serial_decision_msg.remain_bullet = remain_bullet
                 serial_decision_msg.match_progress = match_progress
                 serial_decision_msg.occupation = occupation
+                serial_decision_msg.center_rfid = center_rfid
                 serial_decision_msg.yaw = self.send_datas.yaw
                 serial_decision_msg.can_fire = self.send_datas.can_fire
                 serial_decision_msg.bullet_speed = bullet_speed
@@ -327,6 +334,8 @@ class SerialNode(Node):
                     serial_debug_msg.remain_bullet = remain_bullet
                     serial_debug_msg.match_progress = match_progress
                     serial_debug_msg.occupation = occupation
+                    serial_debug_msg.center_rfid = center_rfid
+                    serial_debug_msg.occupation_raw = occupation_raw
                     serial_debug_msg.bullet_speed = bullet_speed
                     serial_debug_msg.armor_id = armor_id
                     serial_debug_msg.armor_reason = armor_reason

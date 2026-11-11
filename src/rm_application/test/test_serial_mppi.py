@@ -14,12 +14,14 @@ from rm_application.serial_node import SerialNode
 
 
 def _receive_frame(sequence, valid_crc=True):
+    # 字节34: bit0-1 占领状态 = 1(己方), bit2 RFID = 1
+    occupation = 0b101
     payload = struct.pack(
         '<BBBfffffHHHHHBBfBBBBff',
         0xA5, 1, 0,
         0.1, 0.2, 0.3, 0.4, 0.5,
         321, 222, 111, 120, 99,
-        4, 1, 28.0,
+        4, occupation, 28.0,
         2, 1, 3, sequence, 0.1, 0.2,
     )
     checksum = crc16_modbus(payload)
@@ -57,10 +59,15 @@ def test_receive_keeps_input_mode_and_publishes_each_event_once(mode, decision_c
     debug = node.pub_serial_debug_publisher.publish.call_args.args[0]
     assert debug.self_heavy_hp == 222
     assert debug.crc_ok is True
+    assert debug.occupation == 1
+    assert debug.center_rfid is True
+    assert debug.occupation_raw == 0b101
     if decision_count:
         decision = node.pub_uart_receive_decision.publish.call_args.args[0]
         assert decision.self_sentry_hp == 321
         assert decision.self_heavy_hp == 222
+        assert decision.occupation == 1
+        assert decision.center_rfid is True
     node.reopen_port.assert_not_called()
 
 
