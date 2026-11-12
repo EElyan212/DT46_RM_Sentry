@@ -1,0 +1,18 @@
+axis_align_node:
+  ros__parameters:
+    map_frame: map
+    base_frame: base_footprint
+    control_rate: 20.0
+    cmd_vel_topic: /cmd_vel
+    aligned_topic: /axis_align/aligned
+
+    centerline_point: [0.0, 0.0]
+    centerline_yaw: 0.0
+
+    deadband_lat: 0.02
+    settle_time: 0.3
+    kp_lat: 1.0
+    min_speed: 0.02
+    max_speed: 0.15
+    max_accel: 0.5
+    tf_timeout: 0.2

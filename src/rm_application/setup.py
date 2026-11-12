@@ -40,6 +40,9 @@ setup(
             "behavior_tree_node = rm_application.behavior_tree_node:main",
             "test_chase = rm_application.test_chase:main",
             "mock_rm_tf_broadcaster = rm_application.mock_rm_tf_broadcaster:main",
+            "axis_align = rm_application.axis_align.axis_align_node:main",
+            "axis_align_fake_base = rm_application.axis_align.fake_base_node:main",
+            "axis_align_sim = rm_application.axis_align.sim_axis_align:main",
 
         ],
     },
