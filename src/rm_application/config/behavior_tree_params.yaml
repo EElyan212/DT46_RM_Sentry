@@ -12,7 +12,7 @@ behavior_tree_node:
 
     # 是否启用最大追击区域限制
     # 具体边界坐标确定前保持 false
-    chase_boundary_enabled: false
+    chase_boundary_enabled: true
 
     # 最大追击区域在 map 坐标系下的矩形边界，单位：米
     # 当前数值仅占位，之后通过 RViz 确定
