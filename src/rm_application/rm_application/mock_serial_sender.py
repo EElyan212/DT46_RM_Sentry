@@ -23,7 +23,7 @@ def send_mock_data():
     vx = 0.5               # (f)
     vy = 0.2               # (f)
     sentry_hp = 600        # (H)
-    hero_hp = 1500         # (H)
+    heavy_hp = 1500        # (H)
     infantry_hp = 200      # (H)
     remain_time = 420      # (H)
     remain_bullet = 150    # (H)
@@ -41,7 +41,7 @@ def send_mock_data():
                 header, detect_color,
                 roll, pitch, yaw,
                 vx, vy, 
-                sentry_hp, hero_hp, infantry_hp,
+                sentry_hp, heavy_hp, infantry_hp,
                 remain_time, remain_bullet,
                 match_progress, occupation
             )

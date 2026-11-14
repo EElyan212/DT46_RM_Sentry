@@ -14,3 +14,6 @@ serial_node:
         pub_rpy: true
         hole_gate_enabled: true
         hole_block_topic: "/hole/block"
+        # mock：使用 RQT 或模拟节点发布 /nav/decision
+        # serial：使用串口发布 /nav/decision
+        decision_input_mode: "mock"

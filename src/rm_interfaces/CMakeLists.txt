@@ -16,6 +16,7 @@ find_package(action_msgs REQUIRED)
 # find_package(<dependency> REQUIRED)
 rosidl_generate_interfaces(${PROJECT_NAME}
   "msg/Decision.msg"
+  "msg/TacticalModeCommand.msg"
   "msg/GimbalControl.msg"
   "msg/Senddata.msg"
   "msg/OdoMsg.msg"

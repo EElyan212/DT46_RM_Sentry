@@ -59,4 +59,3 @@ class Stalker(Node):
 
             except Exception as e:
                 self.get_logger().error(f'Failed to get transform: {e}')
-
