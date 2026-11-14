@@ -19,7 +19,8 @@ target_pose_server:
         use_path_offset: true
 
         # 自己或敌人移动超过多少米，就重新规划路径
-        enemy_replan_threshold: 0.1
+        # 设为0时，位置有变化就重新规划
+        enemy_replan_threshold: 0.0
 
         # 请求Nav2计算全局路径的接口
         planner_action_name: /compute_path_to_pose

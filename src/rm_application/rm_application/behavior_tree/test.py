@@ -1915,7 +1915,8 @@ def test_merged_chase_config():
     assert config["chase_client"]["ros__parameters"] == {"chase_rate": 10}
     server = config["target_pose_server"]["ros__parameters"]
     assert server["offset_distance"] == 0.5
-    assert server["enemy_replan_threshold"] == 0.1
+    # 保留远程调参：位置有变化就重新规划。
+    assert server["enemy_replan_threshold"] == 0.0
     text = (config_dir / "chase_params.yaml").read_text()
     for obsolete in ("enemy_pose_timeout", "tracked_timeout", "default_offset_distance"):
         assert obsolete not in text
