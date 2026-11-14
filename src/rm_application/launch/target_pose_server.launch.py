@@ -7,7 +7,7 @@ def generate_launch_description():
     config = os.path.join(
         get_package_share_directory('rm_application'),
         'config',
-        'target_pose_server_params.yaml'
+        'chase_params.yaml'
     )
     return launch.LaunchDescription([
         launch_ros.actions.Node(

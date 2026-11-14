@@ -200,7 +200,7 @@ class RosInterface:
         # 最后一次有效跟踪到敌人的时间
         self.last_enemy_tracked_time = None
 
-        # 缓存 TF 数据，用于查询敌人和哨兵的地图位置
+        # 缓存 TF 数据，用于查询哨兵的地图位置
         self.tf_buffer = Buffer()
         self.tf_listener = TransformListener(
             self.tf_buffer,
@@ -293,43 +293,35 @@ class RosInterface:
             )
             
     def is_enemy_within_lost_grace(self, grace_time):
-        # 从未跟踪到敌人时，不能使用等待时间
+        # 从最近一次有效跟踪计时，决定是否继续保留追击任务
         if self.last_enemy_tracked_time is None:
             return False
 
-        # 计算距离最后一次有效跟踪经过了多久
         elapsed = (
             self.node.get_clock().now()
             - self.last_enemy_tracked_time
         ).nanoseconds / 1e9
 
-        return elapsed <= float(grace_time)
+        return 0.0 <= elapsed <= float(grace_time)
 
-    def get_enemy_position(self, grace_time):
-        # 自瞄没有有效目标时，不使用缓存中的敌人坐标
+    def is_enemy_tracked(self, vision_timeout):
+        # 明确丢失时立即无效；消息断流时由共用超时判断
         if (
             self.latest_enemy is None
             or not self.latest_enemy.tracked
-            or not self.is_enemy_within_lost_grace(grace_time)
+            or self.last_enemy_tracked_time is None
         ):
-            return None
+            return False
 
-        try:
-            # 查询敌人相对于地图的位置
-            transform = self.tf_buffer.lookup_transform(
-                "map",
-                "enemy",
-                Time(),
-            )
-        except TransformException:
-            # TF 尚未连通或暂时不可用
-            return None
+        elapsed = (
+            self.node.get_clock().now()
+            - self.last_enemy_tracked_time
+        ).nanoseconds / 1e9
 
-        position = transform.transform.translation
-        return position.x, position.y
+        return 0.0 <= elapsed <= float(vision_timeout)
 
     def get_patrol_area(self, patrol_region):
-        # 根据当前战术要求返回对应的巡逻矩形
+        # 返回当前巡逻子区域的矩形范围
         return self.patrol_areas.get(patrol_region)
 
     def get_robot_position(self):
@@ -540,7 +532,7 @@ class RosInterface:
         # 创建追击请求
         goal = Chase.Goal()
 
-        # 0.0 表示使用 chase_client YAML 中的默认偏移距离
+        # 0.0 表示由目标计算端使用配置的默认偏移距离
         goal.offset_distance = 0.0
 
         # 上一次追击请求还没有结束时，不重复发送

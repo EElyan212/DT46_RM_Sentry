@@ -163,7 +163,7 @@ controller_server:
       xy_goal_tolerance: 0.25  # 目标点位置容忍度（米），机器人到达目标位置的允许误差
       yaw_goal_tolerance: 3.14159  # 对于全向机器人，角度容忍度通常设置为0，因为全向机器人没有明显的“方向”
 
-    # DWB (Dynamic Window Approach) parameters
+    # MPPI 控制器参数
     FollowPath:
       plugin: "nav2_mppi_controller::MPPIController"
       # =========================
