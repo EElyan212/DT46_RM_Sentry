@@ -373,10 +373,11 @@ def create_node_registry(node):
             IsChaseReady,
             is_chase_ready=node.is_chase_ready,
         ),
-        # 中立模式：判断是否允许在中央控制区内追击
+
+        # 中立模式：检查视觉目标和哨兵自身是否位于中央区
         "CanChaseInsideCenterZone": partial(
             CanChaseInsideCenterZone,
-            get_enemy_position=node.get_enemy_position,
+            is_enemy_tracked=node.is_enemy_tracked,
             get_robot_position=node.get_robot_position,
             get_control_zone=node.get_control_zone,
             is_enemy_within_lost_grace=node.is_enemy_within_lost_grace,
@@ -386,10 +387,10 @@ def create_node_registry(node):
             ),
         ),
 
-        # 前压模式：沿用原有追击开启条件和最大追击边界
+        # 前压模式：检查视觉目标、自身起点和最大追击边界
         "CanChase": partial(
             CanChase,
-            get_enemy_position=node.get_enemy_position,
+            is_enemy_tracked=node.is_enemy_tracked,
             get_robot_position=node.get_robot_position,
             get_control_zone=node.get_control_zone,
             get_chase_boundary=node.get_chase_boundary,

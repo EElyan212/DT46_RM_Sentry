@@ -1,0 +1,28 @@
+# 共用参数：加载本文件的节点使用同一份视觉超时配置
+/**:
+    ros__parameters:
+        # 视觉消息多久没更新就认为过期，单位：秒
+        # 收到tracked=false时立即失效，不等超时
+        vision_timeout: 0.5
+
+chase_client:
+    ros__parameters:
+        # 追击时每秒最多请求多少次目标点
+        chase_rate: 10
+
+target_pose_server:
+    ros__parameters:
+        # 从敌人位置沿路径往回退多少米，选作追击目标
+        offset_distance: 0.5
+
+        # 优先沿规划路径选点；规划失败时保留原有直线回退
+        use_path_offset: true
+
+        # 自己或敌人移动超过多少米，就重新规划路径
+        enemy_replan_threshold: 0.1
+
+        # 请求Nav2计算全局路径的接口
+        planner_action_name: /compute_path_to_pose
+
+        # 发出规划请求后的等待预算，单位：秒
+        planner_timeout: 0.5

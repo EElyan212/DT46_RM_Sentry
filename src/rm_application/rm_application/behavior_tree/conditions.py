@@ -113,14 +113,13 @@ class NeedEnterCenterZone(BehaviourWithPorts):
 
 # 判断是否允许在中央控制区内受限追击
 class CanChaseInsideCenterZone(BehaviourWithPorts):
-    # 通过 Python 回调读取追击条件，不使用 XML 数据端口
     INPUT_PORTS = {}
     OUTPUT_PORTS = {}
 
     def __init__(
         self,
         name,
-        get_enemy_position,
+        is_enemy_tracked,
         get_robot_position,
         get_control_zone,
         is_enemy_within_lost_grace,
@@ -129,23 +128,27 @@ class CanChaseInsideCenterZone(BehaviourWithPorts):
     ):
         super().__init__(name=name, **kwargs)
 
-        # 获取敌人、哨兵位置和控制区配置的方法
-        self.get_enemy_position = get_enemy_position
+        # 读取视觉跟踪状态，不在行为树中查询敌人坐标
+        self.is_enemy_tracked = is_enemy_tracked
+
+        # 自身位置用于判断哨兵是否仍在中央控制区内
         self.get_robot_position = get_robot_position
         self.get_control_zone = get_control_zone
 
-        # 检查目标丢失宽限和当前追击状态的方法
+        # 追击期间允许视觉短暂丢失，但不能因此启动新的追击
         self.is_enemy_within_lost_grace = is_enemy_within_lost_grace
         self.is_chasing = is_chasing
 
     def update(self):
         zone = self.get_control_zone()
 
-        # 没有配置中央控制区边界时，不启动受限追击
+        # 未启用中央控制区时，不允许区内追击
         if not zone["enabled"]:
             return py_trees.common.Status.FAILURE
 
         robot_position = self.get_robot_position()
+
+        # 没有自身定位时，无法确认是否仍处于允许范围内
         if robot_position is None:
             return py_trees.common.Status.FAILURE
 
@@ -155,30 +158,16 @@ class CanChaseInsideCenterZone(BehaviourWithPorts):
             and zone["y_min"] <= robot_y <= zone["y_max"]
         )
 
-        # 哨兵离开中央控制区后立即停止追击
+        # 中立模式只限制哨兵自身，不再判断敌人是否位于中央区
         if not robot_inside:
             return py_trees.common.Status.FAILURE
 
-        enemy_position = self.get_enemy_position()
+        if self.is_enemy_tracked():
+            return py_trees.common.Status.SUCCESS
 
-        # 追击中短暂丢失目标时，允许使用现有宽限时间
-        if enemy_position is None:
-            if (
-                self.is_chasing()
-                and self.is_enemy_within_lost_grace()
-            ):
-                return py_trees.common.Status.SUCCESS
-
-            return py_trees.common.Status.FAILURE
-
-        enemy_x, enemy_y = enemy_position
-        enemy_inside = (
-            zone["x_min"] <= enemy_x <= zone["x_max"]
-            and zone["y_min"] <= enemy_y <= zone["y_max"]
-        )
-
-        # 只有哨兵和敌人都在中央控制区内才允许追击
-        if enemy_inside:
+        # 已选择追击且仍在宽限内时，暂时保留追击资格
+        # 执行层会停止旧导航，等待重新取得有效目标
+        if self.is_chasing() and self.is_enemy_within_lost_grace():
             return py_trees.common.Status.SUCCESS
 
         return py_trees.common.Status.FAILURE
@@ -186,14 +175,13 @@ class CanChaseInsideCenterZone(BehaviourWithPorts):
 
 # 判断前压模式下是否允许追击敌人
 class CanChase(BehaviourWithPorts):
-    # 通过 Python 回调读取追击条件，不使用 XML 数据端口
     INPUT_PORTS = {}
     OUTPUT_PORTS = {}
 
     def __init__(
         self,
         name,
-        get_enemy_position,
+        is_enemy_tracked,
         get_robot_position,
         get_control_zone,
         get_chase_boundary,
@@ -203,38 +191,33 @@ class CanChase(BehaviourWithPorts):
     ):
         super().__init__(name=name, **kwargs)
 
-        # 获取敌人和底盘的地图坐标
-        self.get_enemy_position = get_enemy_position
+        # 视觉只提供目标有效性，自身位置用于区域判断
+        self.is_enemy_tracked = is_enemy_tracked
         self.get_robot_position = get_robot_position
 
-        # 获取控制区开关和边界参数
         self.get_control_zone = get_control_zone
-
-        # 获取最大追击区域配置，使用哨兵位置判断边界
         self.get_chase_boundary = get_chase_boundary
 
-        # 检查目标丢失宽限和当前追击任务状态
         self.is_enemy_within_lost_grace = is_enemy_within_lost_grace
         self.is_chasing = is_chasing
 
     def update(self):
-        enemy_position = self.get_enemy_position()
         robot_position = self.get_robot_position()
 
-        # 没有底盘位置时无法判断追击边界
+        # 自身定位不可用时，不允许追击
         if robot_position is None:
             return py_trees.common.Status.FAILURE
 
         zone = self.get_control_zone()
         boundary = self.get_chase_boundary()
 
-        # 中央控制区或最大追击边界未配置时，不允许追击
+        # 保留现有规则：两个区域都启用后，才允许前压追击
         if not zone["enabled"] or not boundary["enabled"]:
             return py_trees.common.Status.FAILURE
 
         robot_x, robot_y = robot_position
 
-        # 哨兵到达最大追击边界后立即停止追击
+        # 最大追击边界只检查哨兵自身，碰到边界也停止追击
         reached_boundary = (
             robot_x <= boundary["x_min"]
             or robot_x >= boundary["x_max"]
@@ -252,19 +235,19 @@ class CanChase(BehaviourWithPorts):
 
         chasing = self.is_chasing()
 
-        # 只能从中央控制区内开始追击
+        # 开始追击时必须在中央区内
+        # 已经选择追击后，允许在最大追击边界内部离开中央区
         if not chasing and not robot_inside_zone:
             return py_trees.common.Status.FAILURE
 
-        # 追击中短暂丢失敌人时，沿用现有宽限时间
-        if enemy_position is None:
-            if chasing and self.is_enemy_within_lost_grace():
-                return py_trees.common.Status.SUCCESS
+        # 目标有效性只检查视觉状态，不查询敌人 TF
+        if self.is_enemy_tracked():
+            return py_trees.common.Status.SUCCESS
 
-            return py_trees.common.Status.FAILURE
+        if chasing and self.is_enemy_within_lost_grace():
+            return py_trees.common.Status.SUCCESS
 
-        # 追击开始后，沿用最大追击边界内允许离区的规则
-        return py_trees.common.Status.SUCCESS
+        return py_trees.common.Status.FAILURE
 
 # 判断比赛是否未在进行
 class IsMatchStopped(BehaviourWithPorts):

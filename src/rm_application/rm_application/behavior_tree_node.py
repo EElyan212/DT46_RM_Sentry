@@ -1,3 +1,4 @@
+import math
 import time
 from pathlib import Path
 
@@ -33,7 +34,8 @@ class BehaviorTreeNode(Node):
         self.declare_parameter("chase_boundary_x_max", 0.0)
         self.declare_parameter("chase_boundary_y_min", 0.0)
         self.declare_parameter("chase_boundary_y_max", 0.0)
-        # 追击过程中允许短暂丢失目标的时间
+        # 视觉过期时间与追击节点共用，任务宽限单独配置
+        self.declare_parameter("vision_timeout", 0.5)
         self.declare_parameter("target_lost_grace_time", 0.5)
         # 追击恢复耗尽后，多久允许再次选择追击，单位：秒
         self.declare_parameter("chase_failure_cooldown_seconds", 3.0)
@@ -80,9 +82,20 @@ class BehaviorTreeNode(Node):
             "chase_boundary_y_max"
         ).value
 
+        self.vision_timeout = float(
+            self.get_parameter("vision_timeout").value
+        )
         self.target_lost_grace_time = float(
             self.get_parameter("target_lost_grace_time").value
         )
+
+        if not math.isfinite(self.vision_timeout) or self.vision_timeout <= 0.0:
+            raise ValueError("视觉超时必须为有限正数")
+        if (
+            not math.isfinite(self.target_lost_grace_time)
+            or self.target_lost_grace_time < 0.0
+        ):
+            raise ValueError("目标丢失宽限必须为有限非负数")
 
         # 读取回血阈值，供节点注册和行为判断使用
         self.hp_limit = self.get_parameter("hp_limit").value
@@ -339,10 +352,10 @@ class BehaviorTreeNode(Node):
             self.target_lost_grace_time
         )
 
-    def get_enemy_position(self):
-        # 从统一通信接口读取有效敌人位置
-        return self.ros_interface.get_enemy_position(
-            self.target_lost_grace_time
+    def is_enemy_tracked(self):
+        # 启动追击检查视觉时效，不使用任务丢失宽限
+        return self.ros_interface.is_enemy_tracked(
+            self.vision_timeout
         )
     
     def get_robot_position(self):

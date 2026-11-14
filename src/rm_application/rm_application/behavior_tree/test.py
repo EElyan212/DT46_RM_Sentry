@@ -35,6 +35,9 @@ from rm_application.behavior_tree.ros_interface import RosInterface
 from rm_application.behavior_tree.xml_loader import load_behavior_tree
 from rm_application.behavior_tree_node import BehaviorTreeNode
 from rm_application.chase_client import ChaseClient
+from rm_application.target_pose_server import TargetPoseServer
+from action_msgs.msg import GoalStatus
+from rm_application.behavior_tree.conditions import CanChase, CanChaseInsideCenterZone
 
 
 
@@ -101,179 +104,121 @@ def test_chase_cancel_confirmation():
 
 
 
-def test_chase_server_waits_for_navigation_cancel():
-    events = []
-    navigator = Mock(spec=["cancelTask", "isTaskComplete", "goToPose"])
-    navigator.cancelTask.side_effect = lambda: events.append("cancel")
-    completions = iter([False, False, True])
+def _target_pose(x=1.0):
+    pose = PoseStamped()
+    pose.header.frame_id = "map"
+    pose.pose.position.x = float(x)
+    return pose
 
-    def is_complete():
-        complete = next(completions)
-        events.append("done" if complete else "running")
-        return complete
 
-    navigator.isTaskComplete.side_effect = is_complete
-    logger = Mock()
-    service = SimpleNamespace(
-        offset_distance=1.5,
-        navigator=navigator,
-        get_logger=lambda: logger,
-        is_enemy_tracked=lambda: True,
-        get_target_client=Mock(),
-        _start_target_updater=Mock(),
-        _stop_target_updater=Mock(
-            side_effect=lambda: events.append("updater_stopped")
-        ),
-    )
-    service.get_target_client.wait_for_server.return_value = True
-    goal = SimpleNamespace(
-        request=SimpleNamespace(offset_distance=0.0),
-        is_cancel_requested=True,
-        canceled=Mock(side_effect=lambda: events.append("chase_canceled")),
-    )
-    # 不创建线程或 ROS 节点，直接运行真实服务回调的取消分支。
-    with patch("rm_application.chase_client.rclpy.ok", side_effect=[True] * 4 + [False]):
-        with patch("rm_application.chase_client.time.sleep", side_effect=lambda _: events.append("wait")):
-            result = ChaseClient.execute_callback(service, goal)
-
-    assert result.success is False
-    assert result.message == "追击已取消"
-    navigator.cancelTask.assert_called_once()
-    navigator.goToPose.assert_not_called()
-    goal.canceled.assert_called_once()
-    assert events == [
-        "cancel", "running", "wait", "running", "wait",
-        "done", "chase_canceled", "updater_stopped",
-    ]
-    print("追击服务等待 Nav2 最终结束才报告取消完成的测试通过\n")
-
+def _completed(value):
+    future = Future()
+    future.set_result(value)
+    return future
 
 
 def _make_chase_execution_test_case():
-    navigator = Mock(spec=["cancelTask", "isTaskComplete", "getResult", "goToPose"])
-    navigator.goToPose.return_value = True
     service = SimpleNamespace(
-        offset_distance=1.5,
-        navigator=navigator,
-        get_logger=Mock(return_value=Mock()),
+        chase_rate=10.0, target_request=None,
+        vision_generation=0, chase_lock=Lock(), chase_active=True,
+        navigator=Mock(), get_target_client=Mock(), get_logger=Mock(return_value=Mock()),
         is_enemy_tracked=Mock(return_value=True),
-        get_target_client=Mock(),
-        _start_target_updater=Mock(),
-        _stop_target_updater=Mock(),
-        target_pose_lock=Lock(),
-        latest_target_pose=PoseStamped(),
     )
-    service.get_target_client.wait_for_server.return_value = True
-    service._has_pose_changed = lambda old, new, threshold: ChaseClient._has_pose_changed(
-        service, old, new, threshold
-    )
+    service.navigator.goToPose.return_value = True
+    service.navigator.isTaskComplete.return_value = False
+    service.navigator.getResult.return_value = TaskResult.CANCELED
+    service.get_target_client.server_is_ready.return_value = True
     goal = SimpleNamespace(
         request=SimpleNamespace(offset_distance=0.0),
-        is_cancel_requested=False,
-        publish_feedback=Mock(),
-        abort=Mock(),
-        succeed=Mock(),
-        canceled=Mock(),
+        is_cancel_requested=False, publish_feedback=Mock(),
+        abort=Mock(), canceled=Mock(), succeed=Mock(),
     )
+    for name in ("_start_target_request", "_poll_target_request", "_has_pose_changed"):
+        setattr(service, name, getattr(ChaseClient, name).__get__(service))
+    service._discard_target_request = ChaseClient._discard_target_request
+    service._is_target_request_stopped = ChaseClient._is_target_request_stopped
+
+    def send_target(_goal):
+        handle = Mock(accepted=True)
+        result = SimpleNamespace(success=True, has_target=True,
+                                 message="有效目标", target_pose=_target_pose())
+        handle.get_result_async.return_value = _completed(SimpleNamespace(
+            status=GoalStatus.STATUS_SUCCEEDED, result=result,
+        ))
+        return _completed(handle)
+    service.get_target_client.send_goal_async.side_effect = send_target
     return service, goal
 
 
+def _run_chase_execution_test(service, goal, on_sleep=None):
+    # 使用虚拟时间推进，不连接 Nav2，也不真实等待。
+    clock = SimpleNamespace(now=0.0, cycles=0)
+    def sleep(seconds):
+        clock.now += float(seconds)
+        clock.cycles += 1
+        assert clock.cycles < 300, "追击没有在预期场景中退出"
+        if on_sleep:
+            on_sleep(clock)
+    with patch("rm_application.chase_client.rclpy.ok", return_value=True), \
+         patch("rm_application.chase_client.time.monotonic", side_effect=lambda: clock.now), \
+         patch("rm_application.chase_client.time.sleep", side_effect=sleep):
+        return ChaseClient.execute_callback(service, goal)
 
-def _run_chase_execution_test(service, goal, cycles=8):
-    # 限制循环次数，测试回归时也不会无限运行；没有真实等待或线程。
-    with patch("rm_application.chase_client.rclpy.ok", side_effect=[True] * cycles + [False]):
-        with patch("rm_application.chase_client.time.sleep"):
-            return ChaseClient.execute_callback(service, goal)
 
+def test_chase_server_waits_for_navigation_cancel():
+    service, goal = _make_chase_execution_test_case()
+    canceled_at = []
+    def progress(clock):
+        if service.navigator.goToPose.called:
+            goal.is_cancel_requested = True
+        if service.navigator.cancelTask.called:
+            canceled_at.append(clock.now)
+            if len(canceled_at) < 3:
+                goal.canceled.assert_not_called()
+            else:
+                service.navigator.isTaskComplete.return_value = True
+    result = _run_chase_execution_test(service, goal, progress)
+    assert result.message == "追击已取消"
+    service.navigator.cancelTask.assert_called_once()
+    service.navigator.goToPose.assert_called_once()
+    goal.canceled.assert_called_once()
+    assert service.chase_active is False
+    print("追击取消等待旧导航终态、等待期间不重复发点测试通过\n")
 
 
 def test_chase_reports_navigation_failure():
     for nav_result in (TaskResult.FAILED, TaskResult.UNKNOWN):
         service, goal = _make_chase_execution_test_case()
-        service.navigator.isTaskComplete.return_value = True
-        service.navigator.getResult.return_value = nav_result
-        next_target = PoseStamped()
-        next_target.pose.position.x = 1.0
-
-        def send_target(_target):
-            service.latest_target_pose = next_target
-            return True
-
-        service.navigator.goToPose.side_effect = send_target
-        result = _run_chase_execution_test(service, goal)
-        # 即使敌人目标已经更新，也必须先处理旧导航的失败。
-        assert result is not None
-        service.navigator.goToPose.assert_called_once()
-        service._stop_target_updater.assert_called_once()
-        assert result.success is False
+        def fail(_clock):
+            if service.navigator.goToPose.called:
+                service.navigator.isTaskComplete.return_value = True
+                service.navigator.getResult.return_value = nav_result
+        result = _run_chase_execution_test(service, goal, fail)
         assert "追击导航未成功" in result.message
-        goal.abort.assert_called_once_with()
+        service.navigator.goToPose.assert_called_once()
+        goal.abort.assert_called_once()
 
-    # 已发出的导航失败后，即使跟踪数据暂时丢失，也不能跳过结果检查。
-    service, goal = _make_chase_execution_test_case()
-    service.is_enemy_tracked.side_effect = [True, True] + [False] * 8
-    service.navigator.isTaskComplete.return_value = True
-    service.navigator.getResult.return_value = TaskResult.FAILED
-    result = _run_chase_execution_test(service, goal)
-    assert result is not None, "跟踪数据丢失时，导航失败被 continue 跳过"
-    assert result.success is False
-    goal.abort.assert_called_once_with()
-    service.navigator.goToPose.assert_called_once()
-    service._stop_target_updater.assert_called_once()
-
-    # 新目标被拒绝时，不能沿用上一目标成功的结果并继续反复发点。
     service, goal = _make_chase_execution_test_case()
     service.navigator.goToPose.return_value = False
-    service.navigator.isTaskComplete.return_value = True
-    service.navigator.getResult.return_value = TaskResult.SUCCEEDED
     result = _run_chase_execution_test(service, goal)
-    assert result is not None, "Nav2 拒绝追击目标后没有返回失败"
-    assert result.success is False
-    goal.abort.assert_called_once_with()
-    service.navigator.goToPose.assert_called_once()
-    service._stop_target_updater.assert_called_once()
-
-    # 启动前失败同样使用 ROS 的无参数 abort()，结果通过 return 返回。
-    for missing in ("enemy", "target_server"):
-        service, goal = _make_chase_execution_test_case()
-        if missing == "enemy":
-            service.is_enemy_tracked.return_value = False
-        else:
-            service.get_target_client.wait_for_server.return_value = False
-        result = _run_chase_execution_test(service, goal)
-        assert result.success is False
-        goal.abort.assert_called_once_with()
-        service.navigator.goToPose.assert_not_called()
-
-    print("追击导航失败与未知结果上报测试通过\n")
-
+    assert result.message == "Nav2 拒绝追击目标"
+    goal.abort.assert_called_once()
+    print("追击导航失败、未知结果及目标拒绝测试通过\n")
 
 
 def test_chase_navigation_success_continues():
     service, goal = _make_chase_execution_test_case()
-    service.navigator.isTaskComplete.side_effect = [True, True]
-    service.navigator.getResult.return_value = TaskResult.SUCCEEDED
-    next_target = PoseStamped()
-    next_target.pose.position.x = 1.0
-
-    def send_target(_target):
-        if service.navigator.goToPose.call_count == 1:
-            service.latest_target_pose = next_target
-        else:
+    def progress(_clock):
+        count = service.navigator.goToPose.call_count
+        service.navigator.isTaskComplete.return_value = count > 0
+        service.navigator.getResult.return_value = TaskResult.SUCCEEDED
+        if count >= 2:
             goal.is_cancel_requested = True
-        return True
-
-    service.navigator.goToPose.side_effect = send_target
-    result = _run_chase_execution_test(service, goal)
-    # 到达一个追击点后继续追击，直到上层要求退出。
+    result = _run_chase_execution_test(service, goal, progress)
     assert service.navigator.goToPose.call_count == 2
-    service.navigator.getResult.assert_called_once()
     goal.succeed.assert_not_called()
-    goal.abort.assert_not_called()
-    goal.canceled.assert_called_once_with()
     assert result.message == "追击已取消"
-    print("追击到达导航点后继续追击测试通过\n")
-
+    print("到达追击点后继续按需获取新目标测试通过\n")
 
 
 def test_chase_cooldown_state():
@@ -1327,6 +1272,751 @@ def test_xml_damage_score_and_resupply():
     print("血量消息到实际 XML 评分、模式切换、150/400 回血抢占与消息超时测试通过\n")
 
 
+def test_visual_only_chase_conditions():
+    # 两种模式不需要敌人坐标；范围不同、宽限不允许从无目标状态启动。
+    from rm_application.behavior_tree.nav_zone import NavigationTask
+    status = py_trees.common.Status
+    zone = dict(enabled=True, x_min=0.0, x_max=2.0, y_min=0.0, y_max=2.0)
+    state = SimpleNamespace(position=(1.0, 1.0), tracked=True, chasing=False, grace=False)
+    for cls in (CanChaseInsideCenterZone, CanChase):
+        kwargs = dict(
+            is_enemy_tracked=lambda: state.tracked,
+            get_robot_position=lambda: state.position,
+            get_control_zone=lambda: zone,
+            is_enemy_within_lost_grace=lambda: state.grace,
+            is_chasing=lambda: state.chasing,
+        )
+        if cls is CanChase:
+            kwargs['get_chase_boundary'] = lambda: dict(
+                enabled=True, x_min=-1.0, x_max=3.0, y_min=-1.0, y_max=3.0)
+        condition = cls(name=cls.__name__, **kwargs)
+        state.position, state.tracked, state.chasing, state.grace = (1., 1.), True, False, False
+        assert condition.update() == status.SUCCESS
+        state.tracked, state.grace = False, True
+        assert condition.update() == status.FAILURE
+        state.chasing = True
+        assert condition.update() == status.SUCCESS
+        state.grace = False
+        assert condition.update() == status.FAILURE
+        state.tracked, state.position = True, (2.5, 1.0)
+        expected = status.SUCCESS if cls is CanChase else status.FAILURE
+        assert condition.update() == expected
+        state.position = (3.0, 1.0)
+        assert condition.update() == status.FAILURE
+    print("中立与前压只用自身区域、视觉状态及宽限测试通过\n")
+
+
+def test_visual_freshness_without_enemy_tf():
+    interface = RosInterface.__new__(RosInterface)
+    now = SimpleNamespace(value=1_000_000_000)
+    class Stamp:
+        def __init__(self, value): self.nanoseconds = value
+        def __sub__(self, other): return Stamp(self.nanoseconds - other.nanoseconds)
+    interface.node = Mock()
+    interface.node.get_clock.return_value.now.side_effect = lambda: Stamp(now.value)
+    interface.latest_enemy = None
+    interface.last_enemy_tracked_time = None
+    interface.tf_buffer = Mock()
+    assert interface.is_enemy_tracked(0.5) is False
+    interface.enemy_callback(SimpleNamespace(tracked=True))
+    assert interface.is_enemy_tracked(0.5) is True
+    now.value += 600_000_000
+    assert interface.is_enemy_tracked(0.5) is False
+    interface.enemy_callback(SimpleNamespace(tracked=False))
+    assert interface.is_enemy_tracked(0.5) is False
+    interface.tf_buffer.lookup_transform.assert_not_called()
+    print("视觉断流过期且不查询敌人 TF 测试通过\n")
+
+
+def test_target_pose_only_computes_on_request():
+    # 构造函数也实际执行，检查有视觉输入时仍不会自行启动线程或计算。
+    import rm_application.target_pose_server as module
+    parameters = dict(offset_distance=.5, use_path_offset=True,
+                      enemy_replan_threshold=.1, planner_action_name='/compute_path_to_pose',
+                      planner_timeout=.5, vision_timeout=.5)
+    with patch.object(module.Node, '__init__', return_value=None), \
+         patch.object(TargetPoseServer, 'declare_parameter'), \
+         patch.object(TargetPoseServer, 'get_parameter', side_effect=lambda key: SimpleNamespace(value=parameters[key])), \
+         patch.object(TargetPoseServer, 'create_subscription'), \
+         patch.object(TargetPoseServer, 'get_logger', return_value=Mock()), \
+         patch.object(module, 'Buffer'), patch.object(module, 'TransformListener'), \
+         patch.object(module, 'ActionClient'), patch.object(module, 'ActionServer'), \
+         patch.object(module.threading, 'Thread') as thread:
+        server = TargetPoseServer()
+        server.compute_target_pose = Mock(return_value=(_target_pose(), True, '新目标'))
+        server.is_enemy_tracked = Mock(return_value=True)
+        thread.assert_not_called()
+        server.compute_target_pose.assert_not_called()
+        goal = SimpleNamespace(request=SimpleNamespace(offset_distance=0.0),
+                               is_cancel_requested=False, succeed=Mock(), abort=Mock(), canceled=Mock(),
+                               publish_feedback=Mock())
+        with patch.object(module.rclpy, 'ok', return_value=True):
+            result = server.execute_callback(goal)
+        assert result.success and result.has_target
+        assert server.compute_target_pose.call_count == 1
+        goal.publish_feedback.assert_not_called()
+        # 下一次失败必须返回失败，不能返回上次成功的目标。
+        server.compute_target_pose.return_value = (None, False, 'TF 不可用')
+        with patch.object(module.rclpy, 'ok', return_value=True):
+            result = server.execute_callback(goal)
+        assert not result.success and not result.has_target
+        assert server._path_cache is None
+    print("目标点服务空闲不计算、按请求计算且失败不返回旧点测试通过\n")
+
+
+def test_target_request_timeout_and_late_results():
+    service, _goal = _make_chase_execution_test_case()
+    pending = Future()
+    service.get_target_client.send_goal_async.side_effect = lambda _: pending
+    with patch('rm_application.chase_client.time.monotonic', return_value=0.0):
+        request = service._start_target_request(.5)
+    with patch('rm_application.chase_client.time.monotonic', return_value=3.1):
+        state, _ = service._poll_target_request(request)
+    assert state == 'failed' and request['abandoned']
+    handle = Mock(accepted=True)
+    pending.set_result(handle)
+    handle.cancel_goal_async.assert_called_once()
+    handle.get_result_async.assert_not_called()
+
+    service, _goal = _make_chase_execution_test_case()
+    handle = Mock(accepted=True)
+    result_future = Future()
+    handle.get_result_async.return_value = result_future
+    service.get_target_client.send_goal_async.side_effect = lambda _: _completed(handle)
+    with patch('rm_application.chase_client.time.monotonic', return_value=0.0):
+        request = service._start_target_request(.5)
+        assert service._poll_target_request(request)[0] == 'waiting'
+    with patch('rm_application.chase_client.time.monotonic', return_value=5.1):
+        assert service._poll_target_request(request)[0] == 'failed'
+    handle.cancel_goal_async.assert_called_once()
+    result_future.set_result(SimpleNamespace(status=GoalStatus.STATUS_SUCCEEDED,
+        result=SimpleNamespace(success=True, has_target=True, target_pose=_target_pose(), message='迟到')))
+    assert service._poll_target_request(request)[0] == 'failed'
+    print("目标请求超时、接受迟到取消及结果迟到丢弃测试通过\n")
+
+
+def test_chase_failed_target_stops_old_navigation():
+    # 临时失败、拒绝、超时和请求异常都不能结束追击；旧导航必须先停。
+    for mode in ('failed', 'rejected', 'timeout', 'exception'):
+        service, goal = _make_chase_execution_test_case()
+        original = service.get_target_client.send_goal_async.side_effect
+        pending = Future()
+        waits = []
+
+        def request(message):
+            count = service.get_target_client.send_goal_async.call_count
+            if count == 1:
+                return original(message)
+            if count >= 3:
+                service.navigator.isTaskComplete.return_value = False
+                return original(message)
+            if mode == 'exception':
+                raise RuntimeError('请求异常')
+            if mode == 'timeout':
+                return pending
+            if mode == 'rejected':
+                return _completed(Mock(accepted=False))
+            handle = Mock(accepted=True)
+            handle.get_result_async.return_value = _completed(SimpleNamespace(
+                status=GoalStatus.STATUS_ABORTED,
+                result=SimpleNamespace(success=False, has_target=False, message='TF暂不可用'),
+            ))
+            return _completed(handle)
+
+        service.get_target_client.send_goal_async.side_effect = request
+
+        def progress(clock):
+            goal.abort.assert_not_called()
+            if service.navigator.cancelTask.call_count == 1:
+                if service.navigator.goToPose.call_count == 1:
+                    waits.append(clock.now)
+                    assert service.get_target_client.send_goal_async.call_count == 2
+                    if len(waits) >= 3:
+                        service.navigator.isTaskComplete.return_value = True
+                        if mode == 'timeout' and not pending.done():
+                            handle = Mock(accepted=True)
+                            handle.get_result_async.return_value = _completed(
+                                SimpleNamespace(status=GoalStatus.STATUS_CANCELED)
+                            )
+                            pending.set_result(handle)
+            if service.navigator.goToPose.call_count >= 2:
+                goal.is_cancel_requested = True
+                service.navigator.isTaskComplete.return_value = True
+
+        result = _run_chase_execution_test(service, goal, progress)
+        assert result.message == '追击已取消'
+        assert service.navigator.goToPose.call_count == 2
+        assert service.navigator.cancelTask.call_count == 2
+        assert service.get_target_client.send_goal_async.call_count == 3
+        goal.abort.assert_not_called()
+    print('取点失败、拒绝、超时和异常后停止旧导航、等待新点并恢复测试通过\n')
+
+
+def test_chase_visual_loss_and_recovery():
+    service, goal = _make_chase_execution_test_case()
+    stage = SimpleNamespace(value=0, waits=0)
+    original = service.get_target_client.send_goal_async.side_effect
+    def request(msg):
+        if stage.value == 2:
+            stage.value = 3
+            # 导航器上一次取消结果仍可读，但此时不应再查询旧导航。
+            service.navigator.isTaskComplete.return_value = False
+        return original(msg)
+    service.get_target_client.send_goal_async.side_effect = request
+    def progress(_clock):
+        if stage.value == 0 and service.navigator.goToPose.call_count == 1:
+            stage.value = 1
+            service.is_enemy_tracked.return_value = False
+            service.vision_generation += 1
+        elif stage.value == 1 and service.navigator.cancelTask.called:
+            stage.waits += 1
+            assert service.navigator.goToPose.call_count == 1
+            if stage.waits >= 3:
+                service.navigator.isTaskComplete.return_value = True
+                service.is_enemy_tracked.return_value = True
+                service.vision_generation += 1
+                stage.value = 2
+        elif stage.value == 3 and service.navigator.goToPose.call_count >= 2:
+            goal.is_cancel_requested = True
+            service.navigator.isTaskComplete.return_value = True
+    result = _run_chase_execution_test(service, goal, progress)
+    assert result.message == '追击已取消'
+    assert service.navigator.goToPose.call_count == 2
+    assert service.get_target_client.send_goal_async.call_count == 2
+    assert service.navigator.cancelTask.call_count == 2
+    print("视觉丢失后停止旧导航、恢复后重新取点测试通过\n")
+
+
+def test_chase_replacement_waits_for_navigation():
+    service, goal = _make_chase_execution_test_case()
+    stage = SimpleNamespace(wait=0, replacing=False)
+    original = service.get_target_client.send_goal_async.side_effect
+    def request(msg):
+        future = original(msg)
+        handle = future.result()
+        handle.get_result_async.return_value.result().result.target_pose = _target_pose(2.0)
+        if service.get_target_client.send_goal_async.call_count == 1:
+            handle.get_result_async.return_value.result().result.target_pose = _target_pose(1.0)
+        return future
+    service.get_target_client.send_goal_async.side_effect = request
+    def progress(_clock):
+        if service.navigator.cancelTask.call_count == 1 and not stage.replacing:
+            stage.wait += 1
+            assert service.navigator.goToPose.call_count == 1
+            assert service.get_target_client.send_goal_async.call_count == 2
+            if stage.wait >= 3:
+                service.navigator.isTaskComplete.return_value = True
+                stage.replacing = True
+        elif service.navigator.goToPose.call_count >= 2:
+            goal.is_cancel_requested = True
+            service.navigator.isTaskComplete.return_value = True
+    result = _run_chase_execution_test(service, goal, progress)
+    assert result.message == '追击已取消'
+    assert service.navigator.goToPose.call_count == 2
+    # 第二次点只用于决定换点，第三次重新取点才发送给 Nav2。
+    assert service.get_target_client.send_goal_async.call_count == 3
+    print('目标变化先等旧导航结束，再重新获取目标测试通过\n')
+
+
+def test_chase_cancels_while_target_request_pending():
+    service, goal = _make_chase_execution_test_case()
+    pending = Future()
+    service.get_target_client.send_goal_async.side_effect = lambda _: pending
+    def progress(clock):
+        if clock.cycles >= 3:
+            goal.is_cancel_requested = True
+    result = _run_chase_execution_test(service, goal, progress)
+    assert result.message == '追击已取消'
+    service.navigator.goToPose.assert_not_called()
+    assert service.target_request is not None and service.target_request['abandoned']
+    handle = Mock(accepted=True)
+    pending.set_result(handle)
+    handle.cancel_goal_async.assert_called_once()
+    service.navigator.goToPose.assert_not_called()
+    print('导航已释放时允许切换任务、迟到计算仍取消并保留收尾记录测试通过\n')
+
+
+def test_chase_startup_and_navigation_exceptions():
+    for missing in ('vision', 'server', 'navigation_exception'):
+        service, goal = _make_chase_execution_test_case()
+        if missing == 'vision':
+            service.is_enemy_tracked.return_value = False
+        elif missing == 'server':
+            service.get_target_client.server_is_ready.return_value = False
+        else:
+            service.navigator.goToPose.side_effect = RuntimeError('发送导航异常')
+        def progress(_clock):
+            if service.navigator.cancelTask.called:
+                goal.abort.assert_not_called()
+                service.navigator.isTaskComplete.return_value = True
+        result = _run_chase_execution_test(service, goal, progress)
+        assert not result.success
+        goal.abort.assert_called_once()
+        if missing != 'navigation_exception':
+            service.navigator.goToPose.assert_not_called()
+        else:
+            service.navigator.cancelTask.assert_called_once()
+
+    # 即使同一轮视觉丢失，也保留已确认的 Nav2 失败上报。
+    service, goal = _make_chase_execution_test_case()
+    def lose_after_send(_clock):
+        if service.navigator.goToPose.called:
+            service.is_enemy_tracked.return_value = False
+            service.navigator.isTaskComplete.return_value = True
+            service.navigator.getResult.return_value = TaskResult.FAILED
+    result = _run_chase_execution_test(service, goal, lose_after_send)
+    assert '追击导航未成功' in result.message
+    print('保留旧版启动检查、导航异常及丢失时Nav2失败上报测试通过\n')
+
+
+def test_target_pose_discards_interrupted_calculation():
+    server = SimpleNamespace(
+        _vision_generation=0, _request_lock=Lock(), _request_busy=True,
+        _path_cache={'old': True}, _plan_fail_until=10.0,
+        offset_distance=.5, is_enemy_tracked=lambda: True,
+    )
+    goal = SimpleNamespace(request=SimpleNamespace(offset_distance=0.0),
+                           is_cancel_requested=False, succeed=Mock(), abort=Mock(), canceled=Mock())
+    def calculate(_offset, _interrupted):
+        server._vision_generation += 1
+        return _target_pose(), True, '丢失前计算'
+    server.compute_target_pose = calculate
+    with patch('rm_application.target_pose_server.rclpy.ok', return_value=True):
+        result = TargetPoseServer.execute_callback(server, goal)
+    assert not result.success and not result.has_target
+    goal.succeed.assert_not_called()
+    goal.abort.assert_called_once()
+    assert server._path_cache is None and server._request_busy is False
+
+    for cls, busy in ((ChaseClient, 'chase_active'), (TargetPoseServer, '_request_busy')):
+        state = SimpleNamespace(chase_lock=Lock(), _request_lock=Lock())
+        setattr(state, busy, False)
+        assert cls.goal_callback(state, None).name == 'ACCEPT'
+        assert cls.goal_callback(state, None).name == 'REJECT'
+    print('计算中视觉丢失结果丢弃、失败清路径缓存和拒绝重叠任务测试通过\n')
+
+
+def test_patrol_area_interface_is_available():
+    interface = RosInterface.__new__(RosInterface)
+    interface.patrol_areas = {PatrolRegion.CENTER: [2.6, 3.3, 1.0, 3.0]}
+    node = SimpleNamespace(ros_interface=interface)
+    # 通过真实入口转发，避免Mock自动生成缺失方法而掩盖问题。
+    assert BehaviorTreeNode.get_patrol_area(node, PatrolRegion.CENTER) == [
+        2.6, 3.3, 1.0, 3.0,
+    ]
+    print("真实巡逻区域接口转发测试通过\n")
+
+
+def test_chase_waits_for_previous_target_request_to_finish():
+    service, goal = _make_chase_execution_test_case()
+    server = SimpleNamespace(_request_lock=Lock(), _request_busy=False)
+    previous_result = Future()
+    events = []
+
+    def send_request(_request):
+        response = TargetPoseServer.goal_callback(server, _request)
+        accepted = response.name == 'ACCEPT'
+        events.append('accepted' if accepted else 'rejected_busy')
+        handle = Mock(accepted=accepted)
+        if accepted and len(events) == 1:
+            # 取消答复先返回，旧计算仍在收尾，最终结果稍后才到。
+            handle.get_result_async.return_value = previous_result
+            handle.cancel_goal_async.return_value = _completed(
+                SimpleNamespace(goals_canceling=[1])
+            )
+        elif accepted:
+            handle.get_result_async.return_value = _completed(SimpleNamespace(
+                status=GoalStatus.STATUS_SUCCEEDED,
+                result=SimpleNamespace(success=True, has_target=True,
+                                       message='新目标', target_pose=_target_pose()),
+            ))
+            server._request_busy = False
+        return _completed(handle)
+
+    service.get_target_client.send_goal_async.side_effect = send_request
+
+    def progress(clock):
+        if clock.cycles == 1:
+            service.is_enemy_tracked.return_value = False
+            service.vision_generation += 1
+        elif clock.cycles == 2:
+            service.is_enemy_tracked.return_value = True
+            service.vision_generation += 1
+        if clock.now >= 0.12 and not previous_result.done():
+            server._request_busy = False
+            previous_result.set_result(SimpleNamespace(
+                status=GoalStatus.STATUS_CANCELED,
+                result=SimpleNamespace(success=False, has_target=False,
+                                       message='旧计算已取消'),
+            ))
+        if clock.now >= 0.30:
+            goal.is_cancel_requested = True
+            service.navigator.isTaskComplete.return_value = True
+
+    result = _run_chase_execution_test(service, goal, progress)
+    assert 'rejected_busy' not in events, (
+        '旧目标计算还没结束就发送了新请求，恢复追击被busy拒绝: ' + repr(events)
+    )
+    goal.abort.assert_not_called()
+    assert result.message == '追击已取消'
+    print("视觉恢复等待旧目标计算终态、不因busy误报失败测试通过\n")
+
+
+def test_chase_visual_loss_during_target_result_does_not_abort():
+    service, goal = _make_chase_execution_test_case()
+
+    def send_request(_request):
+        handle = Mock(accepted=True)
+
+        def get_result():
+            # 计算端先发现丢失；执行端在本轮检查之后收到false。
+            service.is_enemy_tracked.return_value = False
+            service.vision_generation += 1
+            return _completed(SimpleNamespace(
+                status=GoalStatus.STATUS_ABORTED,
+                result=SimpleNamespace(success=False, has_target=False,
+                                       message='目标计算已取消或视觉目标已失效'),
+            ))
+
+        handle.get_result_async.side_effect = get_result
+        return _completed(handle)
+
+    service.get_target_client.send_goal_async.side_effect = send_request
+
+    def progress(clock):
+        if clock.now >= 0.10:
+            goal.is_cancel_requested = True
+
+    result = _run_chase_execution_test(service, goal, progress)
+    assert not goal.abort.called, '视觉丢失的异步结果被当成追击故障，提前退出宽限等待'
+    assert result.message == '追击已取消'
+    print("视觉在接收结果期间丢失时保留任务、等待上层取消测试通过\n")
+
+
+def test_target_pose_rejects_stale_enemy_tf():
+    from geometry_msgs.msg import TransformStamped
+    from rclpy.time import Time
+
+    transform = TransformStamped()
+    transform.header.frame_id = 'map'
+    transform.child_frame_id = 'enemy'
+    transform.header.stamp = Time(seconds=1.0).to_msg()
+    transform.transform.translation.x = 3.0
+    server = SimpleNamespace(
+        vision_timeout=0.5, use_path_offset=False,
+        is_enemy_tracked=lambda: True,
+        get_clock=lambda: SimpleNamespace(now=lambda: Time(seconds=10.0)),
+        tf_buffer=Mock(), get_robot_pose=lambda: (0.0, 0.0),
+        get_logger=lambda: Mock(),
+    )
+    server.tf_buffer.lookup_transform.return_value = transform
+    server._make_pose = lambda x, y, _z: _target_pose(x)
+    # 新视觉状态不能使TF缓冲区中9秒前的敌人坐标重新有效。
+    pose, success, message = TargetPoseServer.compute_target_pose(server, 0.5)
+    assert not success and pose is None, (
+        f'旧enemy TF仍生成有效目标: x={pose.pose.position.x if pose else None}, {message}'
+    )
+    print("视觉恢复后拒绝过期敌人TF测试通过\n")
+
+
+def test_target_pose_uses_latest_tf():
+    from geometry_msgs.msg import TransformStamped
+    from rclpy.time import Time
+    from tf2_ros import Buffer
+
+    transform = TransformStamped()
+    transform.header.frame_id = 'map'
+    transform.child_frame_id = 'enemy'
+    transform.transform.translation.x = 3.0
+    transform.transform.rotation.w = 1.0
+    server = SimpleNamespace(
+        vision_timeout=0.5, use_path_offset=False,
+        is_enemy_tracked=lambda: True,
+        get_clock=lambda: SimpleNamespace(now=lambda: Time(seconds=10.1)),
+        tf_buffer=Mock(), get_robot_pose=lambda: (0.0, 0.0), get_logger=lambda: Mock(),
+        _make_pose=lambda x, y, z: _target_pose(x),
+    )
+    server.tf_buffer.lookup_transform.return_value = transform
+    # 不要求图像与TF逐帧对应，最新坐标仍在有效期内即可计算。
+    transform.header.stamp = Time(seconds=9.9).to_msg()
+    pose, success, _ = TargetPoseServer.compute_target_pose(server, 0.5)
+    assert success and pose.pose.position.x == 2.5
+    assert server.tf_buffer.lookup_transform.call_args.args[2].nanoseconds == 0
+    transform.header.stamp = Time(seconds=10.2).to_msg()
+    assert TargetPoseServer.compute_target_pose(server, 0.5)[1] is False
+    transform.header.stamp = Time(seconds=9.0).to_msg()
+    assert TargetPoseServer.compute_target_pose(server, 0.5)[1] is False
+
+    # 使用真实tf2.Buffer验证：不依赖图像时间，也不会要求未来外推。
+    buffer = Buffer()
+    transform.header.stamp = Time(seconds=10.0).to_msg()
+    buffer.set_transform(transform, 'offline_test')
+    server.tf_buffer = buffer
+    pose, success, _ = TargetPoseServer.compute_target_pose(server, 0.5)
+    assert success and pose.pose.position.x == 2.5
+    print('沿用最新TF查询、允许小幅时间差并拒绝明显过期坐标测试通过\n')
+
+
+def test_server_only_visual_loss_waits_without_fault():
+    service, goal = _make_chase_execution_test_case()
+    original = service.get_target_client.send_goal_async.side_effect
+
+    def send_request(message):
+        if service.get_target_client.send_goal_async.call_count == 1:
+            handle = Mock(accepted=True)
+            handle.get_result_async.return_value = _completed(SimpleNamespace(
+                status=GoalStatus.STATUS_SUCCEEDED,
+                result=SimpleNamespace(success=False, has_target=False,
+                                       message='视觉目标暂不可用'),
+            ))
+            return _completed(handle)
+        return original(message)
+
+    service.get_target_client.send_goal_async.side_effect = send_request
+
+    def progress(clock):
+        goal.abort.assert_not_called()
+        if service.navigator.goToPose.called:
+            goal.is_cancel_requested = True
+            service.navigator.isTaskComplete.return_value = True
+
+    result = _run_chase_execution_test(service, goal, progress)
+    assert result.message == '追击已取消'
+    assert service.get_target_client.send_goal_async.call_count == 2
+    service.navigator.goToPose.assert_called_once()
+    print("计算端先发现视觉丢失时正常等待、恢复后重新取点测试通过\n")
+
+
+def test_next_chase_waits_for_previous_calculation():
+    service, first_goal = _make_chase_execution_test_case()
+    server = SimpleNamespace(_request_lock=Lock(), _request_busy=False)
+    old_result = Future()
+    events = []
+
+    def send_request(message):
+        accepted = TargetPoseServer.goal_callback(server, message).name == 'ACCEPT'
+        events.append(accepted)
+        handle = Mock(accepted=accepted)
+        if len(events) == 1:
+            handle.get_result_async.return_value = old_result
+        elif accepted:
+            server._request_busy = False
+            handle.get_result_async.return_value = _completed(SimpleNamespace(
+                status=GoalStatus.STATUS_SUCCEEDED,
+                result=SimpleNamespace(success=True, has_target=True,
+                                       message='新目标', target_pose=_target_pose()),
+            ))
+        return _completed(handle)
+
+    service.get_target_client.send_goal_async.side_effect = send_request
+
+    def cancel_first(clock):
+        if clock.cycles >= 2:
+            first_goal.is_cancel_requested = True
+
+    result = _run_chase_execution_test(service, first_goal, cancel_first)
+    assert result.message == '追击已取消'
+    assert not old_result.done() and service.target_request['abandoned']
+    second_goal = SimpleNamespace(
+        request=SimpleNamespace(offset_distance=0.0), is_cancel_requested=False,
+        publish_feedback=Mock(), abort=Mock(), canceled=Mock(), succeed=Mock(),
+    )
+    service.chase_active = True
+
+    def finish_old_then_cancel_new(clock):
+        if not old_result.done():
+            assert events == [True]
+            if clock.now >= 0.12:
+                server._request_busy = False
+                old_result.set_result(SimpleNamespace(status=GoalStatus.STATUS_CANCELED))
+        if service.navigator.goToPose.called:
+            second_goal.is_cancel_requested = True
+            service.navigator.isTaskComplete.return_value = True
+
+    result = _run_chase_execution_test(service, second_goal, finish_old_then_cancel_new)
+    assert result.message == '追击已取消'
+    assert events == [True, True]
+    second_goal.abort.assert_not_called()
+    assert service.target_request is None
+    print("下一轮追击等待上一轮计算收尾、不阻塞其他导航任务测试通过\n")
+
+
+def test_server_only_loss_stops_active_navigation():
+    service, goal = _make_chase_execution_test_case()
+    original = service.get_target_client.send_goal_async.side_effect
+    waits = []
+
+    def send_request(message):
+        count = service.get_target_client.send_goal_async.call_count
+        if count == 2:
+            handle = Mock(accepted=True)
+            handle.get_result_async.return_value = _completed(SimpleNamespace(
+                status=GoalStatus.STATUS_SUCCEEDED,
+                result=SimpleNamespace(success=False, has_target=False,
+                                       message='视觉目标暂不可用'),
+            ))
+            return _completed(handle)
+        if count >= 3:
+            service.navigator.isTaskComplete.return_value = False
+        return original(message)
+
+    service.get_target_client.send_goal_async.side_effect = send_request
+
+    def progress(clock):
+        goal.abort.assert_not_called()
+        if service.navigator.cancelTask.call_count == 1:
+            assert service.navigator.goToPose.call_count == 1 or len(waits) >= 3
+            if service.navigator.goToPose.call_count == 1:
+                waits.append(clock.now)
+                assert service.get_target_client.send_goal_async.call_count == 2
+                if len(waits) >= 3:
+                    service.navigator.isTaskComplete.return_value = True
+        if service.navigator.goToPose.call_count >= 2:
+            goal.is_cancel_requested = True
+            service.navigator.isTaskComplete.return_value = True
+
+    result = _run_chase_execution_test(service, goal, progress)
+    assert result.message == '追击已取消'
+    assert service.navigator.goToPose.call_count == 2
+    assert service.navigator.cancelTask.call_count == 2
+    print("执行端尚未收到false时仍按计算端无目标结果停止旧导航测试通过\n")
+
+
+def test_target_server_disconnect_stops_and_waits():
+    service, goal = _make_chase_execution_test_case()
+    waits = []
+
+    def progress(clock):
+        goal.abort.assert_not_called()
+        if service.navigator.goToPose.call_count == 1:
+            service.get_target_client.server_is_ready.return_value = False
+            if service.navigator.cancelTask.called:
+                waits.append(clock.now)
+                assert service.get_target_client.send_goal_async.call_count == 1
+                if len(waits) >= 3:
+                    service.navigator.isTaskComplete.return_value = True
+                    service.get_target_client.server_is_ready.return_value = True
+        if service.navigator.goToPose.call_count >= 2:
+            goal.is_cancel_requested = True
+            service.navigator.isTaskComplete.return_value = True
+
+    result = _run_chase_execution_test(service, goal, progress)
+    assert result.message == '追击已取消'
+    assert service.navigator.goToPose.call_count == 2
+    assert service.navigator.cancelTask.call_count == 2
+    assert service.get_target_client.send_goal_async.call_count == 2
+    print('追击中目标服务短暂断联时停止旧导航、服务恢复后继续测试通过\n')
+
+
+def test_merged_chase_config():
+    config_dir = Path(__file__).resolve().parents[2] / "config"
+    config = yaml.safe_load((config_dir / "chase_params.yaml").read_text())
+    assert config["/**"]["ros__parameters"] == {"vision_timeout": 0.5}
+    assert config["chase_client"]["ros__parameters"] == {"chase_rate": 10}
+    server = config["target_pose_server"]["ros__parameters"]
+    assert server["offset_distance"] == 0.5
+    assert server["enemy_replan_threshold"] == 0.1
+    text = (config_dir / "chase_params.yaml").read_text()
+    for obsolete in ("enemy_pose_timeout", "tracked_timeout", "default_offset_distance"):
+        assert obsolete not in text
+    print("共用视觉超时只配置一次、默认距离只归计算端测试通过\n")
+
+
+def test_offset_default_and_override():
+    # 执行端不保存默认距离：非正请求传0，正数仅覆盖本次请求。
+    for requested, expected in ((0.0, 0.0), (-1.0, 0.0), (1.2, 1.2)):
+        service, goal = _make_chase_execution_test_case()
+        assert not hasattr(service, "offset_distance")
+        goal.request.offset_distance = requested
+
+        def cancel_after_send(_clock):
+            if service.navigator.goToPose.called:
+                goal.is_cancel_requested = True
+                service.navigator.isTaskComplete.return_value = True
+
+        _run_chase_execution_test(service, goal, cancel_after_send)
+        sent = service.get_target_client.send_goal_async.call_args.args[0]
+        assert abs(sent.offset_distance - expected) < 1e-6
+
+    for requested, expected in ((0.0, 0.8), (-1.0, 0.8), (1.2, 1.2)):
+        server = SimpleNamespace(
+            offset_distance=0.8, _vision_generation=0,
+            _request_lock=Lock(), _request_busy=True,
+            is_enemy_tracked=lambda: True,
+            compute_target_pose=Mock(return_value=(_target_pose(), True, "有效目标")),
+        )
+        goal = SimpleNamespace(
+            request=SimpleNamespace(offset_distance=requested),
+            is_cancel_requested=False, succeed=Mock(), abort=Mock(), canceled=Mock(),
+        )
+        with patch("rm_application.target_pose_server.rclpy.ok", return_value=True):
+            result = TargetPoseServer.execute_callback(server, goal)
+        assert result.success and result.has_target
+        assert server.compute_target_pose.call_args.args[0] == expected
+        assert server.offset_distance == 0.8
+    print("默认偏移只在计算端取值、正数临时覆盖不改变配置测试通过\n")
+
+
+def test_shared_vision_timeout_and_independent_grace():
+    class Stamp:
+        def __init__(self, seconds):
+            self.nanoseconds = round(seconds * 1e9)
+
+        def __sub__(self, other):
+            result = Stamp(0)
+            result.nanoseconds = self.nanoseconds - other.nanoseconds
+            return result
+
+    now = SimpleNamespace(seconds=0.0)
+    clock = Mock()
+    clock.now.side_effect = lambda: Stamp(now.seconds)
+    client = SimpleNamespace(
+        vision_timeout=1.2, enemy_tracked=False,
+        enemy_data_timestamp=None, vision_generation=0, get_clock=lambda: clock,
+    )
+    server = SimpleNamespace(
+        vision_timeout=1.2, _enemy_tracked=False,
+        _enemy_data_timestamp=None, _vision_generation=0, get_clock=lambda: clock,
+    )
+    interface = RosInterface.__new__(RosInterface)
+    interface.node = SimpleNamespace(get_clock=lambda: clock)
+    interface.latest_enemy = None
+    interface.last_enemy_tracked_time = None
+    from rm_interfaces.msg import EnemyCenter
+    tracked = EnemyCenter()
+    tracked.tracked = True
+    ChaseClient.enemy_callback(client, tracked)
+    TargetPoseServer.enemy_data_callback(server, tracked)
+    interface.enemy_callback(tracked)
+
+    # 同一个超时值在三个消费者中的边界判断一致。
+    for age, valid in ((0.6, True), (1.2, True), (1.3, False)):
+        now.seconds = age
+        assert ChaseClient.is_enemy_tracked(client) is valid
+        assert TargetPoseServer.is_enemy_tracked(server) is valid
+        assert interface.is_enemy_tracked(1.2) is valid
+    assert interface.is_enemy_within_lost_grace(1.5) is True
+
+    now.seconds = 0.1
+    lost = EnemyCenter()
+    lost.tracked = False
+    ChaseClient.enemy_callback(client, lost)
+    TargetPoseServer.enemy_data_callback(server, lost)
+    interface.enemy_callback(lost)
+    assert ChaseClient.is_enemy_tracked(client) is False
+    assert TargetPoseServer.is_enemy_tracked(server) is False
+    assert interface.is_enemy_tracked(1.2) is False
+    assert interface.is_enemy_within_lost_grace(0.3) is True
+
+    node = SimpleNamespace(vision_timeout=1.2, target_lost_grace_time=0.3,
+                           ros_interface=Mock())
+    BehaviorTreeNode.is_enemy_tracked(node)
+    BehaviorTreeNode.is_enemy_within_lost_grace(node)
+    node.ros_interface.is_enemy_tracked.assert_called_once_with(1.2)
+    node.ros_interface.is_enemy_within_lost_grace.assert_called_once_with(0.3)
+    print("共用视觉超时、false立即失效与任务宽限独立测试通过\n")
+
+
 @contextmanager
 def _rqt_readonly_types():
     """本次调试进程内锁定字段类型，避免 RQT 的类型编辑异常。"""
@@ -1840,5 +2530,37 @@ if __name__ == "__main__":
         test_damage_safety_window()
         test_damage_input_validity()
         test_xml_damage_score_and_resupply()
+        test_visual_only_chase_conditions()
+        test_visual_freshness_without_enemy_tf()
+        test_target_pose_only_computes_on_request()
+        test_target_request_timeout_and_late_results()
+        test_chase_failed_target_stops_old_navigation()
+        test_chase_visual_loss_and_recovery()
+        test_chase_replacement_waits_for_navigation()
+        test_chase_cancels_while_target_request_pending()
+        test_chase_startup_and_navigation_exceptions()
+        test_target_pose_discards_interrupted_calculation()
         test_rqt_expression_editing()
-        print("当前导航、XML 主树、战术评分与 RQT 编辑的 23 项测试全部通过")
+        test_merged_chase_config()
+        test_offset_default_and_override()
+        test_shared_vision_timeout_and_independent_grace()
+        # 汇总链路回归问题，避免第一项失败后看不到其他独立问题。
+        review_failures = []
+        for check in (
+            test_patrol_area_interface_is_available,
+            test_chase_waits_for_previous_target_request_to_finish,
+            test_chase_visual_loss_during_target_result_does_not_abort,
+            test_target_pose_rejects_stale_enemy_tf,
+            test_target_pose_uses_latest_tf,
+            test_server_only_visual_loss_waits_without_fault,
+            test_next_chase_waits_for_previous_calculation,
+            test_server_only_loss_stops_active_navigation,
+            test_target_server_disconnect_stops_and_waits,
+        ):
+            try:
+                check()
+            except Exception as error:
+                review_failures.append((check.__name__, str(error)))
+                print(f"[链路回归失败] {check.__name__}: {error}")
+        assert not review_failures, f"链路回归还有{len(review_failures)}项未通过"
+        print("当前导航、XML 主树、战术评分、追击链路与 RQT 编辑的 45 项测试全部通过")
