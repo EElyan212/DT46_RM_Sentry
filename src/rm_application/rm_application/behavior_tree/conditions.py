@@ -307,6 +307,22 @@ class IsChaseReady(BehaviourWithPorts):
         # 冷却期间，让任务选择树继续检查占点或巡逻
         return py_trees.common.Status.FAILURE
 
+# 判断独立巡逻开关是否开启
+class IsPatrolEnabled(BehaviourWithPorts):
+    INPUT_PORTS = {}
+    OUTPUT_PORTS = {}
+
+    def __init__(self, name, is_patrol_enabled, **kwargs):
+        super().__init__(name=name, **kwargs)
+        self.is_patrol_enabled = is_patrol_enabled
+
+    def update(self):
+        if self.is_patrol_enabled():
+            return py_trees.common.Status.SUCCESS
+
+        return py_trees.common.Status.FAILURE
+
+
 # 判断是否需要切换战术模式，成立时发布待应用候选
 class ShouldSwitchTacticalMode(BehaviourWithPorts):
     INPUT_PORTS = {}

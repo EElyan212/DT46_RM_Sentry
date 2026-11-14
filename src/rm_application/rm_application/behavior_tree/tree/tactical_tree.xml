@@ -25,9 +25,12 @@
                     </ReactiveSequence>
 
                     <ReactiveSequence name="选择己方侧巡逻">
+                        <IsPatrolEnabled name="巡逻已开启" />
                         <SetHomePatrolRegion name="设置己方侧巡逻区域" />
                         <SelectPatrol name="选择巡逻任务" />
                     </ReactiveSequence>
+                    <!-- 关闭巡逻后停车，区外回点仍优先 -->
+                    <SelectStop name="巡逻关闭时停车" />
                 </ReactiveFallback>
             </ReactiveSequence>
 
@@ -48,9 +51,12 @@
                     </ReactiveSequence>
 
                     <ReactiveSequence name="选择中央巡逻">
+                        <IsPatrolEnabled name="巡逻已开启" />
                         <SetCenterPatrolRegion name="设置中央巡逻区域" />
                         <SelectPatrol name="选择巡逻任务" />
                     </ReactiveSequence>
+                    <!-- 关闭巡逻后停车，追击和回点仍优先 -->
+                    <SelectStop name="巡逻关闭时停车" />
                 </ReactiveFallback>
             </ReactiveSequence>
 
@@ -71,9 +77,12 @@
                     </ReactiveSequence>
 
                     <ReactiveSequence name="选择敌方侧巡逻">
+                        <IsPatrolEnabled name="巡逻已开启" />
                         <SetEnemyPatrolRegion name="设置敌方侧巡逻区域" />
                         <SelectPatrol name="选择巡逻任务" />
                     </ReactiveSequence>
+                    <!-- 关闭巡逻后停车，追击和回点仍优先 -->
+                    <SelectStop name="巡逻关闭时停车" />
                 </ReactiveFallback>
             </ReactiveSequence>
 
@@ -90,10 +99,12 @@
         <Condition ID="IsPressureMode" />
         <Condition ID="NeedEnterCenterZone" />
         <Condition ID="IsChaseReady" />
+        <Condition ID="IsPatrolEnabled" />
         <Condition ID="CanChaseInsideCenterZone" />
         <Condition ID="CanChase" />
 
         <Action ID="SelectOccupy" />
+        <Action ID="SelectStop" />
         <Action ID="SelectChase" />
         <Action ID="SelectPatrol" />
         <Action ID="SetHomePatrolRegion" />

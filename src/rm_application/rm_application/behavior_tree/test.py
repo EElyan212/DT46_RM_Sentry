@@ -767,6 +767,114 @@ def _create_tactical_test_tree(
     return blackboard, node, root, updates[0]
 
 
+def _create_patrol_switch_test_tree(mode):
+    blackboard, node, root, _ = _create_tactical_test_tree(mode_source="manual")
+    blackboard.tactical_mode = mode
+    state = SimpleNamespace(enabled=True, stopped=True)
+    node.get_parameter.side_effect = lambda name: SimpleNamespace(value=state.enabled)
+    node.is_patrol_enabled.side_effect = lambda: BehaviorTreeNode.is_patrol_enabled(node)
+    node.is_navigation_stopped.side_effect = lambda: state.stopped
+    node.get_control_zone.return_value = dict(
+        enabled=True, x_min=0.0, x_max=2.0, y_min=0.0, y_max=2.0,
+    )
+    node.get_chase_boundary.return_value = dict(
+        enabled=True, x_min=-1.0, x_max=3.0, y_min=-1.0, y_max=3.0,
+    )
+    node.get_robot_position.return_value = (1.0, 1.0)
+    node.is_chase_ready.return_value = True
+    node.is_enemy_tracked.return_value = False
+    node.is_enemy_within_lost_grace.return_value = False
+    node.get_patrol_region.side_effect = lambda: blackboard.patrol_region
+    node.set_patrol_region.side_effect = lambda region: setattr(
+        blackboard, "patrol_region", region,
+    )
+    node.get_patrol_area.return_value = (0.0, 2.0, 0.0, 2.0)
+    node.start_patrol.return_value = True
+    node.get_patrol_result.return_value = NavigationResult.RUNNING
+    node.start_chase.return_value = True
+    node.get_chase_result.return_value = None
+    return state, blackboard, node, root
+
+
+def test_patrol_switch_task_selection():
+    parameters = yaml.safe_load(
+        (Path(__file__).resolve().parents[2] / "config" / "behavior_tree_params.yaml").read_text()
+    )["behavior_tree_node"]["ros__parameters"]
+    assert parameters["patrol_enabled"] is True
+
+    for mode in TacticalMode:
+        # 通过实际导航XML验证开关，不把追击、回点或回血一并关掉。
+        for enabled, tracked, position, hp, match, ready, expected in (
+            (True, False, (1.0, 1.0), 300, 4, True, NavigationTask.PATROL),
+            (False, False, (1.0, 1.0), 300, 4, True, NavigationTask.STOP),
+            (False, True, (1.0, 1.0), 300, 4, True,
+             NavigationTask.STOP if mode == TacticalMode.DEFENSE else NavigationTask.CHASE),
+            (False, False, (2.5, 1.0), 300, 4, True, NavigationTask.OCCUPY_CENTER),
+            (False, False, (1.0, 1.0), 50, 4, True, NavigationTask.RESUPPLY),
+            (False, True, (1.0, 1.0), 300, 0, True, NavigationTask.STOP),
+            (False, True, (1.0, 1.0), 300, 4, False, NavigationTask.STOP),
+        ):
+            state, blackboard, node, root = _create_patrol_switch_test_tree(mode)
+            state.enabled = enabled
+            blackboard.self_hp = hp
+            blackboard.match_progress = match
+            node.is_enemy_tracked.return_value = tracked
+            node.is_chase_ready.return_value = ready
+            node.get_robot_position.return_value = position
+            with patch("rm_application.behavior_tree.actions.random.uniform", return_value=0.0):
+                root.tick_once()
+            assert blackboard.navigation_task == expected, (mode, enabled, expected)
+            if not enabled:
+                node.start_patrol.assert_not_called()
+            root.stop(py_trees.common.Status.INVALID)
+    print("三种模式独立开关巡逻、保留追击回点回血和冷却约束测试通过\n")
+
+
+def test_patrol_switch_waits_for_cancel():
+    state, blackboard, node, root = _create_patrol_switch_test_tree(TacticalMode.NEUTRAL)
+
+    def start_patrol(_target):
+        assert state.stopped, "旧巡逻尚未结束就发送了新目标"
+        state.stopped = False
+        return True
+
+    node.start_patrol.side_effect = start_patrol
+    with patch("rm_application.behavior_tree.actions.random.uniform", return_value=0.0):
+        root.tick_once()
+        assert blackboard.navigation_task == NavigationTask.PATROL
+        node.start_patrol.assert_called_once()
+
+        # 运行中关闭后只取消一次，等待旧导航终态。
+        state.enabled = False
+        root.tick_once()
+        root.tick_once()
+        assert blackboard.navigation_task == NavigationTask.STOP
+        assert root.status == py_trees.common.Status.RUNNING
+        node.stop_patrol.assert_called_once()
+
+        # 等待期间重新开启，也不能抢在取消完成之前发点。
+        state.enabled = True
+        root.tick_once()
+        assert blackboard.navigation_task == NavigationTask.PATROL
+        assert node.start_patrol.call_count == 1
+        state.stopped = True
+        root.tick_once()
+        assert node.start_patrol.call_count == 2
+    root.stop(py_trees.common.Status.INVALID)
+
+    # 只改变巡逻开关，不中断已经选中的追击。
+    state, blackboard, node, root = _create_patrol_switch_test_tree(TacticalMode.NEUTRAL)
+    node.is_enemy_tracked.return_value = True
+    for enabled in (False, True, False):
+        state.enabled = enabled
+        root.tick_once()
+        assert blackboard.navigation_task == NavigationTask.CHASE
+    node.start_chase.assert_called_once()
+    node.stop_chase.assert_not_called()
+    root.stop(py_trees.common.Status.INVALID)
+    print("运行中关闭巡逻等待取消、重开不抢导航且不打断追击测试通过\n")
+
+
 def test_xml_tactical_mode_confirmation():
     blackboard, node, root, update = _create_tactical_test_tree(
         min_hold_seconds=5.0
@@ -2554,6 +2662,8 @@ if __name__ == "__main__":
         test_chase_navigation_success_continues()
         test_chase_cooldown_state()
         test_chase_selection_respects_cooldown()
+        test_patrol_switch_task_selection()
+        test_patrol_switch_waits_for_cancel()
         test_patrol_region_switch_waits_for_cancel()
         test_xml_patrol_recovery_uses_alternative_goal()
         test_retry_wait_restarts_after_interrupt()
@@ -2604,4 +2714,4 @@ if __name__ == "__main__":
                 review_failures.append((check.__name__, str(error)))
                 print(f"[链路回归失败] {check.__name__}: {error}")
         assert not review_failures, f"链路回归还有{len(review_failures)}项未通过"
-        print("当前导航、XML 主树、战术评分、追击链路、目标日志与 RQT 编辑的 46 项测试全部通过")
+        print("当前导航、XML 主树、战术评分、追击链路、目标日志、巡逻开关与 RQT 编辑的 48 项测试全部通过")
