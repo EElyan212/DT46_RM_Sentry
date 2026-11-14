@@ -7,6 +7,7 @@ import time
 import rclpy
 from action_msgs.msg import GoalStatus
 from nav2_simple_commander.robot_navigator import BasicNavigator, TaskResult
+from rcl_interfaces.msg import Log
 from rclpy.action import ActionClient, ActionServer, CancelResponse, GoalResponse
 from rclpy.callback_groups import ReentrantCallbackGroup
 from rclpy.executors import MultiThreadedExecutor
@@ -84,8 +85,49 @@ class ChaseClient(Node):
             enemy_qos,
         )
 
+        # 汇总计算点和Nav2服务端目标，只接收启动后的新日志
+        self.target_log_subscription = self.create_subscription(
+            Log,
+            '/rosout',
+            self.target_log_callback,
+            QoSProfile(
+                history=HistoryPolicy.KEEP_LAST,
+                depth=100,
+                reliability=ReliabilityPolicy.RELIABLE,
+                durability=DurabilityPolicy.VOLATILE,
+            ),
+        )
+
         self.get_logger().info(
             'chase_client 已启动：追击期间按需请求目标点'
+        )
+
+    def target_log_callback(self, msg):
+        # 只接收原始来源，避免再次转发自己打印的日志
+        logger_name = msg.name.rsplit('.', 1)[-1]
+
+        if (
+            logger_name == 'target_pose_server'
+            and msg.msg.startswith('[追击计算点]')
+        ):
+            content = msg.msg
+        elif (
+            logger_name == 'bt_navigator'
+            and msg.msg.startswith(
+                'Begin navigating from current location'
+            )
+        ):
+            content = f'[Nav2执行目标] {msg.msg}'
+        else:
+            return
+
+        # 保留来源时间，不把转发时间当作目标生效时间
+        stamp = msg.stamp
+        self.get_logger().info(
+            f'[目标对照] '
+            f'源时间={stamp.sec}.{stamp.nanosec:09d}, '
+            f'来源={msg.name}, '
+            f'{content}'
         )
 
     def goal_callback(self, _request):

@@ -626,6 +626,20 @@ class TargetPoseServer(Node):
 
             if success:
                 result.target_pose = pose
+
+                # 沿用目标消息的时间戳，记录本次计算的坐标和方式
+                stamp = pose.header.stamp
+                position = pose.pose.position
+                self.get_logger().info(
+                    f'[追击计算点] '
+                    f'点时间={stamp.sec}.{stamp.nanosec:09d}, '
+                    f'坐标系={pose.header.frame_id}, '
+                    f'x={position.x:.4f}, '
+                    f'y={position.y:.4f}, '
+                    f'偏移={offset:.3f}m, '
+                    f'说明={message}'
+                )
+
                 goal_handle.succeed()
 
             else:

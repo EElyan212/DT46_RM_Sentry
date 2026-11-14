@@ -16,6 +16,7 @@ import yaml
 
 from geometry_msgs.msg import PoseStamped
 from nav2_simple_commander.robot_navigator import TaskResult
+from rcl_interfaces.msg import Log
 from rm_interfaces.msg import Decision, SerialDebug
 
 from rm_application.behavior_tree.actions import (
@@ -1908,6 +1909,43 @@ def test_target_server_disconnect_stops_and_waits():
     print('追击中目标服务短暂断联时停止旧导航、服务恢复后继续测试通过\n')
 
 
+def test_target_log_aggregation():
+    logger = Mock()
+    service = SimpleNamespace(get_logger=lambda: logger)
+    calculated = Log(
+        name='robot.target_pose_server',
+        msg='[追击计算点] 点时间=10.000000001, x=3.4000, y=0.7000',
+    )
+    calculated.stamp.sec = 10
+    calculated.stamp.nanosec = 2
+    ChaseClient.target_log_callback(service, calculated)
+    forwarded = logger.info.call_args.args[0]
+    assert '源时间=10.000000002' in forwarded
+    assert calculated.msg in forwarded
+
+    navigating = Log(
+        name='bt_navigator',
+        msg='Begin navigating from current location (2.00, 1.00) to (3.40, 0.70)',
+    )
+    # 相同坐标再次生效也保留事件，不能因为内容相同而漏掉切换。
+    ChaseClient.target_log_callback(service, navigating)
+    ChaseClient.target_log_callback(service, navigating)
+    assert logger.info.call_count == 3
+    assert '[Nav2执行目标]' in logger.info.call_args.args[0]
+    assert navigating.msg in logger.info.call_args.args[0]
+
+    for name, message in (
+        ('chase_client', forwarded),
+        ('chase_client', '[Nav2追击目标] x=3.4000, y=0.7000'),
+        ('bt_navigator', 'Navigation canceled.'),
+        ('other_bt_navigator', navigating.msg),
+        ('target_pose_server', 'target_pose_server 已启动'),
+    ):
+        ChaseClient.target_log_callback(service, Log(name=name, msg=message))
+    assert logger.info.call_count == 3
+    print('计算点与Nav2服务端目标汇总、保留重复事件和防循环转发测试通过\n')
+
+
 def test_merged_chase_config():
     config_dir = Path(__file__).resolve().parents[2] / "config"
     config = yaml.safe_load((config_dir / "chase_params.yaml").read_text())
@@ -1944,6 +1982,7 @@ def test_offset_default_and_override():
             offset_distance=0.8, _vision_generation=0,
             _request_lock=Lock(), _request_busy=True,
             is_enemy_tracked=lambda: True,
+            get_logger=lambda: Mock(),
             compute_target_pose=Mock(return_value=(_target_pose(), True, "有效目标")),
         )
         goal = SimpleNamespace(
@@ -2542,6 +2581,7 @@ if __name__ == "__main__":
         test_chase_startup_and_navigation_exceptions()
         test_target_pose_discards_interrupted_calculation()
         test_rqt_expression_editing()
+        test_target_log_aggregation()
         test_merged_chase_config()
         test_offset_default_and_override()
         test_shared_vision_timeout_and_independent_grace()
@@ -2564,4 +2604,4 @@ if __name__ == "__main__":
                 review_failures.append((check.__name__, str(error)))
                 print(f"[链路回归失败] {check.__name__}: {error}")
         assert not review_failures, f"链路回归还有{len(review_failures)}项未通过"
-        print("当前导航、XML 主树、战术评分、追击链路与 RQT 编辑的 45 项测试全部通过")
+        print("当前导航、XML 主树、战术评分、追击链路、目标日志与 RQT 编辑的 46 项测试全部通过")
