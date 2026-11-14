@@ -1,0 +1,27 @@
+hole_detector:
+  ros__parameters:
+    enabled: false
+    # 隧道的矩形
+    hole_x_min: 0.0
+    hole_x_max: 0.0
+    hole_y_min: 0.0
+    hole_y_max: 0.0
+
+    pre_stop_distance: 0.8  # 到入口多少距离停下
+    path_timeout: 2.0       # 路径超时时间
+    publish_rate: 10.0      # 判定频率
+    map_frame: map
+    robot_frame: base_footprint
+    plan_topic: /plan
+    status_topic: /hole/status
+
+hole_behavior:
+  ros__parameters:
+    hole_status_topic: /hole/status
+    hole_block_topic: /hole/block
+    gimbal_complete_topic: /gimbal/action_complete
+    gimbal_exit_complete_topic: /gimbal/exit_action_complete
+    post_exit_distance: 0.5    # 离开出口多少距离停下
+    status_timeout: 1.0         
+    block_on_missing_status: true
+    publish_rate: 10.0

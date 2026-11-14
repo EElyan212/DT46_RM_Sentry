@@ -5,7 +5,7 @@ import rclpy
 from rclpy.node import Node
 from geometry_msgs.msg import Twist
 from rm_interfaces.msg import Decision, Senddata, GimbalControl, OdoMsg, SerialDebug, ArmorHit
-from std_msgs.msg import Int32
+from std_msgs.msg import Bool, Int32
 import struct
 from geometry_msgs.msg import Vector3Stamped, Twist
 from .modules.crc import *
@@ -51,6 +51,8 @@ class SerialNode(Node):
         self.sub_gimbal_control = self.create_subscription(GimbalControl, "tracker/gimbal_control", self.gimbal_control_callback, qos_profile_sensor_data)
         #创建小陀螺模式接收者
         self.sub_gimbal_mode = self.create_subscription(Int32, "/gimbal_mode", self.gimbal_mode_callback, 1)
+        #创建洞口门控接收者
+        self.sub_hole_block = self.create_subscription(Bool, self.hole_block_topic, self.hole_block_callback, 10)
         # 创建发布者 2: IMU 数据
         self.pub_uart_receive_imu = self.create_publisher(Vector3Stamped, '/imu/rpy', qos)
         #创建发布者 3: odo 数据
@@ -108,7 +110,9 @@ class SerialNode(Node):
                 ('serial_receive_header', 0xA5),
                 ('serial_send_header', 0x5A),
                 ('pub_rpy', False),
-                ('pub_serial_debug', False)
+                ('pub_serial_debug', False),
+                ('hole_gate_enabled', True),
+                ('hole_block_topic', '/hole/block')
             ]
         )
 
@@ -124,6 +128,9 @@ class SerialNode(Node):
         self.serial_send_header = self.get_parameter("serial_send_header").value
         self.pub_rpy = self.get_parameter("pub_rpy").value
         self.pub_serial_debug = self.get_parameter("pub_serial_debug").value
+        self.hole_gate_enabled = self.get_parameter("hole_gate_enabled").value
+        self.hole_block_topic = self.get_parameter("hole_block_topic").value
+        self.hole_blocked = False
         self.last_gimbal_time = 0.0
 
         # 3. 打印当前生效的配置信息，方便在终端确认 YAML 是否加载成功
@@ -143,6 +150,8 @@ class SerialNode(Node):
     def gimbal_mode_callback(self,msg):
         with self.lock:
             self.send_datas.gimbal_mode = msg.data
+    def hole_block_callback(self,msg):
+        self.hole_blocked = bool(msg.data)
     def gimbal_control_callback(self,msg):
         with self.lock:
             self.send_datas.pitch = msg.pitch
@@ -394,9 +403,14 @@ class SerialNode(Node):
                 can_fire = self.send_datas.can_fire
                 gimbal_mode = self.send_datas.gimbal_mode
                 yaw_rate = self.send_datas.yaw_rate
+                hole_blocked = self.hole_blocked
                 # yaw = 0
                 # pitch = 0
                 # can_fire = 0
+
+            if self.hole_gate_enabled and hole_blocked:
+                linear_velocity_x = 0.0
+                linear_velocity_y = 0.0
             # 数据打包
             #帧头，帧尾赋值
             # self.send_datas.header = b'\xA5'

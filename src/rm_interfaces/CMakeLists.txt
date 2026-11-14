@@ -20,6 +20,7 @@ rosidl_generate_interfaces(${PROJECT_NAME}
   "msg/Senddata.msg"
   "msg/OdoMsg.msg"
   "msg/EnemyCenter.msg"
+  "msg/HoleStatus.msg"
 
   "msg/SerialDebug.msg"
   "msg/ArmorHit.msg"
