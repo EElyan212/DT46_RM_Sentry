@@ -12,3 +12,5 @@ serial_node:
         serial_receive_header: 0xA5
         serial_send_header: 0x5A
         pub_rpy: ture
+        hole_gate_enabled: true
+        hole_block_topic: "/hole/block"
