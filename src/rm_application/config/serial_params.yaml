@@ -14,6 +14,7 @@ serial_node:
         pub_rpy: true
         hole_gate_enabled: true
         hole_block_topic: "/hole/block"
+        hole_block_timeout: 1.0   # /hole/block 超时后自动恢复底盘输出
         # mock：使用 RQT 或模拟节点发布 /nav/decision
         # serial：使用串口发布 /nav/decision
         decision_input_mode: "mock"

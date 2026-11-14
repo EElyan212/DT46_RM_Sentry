@@ -1,3 +1,6 @@
+# 入洞时手动放行 ros2 topic pub --once /gimbal/action_complete std_msgs/msg/Bool "{data: true}"
+# 出洞时手动放行 ros2 topic pub --once /gimbal/exit_action_complete std_msgs/msg/Bool "{data: true}"
+
 import math
 
 import rclpy
@@ -32,7 +35,8 @@ class HoleDetector(Node):
         self.declare_parameter("hole_y_max", 0.0)
         self.declare_parameter("pre_stop_distance", 0.8)   # 到洞口多少距离停下
         self.declare_parameter("path_timeout", 2.0)        # 在洞口停下的时间
-        self.declare_parameter("publish_rate", 10.0)       
+        self.declare_parameter("inside_debounce_time", 0.5)  # 进出洞判定去抖时间
+        self.declare_parameter("publish_rate", 10.0)
         self.declare_parameter("map_frame", "map")
         self.declare_parameter("robot_frame", "base_footprint")
         self.declare_parameter("plan_topic", "/plan")
@@ -47,6 +51,9 @@ class HoleDetector(Node):
             self.get_parameter("pre_stop_distance").value
         )
         self.path_timeout = float(self.get_parameter("path_timeout").value)
+        self.inside_debounce_time = float(
+            self.get_parameter("inside_debounce_time").value
+        )
         self.publish_rate = float(self.get_parameter("publish_rate").value)
         self.map_frame = self.get_parameter("map_frame").value
         self.robot_frame = self.get_parameter("robot_frame").value
@@ -77,10 +84,15 @@ class HoleDetector(Node):
         self.entry_arc_length = None
         self.latest_path_time = None
         self.last_progress_index = 0
-        self.last_robot_progress = None
         self.was_inside = False
         self.exit_distance = None
         self.last_state = None
+        # 进出洞去抖：洞口边界处定位抖动会导致状态反复跳变
+        self.inside_state = False
+        self.inside_candidate = None
+        self.inside_candidate_since = None
+        # 出洞后累计位移用 TF 位移计算，避免路径重规划导致进度原点跳变
+        self.last_robot_xy = None
 
         path_qos = QoSProfile(
             reliability=ReliabilityPolicy.RELIABLE,
@@ -162,25 +174,20 @@ class HoleDetector(Node):
             self.status_publisher.publish(status)
             return
 
-        if self.latest_path is None or self.latest_path_time is None:
-            self.status_publisher.publish(status)
-            return
-
-        path_age = (
-            self.get_clock().now() - self.latest_path_time
-        ).nanoseconds / 1e9
-        if path_age > self.path_timeout:
-            self.status_publisher.publish(status)
-            return
-
         robot_position = self.get_robot_position()
         if robot_position is None:
-            self.status_publisher.publish(status)
+            self.get_logger().warn(
+                f"无法获取 {self.map_frame}->{self.robot_frame} 变换，"
+                f"请检查 TF/里程计是否发布",
+                throttle_duration_sec=5.0,
+            )
+            self.finalize_status(status, 0.0)
             return
 
-        status.path_valid = True
+        # 是否在洞内只依赖 TF 与矩形，不依赖全局路径，
+        # 这样静止放在洞里也能检测到。
         robot_x, robot_y = robot_position
-        status.inside = point_in_rect(
+        raw_inside = point_in_rect(
             robot_x,
             robot_y,
             self.x_min,
@@ -188,6 +195,46 @@ class HoleDetector(Node):
             self.y_min,
             self.y_max,
         )
+        status.inside = self.update_inside(raw_inside)
+        if status.inside:
+            status.path_intersects = True
+            status.distance_to_entry = 0.0
+
+        # 用相邻两帧 TF 位移累计“出洞后行驶距离”，
+        # 不依赖 /plan 进度，重规划/路径超时都不会把它清零。
+        moved = 0.0
+        if self.last_robot_xy is not None:
+            step = math.hypot(
+                robot_x - self.last_robot_xy[0],
+                robot_y - self.last_robot_xy[1],
+            )
+            if step <= 0.5:  # 过滤定位跳变
+                moved = step
+        self.last_robot_xy = (robot_x, robot_y)
+
+        if self.latest_path is None or self.latest_path_time is None:
+            self.get_logger().info(
+                f"尚未收到全局路径 {self.plan_topic}，"
+                f"暂只判断是否在洞内",
+                throttle_duration_sec=5.0,
+            )
+            self.finalize_status(status, moved)
+            return
+
+        path_age = (
+            self.get_clock().now() - self.latest_path_time
+        ).nanoseconds / 1e9
+        if path_age > self.path_timeout:
+            self.get_logger().warn(
+                f"全局路径已超时 {path_age:.1f}s（阈值 "
+                f"{self.path_timeout:.1f}s），等待新路径，"
+                f"暂只判断是否在洞内",
+                throttle_duration_sec=5.0,
+            )
+            self.finalize_status(status, moved)
+            return
+
+        status.path_valid = True
 
         robot_progress = None
         projection = project_robot_on_path(
@@ -200,32 +247,33 @@ class HoleDetector(Node):
             robot_progress, index, _ = projection
             self.last_progress_index = index
 
-        progress_delta = 0.0
-        if (
-            robot_progress is not None
-            and self.last_robot_progress is not None
-        ):
-            delta = robot_progress - self.last_robot_progress
-            if 0.0 <= delta <= 1.0:
-                progress_delta = delta
-
-        if robot_progress is not None:
-            self.last_robot_progress = robot_progress
-
-        if status.inside:
-            status.path_intersects = True
-            status.approaching = False
-            status.distance_to_entry = 0.0
-        elif self.entry_arc_length is not None and robot_progress is not None:
+        if self.entry_arc_length is None:
+            self.get_logger().warn(
+                f"全局路径未与洞矩形 "
+                f"({self.x_min:.2f},{self.x_max:.2f},"
+                f"{self.y_min:.2f},{self.y_max:.2f}) 相交，"
+                f"请检查矩形或路径坐标系",
+                throttle_duration_sec=2.0,
+            )
+        elif not status.inside and robot_progress is not None:
             distance = self.entry_arc_length - robot_progress
-            if distance >= -1e-6:
-                distance = max(0.0, distance)
-                status.path_intersects = True
-                status.distance_to_entry = distance
-                status.approaching = (
-                    distance <= self.pre_stop_distance
-                )
+            distance = max(0.0, distance)
+            status.path_intersects = True
+            status.distance_to_entry = distance
+            status.approaching = (
+                distance <= self.pre_stop_distance
+            )
+            self.get_logger().info(
+                f"入口弧长={self.entry_arc_length:.2f}m 当前位置弧长="
+                f"{robot_progress:.2f}m 距入口={distance:.2f}m "
+                f"提前停止距离={self.pre_stop_distance:.2f}m "
+                f"approaching={status.approaching}",
+                throttle_duration_sec=2.0,
+            )
 
+        self.finalize_status(status, moved)
+
+    def finalize_status(self, status, moved):
         if status.inside:
             self.exit_distance = None
             self.was_inside = True
@@ -234,13 +282,39 @@ class HoleDetector(Node):
                 self.exit_distance = 0.0
 
             if self.exit_distance is not None:
-                self.exit_distance += progress_delta
+                self.exit_distance += moved
                 status.distance_since_exit = self.exit_distance
 
             self.was_inside = False
 
         self.log_transition(status)
         self.status_publisher.publish(status)
+
+    def update_inside(self, raw_inside):
+        # 只有新增状态持续超过去抖时间才真正切换，避免边界抖动反复进出洞
+        if raw_inside == self.inside_state:
+            self.inside_candidate = None
+            self.inside_candidate_since = None
+            return self.inside_state
+
+        now = self.get_clock().now()
+        if (
+            self.inside_candidate != raw_inside
+            or self.inside_candidate_since is None
+        ):
+            self.inside_candidate = raw_inside
+            self.inside_candidate_since = now
+            return self.inside_state
+
+        elapsed = (
+            now - self.inside_candidate_since
+        ).nanoseconds / 1e9
+        if elapsed >= self.inside_debounce_time:
+            self.inside_state = raw_inside
+            self.inside_candidate = None
+            self.inside_candidate_since = None
+
+        return self.inside_state
 
     def get_robot_position(self):
         try:
@@ -266,7 +340,19 @@ class HoleDetector(Node):
         previous = self.last_state
         self.last_state = current
 
-        if previous is None or previous == current:
+        if previous is None:
+            if current[3]:
+                self.get_logger().info("机器人已在洞区域内")
+            elif current[2]:
+                self.get_logger().info(
+                    f"全局路径经过洞，距离入口 "
+                    f"{status.distance_to_entry:.2f}m"
+                )
+            elif current[1]:
+                self.get_logger().info("全局路径经过洞区域")
+            return
+
+        if previous == current:
             return
 
         if current[3] and not previous[3]:

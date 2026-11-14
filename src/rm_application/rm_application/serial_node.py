@@ -28,7 +28,7 @@ class SerialNode(Node):
         self.get_logger().info("启动Serial node !!!")
 
         self.send_datas = Senddata()
-        self.send_datas.cliss_mode = 1
+        self.send_datas.cliss_mode = 0
         self.send_datas.gimbal_speed = 120
         self.lock = threading.Lock()
         # 新增：串口重连专用的锁和标志位
@@ -115,6 +115,7 @@ class SerialNode(Node):
                 ('pub_serial_debug', False),
                 ('hole_gate_enabled', True),
                 ('hole_block_topic', '/hole/block'),
+                ('hole_block_timeout', 1.0),  # /hole/block 超时后自动恢复输出
                 ('decision_input_mode', 'mock')
             ]
         )
@@ -133,7 +134,11 @@ class SerialNode(Node):
         self.pub_serial_debug = self.get_parameter("pub_serial_debug").value
         self.hole_gate_enabled = self.get_parameter("hole_gate_enabled").value
         self.hole_block_topic = self.get_parameter("hole_block_topic").value
+        self.hole_block_timeout = float(
+            self.get_parameter("hole_block_timeout").value
+        )
         self.hole_blocked = False
+        self.last_hole_block_time = None
         self.decision_input_mode = (str(self.get_parameter("decision_input_mode").value).strip().lower())
         valid_decision_input_modes = {"serial", "mock"}
         if self.decision_input_mode not in valid_decision_input_modes:
@@ -170,6 +175,7 @@ class SerialNode(Node):
             self.send_datas.gimbal_mode = msg.data
     def hole_block_callback(self,msg):
         self.hole_blocked = bool(msg.data)
+        self.last_hole_block_time = time.monotonic()
     def gimbal_control_callback(self,msg):
         with self.lock:
             self.send_datas.pitch = msg.pitch
@@ -385,6 +391,23 @@ class SerialNode(Node):
                 # yaw = 0
                 # pitch = 0
                 # can_fire = 0
+
+            # 看门狗：/hole/block 长时间没更新（节点退出/崩溃）时
+            # 自动解除阻塞，避免底盘速度一直为 0。
+            if self.hole_block_timeout > 0.0:
+                stale = (
+                    self.last_hole_block_time is None
+                    or time.monotonic() - self.last_hole_block_time
+                    > self.hole_block_timeout
+                )
+                if stale and hole_blocked:
+                    self.get_logger().warn(
+                        f"超过 {self.hole_block_timeout:.1f}s 未收到 "
+                        f"{self.hole_block_topic}，自动恢复底盘输出",
+                        throttle_duration_sec=5.0,
+                    )
+                    hole_blocked = False
+                    self.hole_blocked = False
 
             if self.hole_gate_enabled and hole_blocked:
                 linear_velocity_x = 0.0

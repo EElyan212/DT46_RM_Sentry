@@ -226,7 +226,13 @@ class HoleBehavior(Node):
             )
             return False
 
-        if not status.path_intersects and not status.approaching:
+        # 只有拿到有效的新路径、且确认它不再经过洞口时才取消等待；
+        # 路径超时（path_valid=False）时保持等待，避免来回抖动。
+        if (
+            status.path_valid
+            and not status.path_intersects
+            and not status.approaching
+        ):
             self.state = self.STATE_IDLE
             self.get_logger().info(
                 "路径已不再经过洞口，取消等待"
@@ -239,7 +245,11 @@ class HoleBehavior(Node):
         if status.inside:
             self.state = self.STATE_INSIDE
             self.get_logger().info("已进入洞口")
-        elif not status.path_intersects and not status.approaching:
+        elif (
+            status.path_valid
+            and not status.path_intersects
+            and not status.approaching
+        ):
             self.state = self.STATE_IDLE
 
         return False
@@ -296,8 +306,12 @@ def main(args=None):
     except KeyboardInterrupt:
         pass
     finally:
-        node.set_block(False)
-        node.publish_block()
+        try:
+            if rclpy.ok():
+                node.set_block(False)
+                node.publish_block()
+        except Exception:
+            pass
         node.destroy_node()
         if rclpy.ok():
             rclpy.shutdown()
