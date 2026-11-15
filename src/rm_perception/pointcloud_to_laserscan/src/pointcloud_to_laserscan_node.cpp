@@ -75,16 +75,7 @@ PointCloudToLaserScanNode::PointCloudToLaserScanNode(const rclcpp::NodeOptions &
   inf_epsilon_ = this->declare_parameter("inf_epsilon", 1.0);
   use_inf_ = this->declare_parameter("use_inf", true);
 
-  // ====== 【修改部分开始】动态读取和配置 QoS 策略 ======
-  std::string qos_reliability = this->declare_parameter("scan_qos_reliability", "best_effort");
-  rclcpp::QoS qos_profile = rclcpp::SensorDataQoS();
-  if (qos_reliability == "reliable") {
-    qos_profile.reliable();
-  } else {
-    qos_profile.best_effort();
-  }
-  pub_ = this->create_publisher<sensor_msgs::msg::LaserScan>("scan", qos_profile);
-  // ====== 【修改部分结束】==============================
+  pub_ = this->create_publisher<sensor_msgs::msg::LaserScan>("scan", rclcpp::SensorDataQoS());
 
   using std::placeholders::_1;
   // if pointcloud target frame specified, we need to filter by transform availability
@@ -244,12 +235,3 @@ void PointCloudToLaserScanNode::cloudCallback(
 #include "rclcpp_components/register_node_macro.hpp"
 
 RCLCPP_COMPONENTS_REGISTER_NODE(pointcloud_to_laserscan::PointCloudToLaserScanNode)
-
-int main(int argc, char * argv[])
-{
-  rclcpp::init(argc, argv);
-  auto node = std::make_shared<pointcloud_to_laserscan::PointCloudToLaserScanNode>(rclcpp::NodeOptions());
-  rclcpp::spin(node);
-  rclcpp::shutdown();
-  return 0;
-}
