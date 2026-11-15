@@ -124,6 +124,17 @@ class ChaseClient(Node):
         logger_name = msg.name.rsplit('.', 1)[-1]
 
         if (
+            logger_name == 'behavior_tree_node'
+            and msg.msg.startswith('[未追击原因]')
+        ):
+            # 汇总到追击终端，保留源时间且不转发自己的日志。
+            self.get_logger().info(
+                f'{msg.msg}，行为树源时间='
+                f'{msg.stamp.sec}.{msg.stamp.nanosec:09d}'
+            )
+            return
+
+        if (
             logger_name == 'target_pose_server'
             and msg.msg.startswith('[追击计算点]')
         ):
