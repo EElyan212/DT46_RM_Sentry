@@ -35,6 +35,10 @@ behavior_tree_node:
     center: [3.0, 2.0]
     home: [0.65, 0.15]
 
+    # 是否开启巡逻；关闭后，原本需要巡逻时改为停车
+    # 不影响追击、区外回点和回血
+    patrol_enabled: true
+
     # 中央控制区内三个巡逻子区域的矩形边界
     # 顺序：[x_min, x_max, y_min, y_max]
     # 当前暂用 0 占位，之后在 RViz 中确定实际边界

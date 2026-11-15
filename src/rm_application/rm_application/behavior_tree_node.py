@@ -43,6 +43,9 @@ class BehaviorTreeNode(Node):
         self.declare_parameter("hp_limit", 150)
         self.declare_parameter("hp_up", 400)
 
+        # 独立控制巡逻，不改变追击、回点和回血条件
+        self.declare_parameter("patrol_enabled", True)
+
         # 战术选择来源和模式切换防抖参数
         self.declare_parameter("tactical_mode_source", "manual")
         self.declare_parameter("tactical_confirm_seconds", 2.0)
@@ -198,6 +201,10 @@ class BehaviorTreeNode(Node):
     def is_chase_ready(self):
         # 冷却结束后，还需要由追击条件节点检查敌人和边界
         return time.monotonic() >= self.blackboard.chase_retry_after
+
+    def is_patrol_enabled(self):
+        # 每次读取当前参数，运行中关闭也能停止正在执行的巡逻
+        return self.get_parameter("patrol_enabled").value
 
     def report_chase_exhausted(self):
         # 追击恢复耗尽时，暂时关闭追击资格

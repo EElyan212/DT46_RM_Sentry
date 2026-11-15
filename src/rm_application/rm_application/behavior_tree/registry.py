@@ -21,6 +21,7 @@ from rm_application.behavior_tree.conditions import (
     IsTacticalMode,
     NeedEnterCenterZone,
     IsChaseReady,
+    IsPatrolEnabled,
     CanChase,
     CanChaseInsideCenterZone,
 )
@@ -406,6 +407,12 @@ def create_node_registry(node):
             SetNavigationTask,
             set_navigation_task=node.set_navigation_task,
             task=NavigationTask.CHASE,
+        ),
+
+        # 只限制巡逻选择，其他任务仍使用原有条件
+        "IsPatrolEnabled": partial(
+            IsPatrolEnabled,
+            is_patrol_enabled=node.is_patrol_enabled,
         ),
 
         # 将导航任务牌设置为巡逻

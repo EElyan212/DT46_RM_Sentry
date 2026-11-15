@@ -16,6 +16,7 @@ import yaml
 
 from geometry_msgs.msg import PoseStamped
 from nav2_simple_commander.robot_navigator import TaskResult
+from rcl_interfaces.msg import Log
 from rm_interfaces.msg import Decision, SerialDebug
 
 from rm_application.behavior_tree.actions import (
@@ -123,6 +124,7 @@ def _make_chase_execution_test_case():
         vision_generation=0, chase_lock=Lock(), chase_active=True,
         navigator=Mock(), get_target_client=Mock(), get_logger=Mock(return_value=Mock()),
         is_enemy_tracked=Mock(return_value=True),
+        print_chase_position=Mock(),
     )
     service.navigator.goToPose.return_value = True
     service.navigator.isTaskComplete.return_value = False
@@ -764,6 +766,114 @@ def _create_tactical_test_tree(
                if isinstance(item, ShouldSwitchTacticalMode)]
     assert len(updates) == 1, "战术 XML 必须包含一个实际的切换条件节点"
     return blackboard, node, root, updates[0]
+
+
+def _create_patrol_switch_test_tree(mode):
+    blackboard, node, root, _ = _create_tactical_test_tree(mode_source="manual")
+    blackboard.tactical_mode = mode
+    state = SimpleNamespace(enabled=True, stopped=True)
+    node.get_parameter.side_effect = lambda name: SimpleNamespace(value=state.enabled)
+    node.is_patrol_enabled.side_effect = lambda: BehaviorTreeNode.is_patrol_enabled(node)
+    node.is_navigation_stopped.side_effect = lambda: state.stopped
+    node.get_control_zone.return_value = dict(
+        enabled=True, x_min=0.0, x_max=2.0, y_min=0.0, y_max=2.0,
+    )
+    node.get_chase_boundary.return_value = dict(
+        enabled=True, x_min=-1.0, x_max=3.0, y_min=-1.0, y_max=3.0,
+    )
+    node.get_robot_position.return_value = (1.0, 1.0)
+    node.is_chase_ready.return_value = True
+    node.is_enemy_tracked.return_value = False
+    node.is_enemy_within_lost_grace.return_value = False
+    node.get_patrol_region.side_effect = lambda: blackboard.patrol_region
+    node.set_patrol_region.side_effect = lambda region: setattr(
+        blackboard, "patrol_region", region,
+    )
+    node.get_patrol_area.return_value = (0.0, 2.0, 0.0, 2.0)
+    node.start_patrol.return_value = True
+    node.get_patrol_result.return_value = NavigationResult.RUNNING
+    node.start_chase.return_value = True
+    node.get_chase_result.return_value = None
+    return state, blackboard, node, root
+
+
+def test_patrol_switch_task_selection():
+    parameters = yaml.safe_load(
+        (Path(__file__).resolve().parents[2] / "config" / "behavior_tree_params.yaml").read_text()
+    )["behavior_tree_node"]["ros__parameters"]
+    assert parameters["patrol_enabled"] is True
+
+    for mode in TacticalMode:
+        # 通过实际导航XML验证开关，不把追击、回点或回血一并关掉。
+        for enabled, tracked, position, hp, match, ready, expected in (
+            (True, False, (1.0, 1.0), 300, 4, True, NavigationTask.PATROL),
+            (False, False, (1.0, 1.0), 300, 4, True, NavigationTask.STOP),
+            (False, True, (1.0, 1.0), 300, 4, True,
+             NavigationTask.STOP if mode == TacticalMode.DEFENSE else NavigationTask.CHASE),
+            (False, False, (2.5, 1.0), 300, 4, True, NavigationTask.OCCUPY_CENTER),
+            (False, False, (1.0, 1.0), 50, 4, True, NavigationTask.RESUPPLY),
+            (False, True, (1.0, 1.0), 300, 0, True, NavigationTask.STOP),
+            (False, True, (1.0, 1.0), 300, 4, False, NavigationTask.STOP),
+        ):
+            state, blackboard, node, root = _create_patrol_switch_test_tree(mode)
+            state.enabled = enabled
+            blackboard.self_hp = hp
+            blackboard.match_progress = match
+            node.is_enemy_tracked.return_value = tracked
+            node.is_chase_ready.return_value = ready
+            node.get_robot_position.return_value = position
+            with patch("rm_application.behavior_tree.actions.random.uniform", return_value=0.0):
+                root.tick_once()
+            assert blackboard.navigation_task == expected, (mode, enabled, expected)
+            if not enabled:
+                node.start_patrol.assert_not_called()
+            root.stop(py_trees.common.Status.INVALID)
+    print("三种模式独立开关巡逻、保留追击回点回血和冷却约束测试通过\n")
+
+
+def test_patrol_switch_waits_for_cancel():
+    state, blackboard, node, root = _create_patrol_switch_test_tree(TacticalMode.NEUTRAL)
+
+    def start_patrol(_target):
+        assert state.stopped, "旧巡逻尚未结束就发送了新目标"
+        state.stopped = False
+        return True
+
+    node.start_patrol.side_effect = start_patrol
+    with patch("rm_application.behavior_tree.actions.random.uniform", return_value=0.0):
+        root.tick_once()
+        assert blackboard.navigation_task == NavigationTask.PATROL
+        node.start_patrol.assert_called_once()
+
+        # 运行中关闭后只取消一次，等待旧导航终态。
+        state.enabled = False
+        root.tick_once()
+        root.tick_once()
+        assert blackboard.navigation_task == NavigationTask.STOP
+        assert root.status == py_trees.common.Status.RUNNING
+        node.stop_patrol.assert_called_once()
+
+        # 等待期间重新开启，也不能抢在取消完成之前发点。
+        state.enabled = True
+        root.tick_once()
+        assert blackboard.navigation_task == NavigationTask.PATROL
+        assert node.start_patrol.call_count == 1
+        state.stopped = True
+        root.tick_once()
+        assert node.start_patrol.call_count == 2
+    root.stop(py_trees.common.Status.INVALID)
+
+    # 只改变巡逻开关，不中断已经选中的追击。
+    state, blackboard, node, root = _create_patrol_switch_test_tree(TacticalMode.NEUTRAL)
+    node.is_enemy_tracked.return_value = True
+    for enabled in (False, True, False):
+        state.enabled = enabled
+        root.tick_once()
+        assert blackboard.navigation_task == NavigationTask.CHASE
+    node.start_chase.assert_called_once()
+    node.stop_chase.assert_not_called()
+    root.stop(py_trees.common.Status.INVALID)
+    print("运行中关闭巡逻等待取消、重开不抢导航且不打断追击测试通过\n")
 
 
 def test_xml_tactical_mode_confirmation():
@@ -1908,6 +2018,43 @@ def test_target_server_disconnect_stops_and_waits():
     print('追击中目标服务短暂断联时停止旧导航、服务恢复后继续测试通过\n')
 
 
+def test_target_log_aggregation():
+    logger = Mock()
+    service = SimpleNamespace(get_logger=lambda: logger)
+    calculated = Log(
+        name='robot.target_pose_server',
+        msg='[追击计算点] 点时间=10.000000001, x=3.4000, y=0.7000',
+    )
+    calculated.stamp.sec = 10
+    calculated.stamp.nanosec = 2
+    ChaseClient.target_log_callback(service, calculated)
+    forwarded = logger.info.call_args.args[0]
+    assert '源时间=10.000000002' in forwarded
+    assert calculated.msg in forwarded
+
+    navigating = Log(
+        name='bt_navigator',
+        msg='Begin navigating from current location (2.00, 1.00) to (3.40, 0.70)',
+    )
+    # 相同坐标再次生效也保留事件，不能因为内容相同而漏掉切换。
+    ChaseClient.target_log_callback(service, navigating)
+    ChaseClient.target_log_callback(service, navigating)
+    assert logger.info.call_count == 3
+    assert '[Nav2执行目标]' in logger.info.call_args.args[0]
+    assert navigating.msg in logger.info.call_args.args[0]
+
+    for name, message in (
+        ('chase_client', forwarded),
+        ('chase_client', '[Nav2追击目标] x=3.4000, y=0.7000'),
+        ('bt_navigator', 'Navigation canceled.'),
+        ('other_bt_navigator', navigating.msg),
+        ('target_pose_server', 'target_pose_server 已启动'),
+    ):
+        ChaseClient.target_log_callback(service, Log(name=name, msg=message))
+    assert logger.info.call_count == 3
+    print('计算点与Nav2服务端目标汇总、保留重复事件和防循环转发测试通过\n')
+
+
 def test_merged_chase_config():
     config_dir = Path(__file__).resolve().parents[2] / "config"
     config = yaml.safe_load((config_dir / "chase_params.yaml").read_text())
@@ -1944,6 +2091,7 @@ def test_offset_default_and_override():
             offset_distance=0.8, _vision_generation=0,
             _request_lock=Lock(), _request_busy=True,
             is_enemy_tracked=lambda: True,
+            get_logger=lambda: Mock(),
             compute_target_pose=Mock(return_value=(_target_pose(), True, "有效目标")),
         )
         goal = SimpleNamespace(
@@ -2515,6 +2663,8 @@ if __name__ == "__main__":
         test_chase_navigation_success_continues()
         test_chase_cooldown_state()
         test_chase_selection_respects_cooldown()
+        test_patrol_switch_task_selection()
+        test_patrol_switch_waits_for_cancel()
         test_patrol_region_switch_waits_for_cancel()
         test_xml_patrol_recovery_uses_alternative_goal()
         test_retry_wait_restarts_after_interrupt()
@@ -2542,6 +2692,7 @@ if __name__ == "__main__":
         test_chase_startup_and_navigation_exceptions()
         test_target_pose_discards_interrupted_calculation()
         test_rqt_expression_editing()
+        test_target_log_aggregation()
         test_merged_chase_config()
         test_offset_default_and_override()
         test_shared_vision_timeout_and_independent_grace()
@@ -2564,4 +2715,4 @@ if __name__ == "__main__":
                 review_failures.append((check.__name__, str(error)))
                 print(f"[链路回归失败] {check.__name__}: {error}")
         assert not review_failures, f"链路回归还有{len(review_failures)}项未通过"
-        print("当前导航、XML 主树、战术评分、追击链路与 RQT 编辑的 45 项测试全部通过")
+        print("当前导航、XML 主树、战术评分、追击链路、目标日志、巡逻开关与 RQT 编辑的 48 项测试全部通过")

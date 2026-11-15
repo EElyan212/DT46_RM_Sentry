@@ -6,14 +6,21 @@ import time
 
 import rclpy
 from action_msgs.msg import GoalStatus
+from geometry_msgs.msg import Twist
 from nav2_simple_commander.robot_navigator import BasicNavigator, TaskResult
+from rcl_interfaces.msg import Log
 from rclpy.action import ActionClient, ActionServer, CancelResponse, GoalResponse
 from rclpy.callback_groups import ReentrantCallbackGroup
 from rclpy.executors import MultiThreadedExecutor
 from rclpy.node import Node
-from rclpy.qos import DurabilityPolicy, HistoryPolicy, QoSProfile, ReliabilityPolicy
+from rclpy.qos import (
+    DurabilityPolicy, HistoryPolicy, QoSProfile, ReliabilityPolicy,
+    qos_profile_sensor_data,
+)
+from rclpy.time import Time
 from rm_interfaces.action import Chase, GetTargetPose
 from rm_interfaces.msg import EnemyCenter
+from tf2_ros import Buffer, TransformException, TransformListener
 
 
 class ChaseClient(Node):
@@ -51,6 +58,17 @@ class ChaseClient(Node):
 
         self.navigator = BasicNavigator()
 
+        # 只观测定位和速度指令，不向底盘或导航发送控制消息。
+        self.position_tf_buffer = Buffer()
+        self.position_tf_listener = TransformListener(
+            self.position_tf_buffer, self
+        )
+        self.last_cmd_vel_for_log = None
+        self.cmd_vel_log_subscription = self.create_subscription(
+            Twist, '/cmd_vel', self.cmd_vel_log_callback,
+            qos_profile_sensor_data,
+        )
+
         self.action_callback_group = ReentrantCallbackGroup()
 
         self.action_server = ActionServer(
@@ -84,8 +102,49 @@ class ChaseClient(Node):
             enemy_qos,
         )
 
+        # 汇总计算点和Nav2服务端目标，只接收启动后的新日志
+        self.target_log_subscription = self.create_subscription(
+            Log,
+            '/rosout',
+            self.target_log_callback,
+            QoSProfile(
+                history=HistoryPolicy.KEEP_LAST,
+                depth=100,
+                reliability=ReliabilityPolicy.RELIABLE,
+                durability=DurabilityPolicy.VOLATILE,
+            ),
+        )
+
         self.get_logger().info(
             'chase_client 已启动：追击期间按需请求目标点'
+        )
+
+    def target_log_callback(self, msg):
+        # 只接收原始来源，避免再次转发自己打印的日志
+        logger_name = msg.name.rsplit('.', 1)[-1]
+
+        if (
+            logger_name == 'target_pose_server'
+            and msg.msg.startswith('[追击计算点]')
+        ):
+            content = msg.msg
+        elif (
+            logger_name == 'bt_navigator'
+            and msg.msg.startswith(
+                'Begin navigating from current location'
+            )
+        ):
+            content = f'[Nav2执行目标] {msg.msg}'
+        else:
+            return
+
+        # 保留来源时间，不把转发时间当作目标生效时间
+        stamp = msg.stamp
+        self.get_logger().info(
+            f'[目标对照] '
+            f'源时间={stamp.sec}.{stamp.nanosec:09d}, '
+            f'来源={msg.name}, '
+            f'{content}'
         )
 
     def goal_callback(self, _request):
@@ -101,6 +160,52 @@ class ChaseClient(Node):
     def cancel_callback(self, _goal_handle):
         self.get_logger().info('收到停止追击请求')
         return CancelResponse.ACCEPT
+
+    def cmd_vel_log_callback(self, msg):
+        # 一次替换整个快照，打印时不混用两条消息的字段。
+        self.last_cmd_vel_for_log = (
+            msg.linear.x, msg.linear.y, time.monotonic(),
+        )
+
+    def print_chase_position(self, target_pose):
+        target = target_pose.pose.position
+        try:
+            transform = self.position_tf_buffer.lookup_transform(
+                'map', 'base_footprint', Time()
+            )
+            position = transform.transform.translation
+            position_time = Time.from_msg(transform.header.stamp)
+            position_age = (
+                self.get_clock().now() - position_time
+            ).nanoseconds / 1e9
+            position_text = (
+                f'自身位置map=({position.x:.3f},{position.y:.3f})，'
+                f'位置数据龄={position_age:.3f}s'
+            )
+            if not 0.0 <= position_age <= 0.5:
+                position_text += '[已过期或时间异常]'
+        except TransformException:
+            position_text = '自身位置map=TF查询失败'
+
+        command = self.last_cmd_vel_for_log
+        if command is None:
+            velocity_text = '速度指令=尚未收到'
+        else:
+            vx, vy, received_at = command
+            velocity_age = time.monotonic() - received_at
+            velocity_text = (
+                f'速度指令vx={vx:.3f}，vy={vy:.3f}，'
+                f'速度数据龄={velocity_age:.3f}s'
+            )
+            if not 0.0 <= velocity_age <= 0.5:
+                velocity_text += '[最后一条指令已过期或时间异常]'
+
+        sample_time = self.get_clock().now().nanoseconds / 1e9
+        self.get_logger().info(
+            f'[追击位置对照] 时间={sample_time:.3f}，'
+            f'Nav2目标map=({target.x:.3f},{target.y:.3f})，'
+            f'{position_text}，{velocity_text}'
+        )
 
     def enemy_callback(self, msg):
         now = self.get_clock().now()
@@ -317,6 +422,7 @@ class ChaseClient(Node):
         failure = None
 
         next_request_at = 0.0
+        next_position_log_at = 0.0
         server_deadline = time.monotonic() + 3.0
         seen_generation = self.vision_generation
         feedback_state = None
@@ -401,6 +507,19 @@ class ChaseClient(Node):
                     ):
                         request = None
                         self.target_request = None
+
+                    # 在清理前采样，短任务也有机会记录最后的位置。
+                    now = time.monotonic()
+                    if (
+                        last_sent_pose is not None
+                        and now >= next_position_log_at
+                    ):
+                        next_position_log_at = now + 0.2
+                        try:
+                            self.print_chase_position(last_sent_pose)
+                        except Exception as error:
+                            # 诊断异常不能触发追击失败或导航取消。
+                            self.get_logger().warn(f'追击位置打印失败: {error}')
 
                     # 已发送目标必须等 Nav2 终态后才能清理记录
                     if (
@@ -529,6 +648,8 @@ class ChaseClient(Node):
                                         last_sent_pose = None
                                         failure = 'Nav2 拒绝追击目标'
                                     else:
+                                        # 新目标接受后，下一轮立即打印。
+                                        next_position_log_at = 0.0
                                         feedback('正在追击', True)
 
                                 elif self._has_pose_changed(
