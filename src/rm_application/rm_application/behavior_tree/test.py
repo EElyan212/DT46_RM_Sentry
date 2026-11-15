@@ -124,6 +124,7 @@ def _make_chase_execution_test_case():
         vision_generation=0, chase_lock=Lock(), chase_active=True,
         navigator=Mock(), get_target_client=Mock(), get_logger=Mock(return_value=Mock()),
         is_enemy_tracked=Mock(return_value=True),
+        print_chase_position=Mock(),
     )
     service.navigator.goToPose.return_value = True
     service.navigator.isTaskComplete.return_value = False
