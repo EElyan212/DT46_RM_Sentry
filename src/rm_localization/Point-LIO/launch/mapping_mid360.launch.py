@@ -4,6 +4,7 @@ from launch.conditions import IfCondition
 from launch.substitutions import LaunchConfiguration, PathJoinSubstitution
 from launch_ros.actions import Node
 from launch_ros.substitutions import FindPackageShare
+import os
 
 
 def generate_launch_description():
@@ -39,6 +40,10 @@ def generate_launch_description():
         name='laserMapping',
         output='screen',
         parameters=laser_mapping_params,
+        env={
+            **os.environ,  
+            "LD_PRELOAD": "/usr/lib/x86_64-linux-gnu/libusb-1.0.so.0"
+        }
         # prefix='gdb -ex run --args'
     )
 

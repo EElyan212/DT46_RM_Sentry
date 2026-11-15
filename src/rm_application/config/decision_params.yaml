@@ -1,0 +1,16 @@
+decision_node:
+  ros__parameters:
+    center: [4.86, -2.39]
+    home: [-0.233, 0.833]
+    # home: [10.3, -4.97]
+    defence_left: [5.7, -1.98]
+    defence_right: [4.07, -1.96]
+    defence_mid: [5.07, -1.32]
+    defence_mid_left: [4.66, -0.922]
+    defence_mid_right: [4.66, -3.02]
+    attack: [4.85, -3.38]
+    to_center_param1: [10.04, -2.03]
+    to_center_param2: [9.53, 0.42]
+    to_center_param3: [4.45, 0.20]
+    hp_limit: 150
+    hp_up: 380

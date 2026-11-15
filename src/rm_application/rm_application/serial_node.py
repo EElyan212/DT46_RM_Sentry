@@ -4,12 +4,13 @@ import threading
 import rclpy
 from rclpy.node import Node
 from geometry_msgs.msg import Twist
-from rm_interfaces.msg import Decision, Senddata, GimbalControl
+from rm_interfaces.msg import Decision, Senddata, GimbalControl, OdoMsg, SerialDebug, ArmorHit
 from std_msgs.msg import Int32
 import struct
 from geometry_msgs.msg import Vector3Stamped, Twist
 from .modules.crc import *
 from rclpy.qos import QoSProfile, ReliabilityPolicy, HistoryPolicy, DurabilityPolicy
+from rclpy.qos import qos_profile_sensor_data
 
 
 class ColorPrint():
@@ -27,6 +28,8 @@ class SerialNode(Node):
         self.get_logger().info("启动Serial node !!!")
 
         self.send_datas = Senddata()
+        self.send_datas.cliss_mode = 1
+        self.send_datas.gimbal_speed = 120
         self.lock = threading.Lock()
         # 新增：串口重连专用的锁和标志位
         self.serial_lock = threading.Lock()
@@ -38,6 +41,8 @@ class SerialNode(Node):
             depth=50,
             durability=DurabilityPolicy.VOLATILE,
         )
+        # 你打印频率这么高找死是吧，写多个东西不行？
+        self.sb_swj = 0
         #获取参数
         self.get_params()
         #创建决策消息发布者
@@ -45,15 +50,29 @@ class SerialNode(Node):
         #串建导航（底盘）消息接收者
         self.sub_uart_cmd = self.create_subscription(Twist, "/cmd_vel", self.cmd_vel_callback, 10)
         #创建自瞄（云台）消息订阅者
-        self.sub_gimbal_control = self.create_subscription(GimbalControl, "/gimbal/control", self.gimbal_control_callback, 10)
+        self.sub_gimbal_control = self.create_subscription(GimbalControl, "tracker/gimbal_control", self.gimbal_control_callback, qos_profile_sensor_data)
         #创建小陀螺模式接收者
-        self.sub_gimbal_mode = self.create_subscription(Int32, "/gimbal_mode", self.gimbal_mode_callback, 10)
+        self.sub_gimbal_mode = self.create_subscription(Int32, "/gimbal_mode", self.gimbal_mode_callback, 1)
         # 创建发布者 2: IMU 数据
         self.pub_uart_receive_imu = self.create_publisher(Vector3Stamped, '/imu/rpy', qos)
-        # 创建变量
-        self.tracking_color = 10
+        #创建发布者 3: odo 数据
+        self.pub_uart_receive_odo = self.create_publisher(OdoMsg, '/nav/odo', 10)
+
+        # 每次新受击发布一条事件消息
+        self.pub_armor_hit = self.create_publisher(ArmorHit, '/armor/hit', 10)
+        # 可选的整帧解包调试消息
+        self.pub_serial_debug_publisher = self.create_publisher(
+            SerialDebug,
+            '/serial/debug',
+            10,
+        )
+
 
         self.color = ColorPrint()
+
+        self.serial_receive_header = 0xA5
+        self.serial_send_header = 0x5A
+
         #初始化串口
         try:
             self.serial = serial.Serial(
@@ -64,14 +83,14 @@ class SerialNode(Node):
                 )
             if self.serial.is_open:
                 self.get_logger().info(f"串口已打开: {self.port_name}")
-                self.receive_thread = threading.Thread(target=self.receive_data,daemon=True)  
-                # self.serial.setDaemon(True) 
+                self.receive_thread = threading.Thread(target=self.receive_data,daemon=True)
+                # self.serial.setDaemon(True)
                 self.receive_thread.start()
                 self.timer = self.create_timer(0.01, self.Send)
         except serial.SerialException as e:
             self.get_logger().error(f"创建串口时出错: {self.port_name} - {str(e)}")
-            raise e    
-            
+            raise e
+
     def get_params(self):
         """
         从 ROS 2 参数服务器声明并获取串口配置参数
@@ -81,13 +100,18 @@ class SerialNode(Node):
         self.declare_parameters(
             namespace='',
             parameters=[
-                ('port_name', '/dev/ttyUSB0'),
+                ('port_name', '/dev/ttyPortMCU'),
                 ('baudrate', 115200),
                 ('timeout', 1.0),            # 对应 YAML 中的 timeout
                 ('write_timeout', 1.0),      # 对应 YAML 中的 write_timeout
                 ('flow_control', 'none'),
                 ('parity', 'none'),
-                ('stop_bits', '1')
+                ('stop_bits', '1'),
+                ('serial_receive_header', 0xA5),
+                ('serial_send_header', 0x5A),
+                ('pub_rpy', False),
+                ('pub_serial_debug', False),
+                ('decision_input_mode', 'mock')
             ]
         )
 
@@ -99,6 +123,18 @@ class SerialNode(Node):
         self.flow_control = self.get_parameter("flow_control").value
         self.parity = self.get_parameter("parity").value
         self.stop_bits = self.get_parameter("stop_bits").value
+        self.serial_receive_header = self.get_parameter("serial_receive_header").value
+        self.serial_send_header = self.get_parameter("serial_send_header").value
+        self.pub_rpy = self.get_parameter("pub_rpy").value
+        self.pub_serial_debug = self.get_parameter("pub_serial_debug").value
+        self.decision_input_mode = (str(self.get_parameter("decision_input_mode").value).strip().lower())
+        valid_decision_input_modes = {"serial", "mock"}
+        if self.decision_input_mode not in valid_decision_input_modes:
+            raise ValueError(
+                "decision_input_mode 只能填写 'serial' 或 'mock'，"
+                f"当前值为: {self.decision_input_mode}"
+            )
+        self.last_gimbal_time = 0.0
 
         # 3. 打印当前生效的配置信息，方便在终端确认 YAML 是否加载成功
         self.get_logger().info("-" * 30)
@@ -107,7 +143,16 @@ class SerialNode(Node):
         self.get_logger().info(f"  波特率: {self.baudrate}")
         self.get_logger().info(f"  超时设置: Read={self.timeout}s, Write={self.write_timeout}s")
         self.get_logger().info(f"  校验/流控: Parity={self.parity}, Flow={self.flow_control}")
+        if self.decision_input_mode == "serial":
+            self.get_logger().info(
+                "决策输入模式: serial，串口将发布 /nav/decision"
+            )
+        else:
+            self.get_logger().info(
+                "决策输入模式: mock，/nav/decision 由 RQT 或模拟节点发布"
+            )
         self.get_logger().info("-" * 30)
+
     def cmd_vel_callback(self,msg):
         with self.lock:
             self.send_datas.linear_velocity_x = msg.linear.x
@@ -121,29 +166,50 @@ class SerialNode(Node):
             self.send_datas.pitch = msg.pitch
             self.send_datas.yaw = msg.yaw
             self.send_datas.can_fire = msg.can_fire
+            self.send_datas.yaw_rate = msg.yaw_rate
+            self.last_gimbal_time = time.monotonic()
 
     def receive_data(self):
-        serial_receive_msg = Decision()
-        serial_receive_msg.header.frame_id = 'serial_receive_frame'
-        serial_receive_msg.color = 10
+        serial_decision_msg = Decision()
+        serial_odo_msg = OdoMsg()
+        serial_hit_msg = ArmorHit()
 
-        # [确认配置]
-        # 总长 16 = Header(1)+Color(1)+Roll(4)+Pitch(4)+Yaw(4) + CRC(2)
-        packet_length = 16
+        serial_debug_msg = SerialDebug()
+        last_armor_hit_seq = None
+        serial_decision_msg.header.frame_id = 'serial_receive_frame'
+        serial_decision_msg.color = 10
 
-        self.get_logger().info("接收数据线程已启动 (CRC16 Mode - 16 Bytes)")
 
+        # 53 字节固定长帧，小端，float 为 IEEE-754 单精度：
+        # 0 sof, 1 detect_color, 2 reserved, 3..22 IMU/速度，
+         # 23..38 裁判数据（34 为位域：bit0-1 中心增益点占领状态，bit2 RFID），
+        # 39..50 受击数据，51..52 CRC16。
+        packet_length = 53
+
+        self.get_logger().info(
+            "接收数据线程已启动 (53B 帧, CRC-16/MODBUS)"
+        )
+
+        self.serial.reset_input_buffer()
+        rx_idle = 0
         while rclpy.ok():
-            if self.is_reconnecting:
-                time.sleep(0.1)
-                continue
             try:
                 # 1. 查找帧头
                 header = self.serial.read(1)
-                if not header or header != b'\xA5':
+
+                if not header:
+                    rx_idle += 1
+                    if self.pub_serial_debug and rx_idle % 10 == 0:
+                        print("[RX] 无数据 (读超时, 下位机可能未发送)", flush=True)
+                    continue
+                rx_idle = 0
+                if self.pub_serial_debug:
+                    print(f"[RX] 原始字节: {header.hex()}", flush=True)
+                if header[0] != self.serial_receive_header:
                     continue
 
-                # 2. 读取剩余数据 (15字节)
+                print("帧头已找到")
+                # 2. 读取剩余数据 (52字节)
                 remaining_data = self.serial.read(packet_length - 1)
                 if len(remaining_data) != packet_length - 1:
                     self.get_logger().warn("数据包不完整")
@@ -152,54 +218,144 @@ class SerialNode(Node):
                 # 3. 组合完整包
                 full_packet = header + remaining_data
 
-                # 4. CRC16 校验逻辑
-                # 数据载荷：前14字节 (Header ~ Yaw)
+                # print(full_packet)
+                # 4. CRC16 校验：载荷 = 前 51 字节 (0..50)
                 data_payload = full_packet[:-2]
-                # 校验位：最后2字节
                 checksum_bytes = full_packet[-2:]
 
-                # 解析收到的校验值 (小端序 unsigned short)
                 received_crc = struct.unpack('<H', checksum_bytes)[0]
-
-                # 计算本地数据的 CRC16
-                # 注意：确保 get_crc16_check_sum 算法与下位机一致 (通常是 CRC-CCITT)
-                calculated_crc = get_crc16_check_sum(data_payload)
-
+                calculated_crc = crc16_modbus(data_payload)
                 if calculated_crc != received_crc:
-                    # 校验失败时打印 Hex 用于调试
-                    raw_hex = ' '.join([f'{b:02x}' for b in full_packet])
-                    self.get_logger().warn(f"校验失败 | 收:{hex(received_crc)} 算:{hex(calculated_crc)} | Raw: {raw_hex}")
                     continue
 
-                # 5. 数据解包 (14字节)
-                # <BBfff: Header(1), Color(1), Roll(4), Pitch(4), Yaw(4)
-                _, detect_color, roll, pitch, yaw = struct.unpack("<BBfff", data_payload)
+                # 5. 解包前 51 字节数据载荷
+                (
+                    sof,
+                    detect_color,
+                    reserved,
+                    roll,
+                    pitch,
+                    yaw,
+                    vx,
+                    vy,
+                    self_sentry_hp,
+                    self_heavy_hp,
+                    self_infantry_hp,
+                    remain_time,
+                    remain_bullet,
+                    match_progress,
+                    occupation,
+                    bullet_speed,
+                    armor_id,
+                    armor_reason,
+                    armor_hit_cnt,
+                    armor_hit_seq,
+                    armor_angle_chassis,
+                    armor_angle_world,
+                ) = struct.unpack(
+                    "<BBBfffffHHHHHBBfBBBBff",
+                    data_payload,
+                )
 
-                # 6. 发布 IMU 消息
-                rpy_msg = Vector3Stamped()
-                rpy_msg.header.stamp = self.get_clock().now().to_msg()
-                rpy_msg.header.frame_id = 'imu_link'
-                rpy_msg.vector.x = float(roll)
-                rpy_msg.vector.y = float(-pitch)
-                rpy_msg.vector.z = float(yaw)
+                # 6.1 发布 IMU 消息
 
-                self.pub_uart_receive_imu.publish(rpy_msg)
+                if self.pub_rpy:
+                    rpy_msg = Vector3Stamped()
+                    rpy_msg.header.stamp = self.get_clock().now().to_msg()
+                    rpy_msg.header.frame_id = 'imu_link'
+                    rpy_msg.vector.x = float(roll)
+                    rpy_msg.vector.y = float(pitch)
+                    rpy_msg.vector.z = float(yaw)
 
-                # 7. 处理 Decision 逻辑
-                serial_receive_msg.header.stamp = self.get_clock().now().to_msg()
+                    self.pub_uart_receive_imu.publish(rpy_msg)
 
-                if self.tracking_color != detect_color:
-                    self.tracking_color = detect_color
-                    serial_receive_msg.color = detect_color
+                # 6.2 发布里程计消息
+                serial_odo_msg.vx = vx
+                serial_odo_msg.vy = vy
+                serial_odo_msg.yaw = yaw
+                self.pub_uart_receive_odo.publish(serial_odo_msg)
 
-                # 发布决策消息 (注意：match 字段已被移除)
-                self.pub_uart_receive_decision.publish(serial_receive_msg)
+                # 字节34为位域：bit0-1 中心增益点占领状态，bit2 本车检测到 RFID 卡
+                occupation_raw = occupation
+                occupation = occupation_raw & 0x03
+                center_rfid = bool(occupation_raw & 0x04)
 
+                # 6.3 发布 Decision 消息，保持行为树现有接口不变
+                serial_decision_msg.header.stamp = self.get_clock().now().to_msg()
+                serial_decision_msg.color = detect_color
+                serial_decision_msg.self_sentry_hp = self_sentry_hp
+                serial_decision_msg.self_heavy_hp = self_heavy_hp
+                serial_decision_msg.self_infantry_hp = self_infantry_hp
+                serial_decision_msg.remain_time = remain_time
+                serial_decision_msg.remain_bullet = remain_bullet
+                serial_decision_msg.match_progress = match_progress
+                serial_decision_msg.occupation = occupation
+                serial_decision_msg.center_rfid = center_rfid
+                serial_decision_msg.yaw = self.send_datas.yaw
+                serial_decision_msg.can_fire = self.send_datas.can_fire
+                serial_decision_msg.bullet_speed = bullet_speed
+                if self.decision_input_mode == "serial":
+                    self.pub_uart_receive_decision.publish(serial_decision_msg)
+
+                # 6.4 序号变化时发布一次受击事件；首帧只初始化
+                if last_armor_hit_seq is None:
+                    last_armor_hit_seq = armor_hit_seq
+                elif armor_hit_seq != last_armor_hit_seq:
+                    last_armor_hit_seq = armor_hit_seq
+                    serial_hit_msg.header.stamp = (
+                        self.get_clock().now().to_msg()
+                    )
+                    serial_hit_msg.header.frame_id = 'serial_receive_frame'
+                    serial_hit_msg.armor_id = armor_id
+                    serial_hit_msg.armor_reason = armor_reason
+                    serial_hit_msg.armor_hit_cnt = armor_hit_cnt
+                    serial_hit_msg.armor_hit_seq = armor_hit_seq
+                    serial_hit_msg.armor_angle_chassis = armor_angle_chassis
+                    serial_hit_msg.armor_angle_world = armor_angle_world
+                    self.pub_armor_hit.publish(serial_hit_msg)
+
+                # 6.5 测试时可选发布完整解包结果
+                if self.pub_serial_debug:
+                    serial_debug_msg.header.stamp = (
+                        self.get_clock().now().to_msg()
+                    )
+                    serial_debug_msg.sof = sof
+                    serial_debug_msg.detect_color = detect_color
+                    serial_debug_msg.reserved = reserved
+                    serial_debug_msg.roll = roll
+                    serial_debug_msg.pitch = pitch
+                    serial_debug_msg.yaw = yaw
+                    serial_debug_msg.vx = vx
+                    serial_debug_msg.vy = vy
+                    serial_debug_msg.self_sentry_hp = self_sentry_hp
+                    serial_debug_msg.self_heavy_hp = self_heavy_hp
+                    serial_debug_msg.self_infantry_hp = self_infantry_hp
+                    serial_debug_msg.remain_time = remain_time
+                    serial_debug_msg.remain_bullet = remain_bullet
+                    serial_debug_msg.match_progress = match_progress
+                    serial_debug_msg.occupation = occupation
+                    serial_debug_msg.center_rfid = center_rfid
+                    serial_debug_msg.occupation_raw = occupation_raw
+                    serial_debug_msg.bullet_speed = bullet_speed
+                    serial_debug_msg.armor_id = armor_id
+                    serial_debug_msg.armor_reason = armor_reason
+                    serial_debug_msg.armor_hit_cnt = armor_hit_cnt
+                    serial_debug_msg.armor_hit_seq = armor_hit_seq
+                    serial_debug_msg.armor_angle_chassis = (
+                        armor_angle_chassis
+                    )
+                    serial_debug_msg.armor_angle_world = armor_angle_world
+                    serial_debug_msg.crc_received = received_crc
+                    serial_debug_msg.crc_calculated = calculated_crc
+                    serial_debug_msg.crc_ok = True
+                    self.pub_serial_debug_publisher.publish(
+                        serial_debug_msg
+                    )
             except (serial.SerialException, struct.error, ValueError) as e:
                 self.get_logger().error(f"接收数据异常: {str(e)}")
                 self.reopen_port()
 
-    
+
     def Send(self):
         if self.is_reconnecting:
             return  # 如果正在重连，跳过本次发送
@@ -208,27 +364,42 @@ class SerialNode(Node):
             with self.lock:
                 linear_velocity_x = self.send_datas.linear_velocity_x
                 linear_velocity_y = self.send_datas.linear_velocity_y
-                gimbal_mode = self.send_datas.gimbal_mode
+                # gimbal_mode = self.self.send_datas.gimbal_mode
                 yaw = self.send_datas.yaw
                 pitch = self.send_datas.pitch
                 can_fire = self.send_datas.can_fire
+                gimbal_mode = self.send_datas.gimbal_mode
+                yaw_rate = self.send_datas.yaw_rate
+                cliss_mode = self.send_datas.cliss_mode
+                gimbal_speed = self.send_datas.gimbal_speed
+                # yaw = 0
+                # pitch = 0
+                # can_fire = 0
             # 数据打包
             #帧头，帧尾赋值
             # self.send_datas.header = b'\xA5'
             # self.send_datas.ender  = b'\x2b'
-            header = 0xA5
-            ender = 0x2b
-            #帧头，x线速度，y线速度，小陀螺模式， 云台yaw，云台pitch，开火，帧尾
+
+            if time.monotonic() - self.last_gimbal_time > 0.15:
+                yaw_rate = 0.0
+                can_fire = 0
+
+            header = self.serial_send_header
+
+            #帧头，x线速度，y线速度，小陀螺模式， 云台yaw，云台pitc，开火，前馈角速度，帧尾
             data_payload = struct.pack(
-                '<BffiffiB',
-                header, 
+                '<Bffiffifii',
+                header,
                 linear_velocity_x,
-                linear_velocity_y, 
+                # 0.0,
+                linear_velocity_y,
                 gimbal_mode,
-                yaw, 
-                pitch, 
-                can_fire, 
-                ender
+                yaw,
+                pitch,
+                can_fire,
+                yaw_rate,
+                cliss_mode,
+                gimbal_speed
                 )
 
             checksum = get_crc16_check_sum(data_payload)
@@ -236,7 +407,8 @@ class SerialNode(Node):
             packet = data_payload + struct.pack("<H", checksum)
 
             self.serial.write(packet)
-            print(header, linear_velocity_x,linear_velocity_y, gimbal_mode,yaw, pitch, can_fire, ender)
+            # print(linear_velocity_x,linear_velocity_y)
+            print(linear_velocity_x, linear_velocity_y )
         except Exception as e:
             self.get_logger().error(f"发送数据时出错: {str(e)}")
 
@@ -248,12 +420,12 @@ class SerialNode(Node):
             self.is_reconnecting = True
 
         self.get_logger().warn("正在重连串口...")
-        
+
         while rclpy.ok():
             try:
                 if self.serial and self.serial.is_open:
                     self.serial.close()
-                
+
                 # 重新实例化串口对象，处理底层设备节点变更
                 self.serial = serial.Serial(
                     port=self.port_name,
@@ -263,7 +435,7 @@ class SerialNode(Node):
                 )
                 self.get_logger().info("串口重连成功")
                 break  # 重连成功，跳出循环
-                
+
             except serial.SerialException as e:
                 self.get_logger().error(f"串口重连失败，1秒后重试: {str(e)}")
                 time.sleep(1)
@@ -272,17 +444,30 @@ class SerialNode(Node):
         with self.serial_lock:
             self.is_reconnecting = False
 
+# def main(args=None):
+#     rclpy.init(args=args)
+#     node = SerialNode("serial_node")
+#     try:
+#         rclpy.spin(node)
+#     except KeyboardInterrupt:
+#         pass
+#     finally:
+#         node.destroy_node()
+#         rclpy.shutdown()
 def main(args=None):
     rclpy.init(args=args)
-    node = SerialNode("serial_node")
+    node = SerialNode("serial_node") # 假设您的类名
     try:
         rclpy.spin(node)
     except KeyboardInterrupt:
         pass
+    except Exception as e:
+        print(f"Node terminated due to error: {e}")
     finally:
+        # 确保先销毁节点，停止所有定时器和回调
         node.destroy_node()
-        rclpy.shutdown()
-
+        # 检查是否已经 shutdown，避免重复调用
+        if rclpy.ok():
+            rclpy.shutdown()
 if __name__ == "__main__":
     main()
-    

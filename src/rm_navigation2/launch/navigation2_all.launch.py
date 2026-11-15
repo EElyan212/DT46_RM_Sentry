@@ -13,25 +13,25 @@ def generate_launch_description():
     rviz_config_dir = os.path.join(
         nav2_bringup_dir, 'rviz', 'nav2_default_view.rviz')
     # target_launch_path = os.path.join(
-    #     get_package_share_directory('rm_navigation2'), 
-    #     'launch', 
+    #     get_package_share_directory('rm_navigation2'),
+    #     'launch',
     #     'navigation.launch.py'
     # )
     segmentation_dir = os.path.join(
-        get_package_share_directory('linefit_ground_segmentation_ros'), 
-        'launch', 
+        get_package_share_directory('linefit_ground_segmentation_ros'),
+        'launch',
         'segmentation.launch.py'
     )
     pointcloud_to_laserscan_dir = os.path.join(
-        get_package_share_directory('pointcloud_to_laserscan'), 
-        'launch', 
+        get_package_share_directory('pointcloud_to_laserscan'),
+        'launch',
         'pointcloud_to_laserscan_launch.py'
     )
     # 创建 Launch 配置
     use_sim_time = launch.substitutions.LaunchConfiguration(
-        'use_sim_time', default='true')
+        'use_sim_time', default='False')
     map_yaml_path = launch.substitutions.LaunchConfiguration(
-        'map', default=os.path.join(rm_navigation2_dir, 'maps', 'room.yaml'))
+        'map', default=os.path.join(rm_navigation2_dir, 'maps', 'room3.yaml'))
     nav2_param_path = launch.substitutions.LaunchConfiguration(
         'params_file', default=os.path.join(rm_navigation2_dir, 'config', 'nav2_params.yaml'))
 
@@ -53,14 +53,14 @@ def generate_launch_description():
                 'use_sim_time': use_sim_time,
                 'params_file': nav2_param_path}.items(),
         ),
-        launch.actions.IncludeLaunchDescription(
-            PythonLaunchDescriptionSource(
-                [segmentation_dir]),
-        ),
-        launch.actions.IncludeLaunchDescription(
-            PythonLaunchDescriptionSource(
-                [pointcloud_to_laserscan_dir]),
-        ),
+        # launch.actions.IncludeLaunchDescription(
+        #     PythonLaunchDescriptionSource(
+        #         [segmentation_dir]),
+        # ),
+        # launch.actions.IncludeLaunchDescription(
+        #     PythonLaunchDescriptionSource(
+        #         [pointcloud_to_laserscan_dir]),
+        # ),
         launch_ros.actions.Node(
             package='rviz2',
             executable='rviz2',
