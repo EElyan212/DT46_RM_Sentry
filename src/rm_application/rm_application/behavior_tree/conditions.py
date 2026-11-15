@@ -86,15 +86,20 @@ class NeedEnterCenterZone(BehaviourWithPorts):
 
     def update(self):
         zone = self.get_control_zone()
+        self.feedback_message = ""
+        self.checked_robot_position = None
 
         # 边界未配置时，继续选择进入控制区任务
         if not zone["enabled"]:
+            self.feedback_message = "中央区未启用，优先选择回点"
             return py_trees.common.Status.SUCCESS
 
         robot_position = self.get_robot_position()
+        self.checked_robot_position = robot_position
 
         # 定位不可用时，暂不切换为区内巡逻
         if robot_position is None:
+            self.feedback_message = "自身定位不可用，无法确认已进入中央区"
             return py_trees.common.Status.SUCCESS
 
         robot_x, robot_y = robot_position
@@ -109,6 +114,7 @@ class NeedEnterCenterZone(BehaviourWithPorts):
             return py_trees.common.Status.FAILURE
 
         # 位于区外，需要进入或返回控制区
+        self.feedback_message = "自身位于中央区外，中立模式优先回点"
         return py_trees.common.Status.SUCCESS
 
 # 判断是否允许在中央控制区内受限追击
@@ -141,15 +147,20 @@ class CanChaseInsideCenterZone(BehaviourWithPorts):
 
     def update(self):
         zone = self.get_control_zone()
+        self.feedback_message = ""
+        self.checked_robot_position = None
 
         # 未启用中央控制区时，不允许区内追击
         if not zone["enabled"]:
+            self.feedback_message = "中央区未启用，不允许区内追击"
             return py_trees.common.Status.FAILURE
 
         robot_position = self.get_robot_position()
+        self.checked_robot_position = robot_position
 
         # 没有自身定位时，无法确认是否仍处于允许范围内
         if robot_position is None:
+            self.feedback_message = "自身定位不可用，无法判断追击区域"
             return py_trees.common.Status.FAILURE
 
         robot_x, robot_y = robot_position
@@ -160,6 +171,7 @@ class CanChaseInsideCenterZone(BehaviourWithPorts):
 
         # 中立模式只限制哨兵自身，不再判断敌人是否位于中央区
         if not robot_inside:
+            self.feedback_message = "自身位于中央区外，不允许中立模式追击"
             return py_trees.common.Status.FAILURE
 
         if self.is_enemy_tracked():
@@ -170,6 +182,7 @@ class CanChaseInsideCenterZone(BehaviourWithPorts):
         if self.is_chasing() and self.is_enemy_within_lost_grace():
             return py_trees.common.Status.SUCCESS
 
+        self.feedback_message = "行为树视觉无效，且不满足保留追击的丢失宽限条件"
         return py_trees.common.Status.FAILURE
 
 
@@ -203,9 +216,12 @@ class CanChase(BehaviourWithPorts):
 
     def update(self):
         robot_position = self.get_robot_position()
+        self.feedback_message = ""
+        self.checked_robot_position = robot_position
 
         # 自身定位不可用时，不允许追击
         if robot_position is None:
+            self.feedback_message = "自身定位不可用，无法判断追击区域"
             return py_trees.common.Status.FAILURE
 
         zone = self.get_control_zone()
@@ -213,6 +229,7 @@ class CanChase(BehaviourWithPorts):
 
         # 保留现有规则：两个区域都启用后，才允许前压追击
         if not zone["enabled"] or not boundary["enabled"]:
+            self.feedback_message = "中央区或最大追击边界未启用，不允许前压追击"
             return py_trees.common.Status.FAILURE
 
         robot_x, robot_y = robot_position
@@ -226,6 +243,7 @@ class CanChase(BehaviourWithPorts):
         )
 
         if reached_boundary:
+            self.feedback_message = "自身碰到或越过最大追击边界"
             return py_trees.common.Status.FAILURE
 
         robot_inside_zone = (
@@ -238,6 +256,7 @@ class CanChase(BehaviourWithPorts):
         # 开始追击时必须在中央区内
         # 已经选择追击后，允许在最大追击边界内部离开中央区
         if not chasing and not robot_inside_zone:
+            self.feedback_message = "重新开始追击需要自身先进入中央区"
             return py_trees.common.Status.FAILURE
 
         # 目标有效性只检查视觉状态，不查询敌人 TF
@@ -247,6 +266,7 @@ class CanChase(BehaviourWithPorts):
         if chasing and self.is_enemy_within_lost_grace():
             return py_trees.common.Status.SUCCESS
 
+        self.feedback_message = "行为树视觉无效，且不满足保留追击的丢失宽限条件"
         return py_trees.common.Status.FAILURE
 
 # 判断比赛是否未在进行

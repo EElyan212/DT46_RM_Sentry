@@ -9,6 +9,7 @@ from ament_index_python.packages import get_package_share_directory
 
 from rm_application.behavior_tree.ros_interface import RosInterface
 from rm_application.behavior_tree.blackboard import Blackboard
+from rm_application.behavior_tree.chase_diagnostics import ChaseDiagnostics
 from rm_application.behavior_tree.xml_loader import load_behavior_tree
 
 class BehaviorTreeNode(Node):
@@ -179,6 +180,8 @@ class BehaviorTreeNode(Node):
             / "main_tree.xml"
         )
         self.behavior_tree = load_behavior_tree(self, tree_path)
+        self.chase_diagnostics = ChaseDiagnostics(self)
+        self.last_chase_diagnostic_error_at = float("-inf")
 
         # 每 0.1 秒运行一次行为树，即 10 Hz
         self.behavior_tree_timer = self.create_timer(
@@ -189,6 +192,14 @@ class BehaviorTreeNode(Node):
     def tick_behavior_tree(self):
         # 执行完整一轮 tick，重新检查优先级和当前条件
         self.behavior_tree.tick_once()
+        # 诊断只读本轮状态，打印异常不能中断行为树控制。
+        try:
+            self.chase_diagnostics.log_if_needed()
+        except Exception as error:
+            now = time.monotonic()
+            if now - self.last_chase_diagnostic_error_at >= 1.0:
+                self.get_logger().warn(f"未追击原因打印失败: {error}")
+                self.last_chase_diagnostic_error_at = now
     
     def set_navigation_task(self, task):
         # 任务选择树把当前导航任务写入共享黑板
