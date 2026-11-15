@@ -95,20 +95,20 @@ inline void dump_lio_state_to_log(FILE *fp) {
     fprintf(fp, "%lf ", Measures.lidar_beg_time - first_lidar_time);
     fprintf(fp, "%lf %lf %lf ", rot_ang(0), rot_ang(1), rot_ang(2));                   // Angle
     if (use_imu_as_input) {
-        fprintf(fp, "%lf %lf %lf ", kf_input.x_.pos(0), kf_input.x_.pos(1), kf_input.x_.pos(2)); // Pos
-        fprintf(fp, "%lf %lf %lf ", 0.0, 0.0, 0.0);                                        // omega
-        fprintf(fp, "%lf %lf %lf ", kf_input.x_.vel(0), kf_input.x_.vel(1), kf_input.x_.vel(2)); // Vel
-        fprintf(fp, "%lf %lf %lf ", 0.0, 0.0, 0.0);                                        // Acc
-        fprintf(fp, "%lf %lf %lf ", kf_input.x_.bg(0), kf_input.x_.bg(1), kf_input.x_.bg(2));    // Bias_g
-        fprintf(fp, "%lf %lf %lf ", kf_input.x_.ba(0), kf_input.x_.ba(1), kf_input.x_.ba(2));    // Bias_a
-        fprintf(fp, "%lf %lf %lf ", kf_input.x_.gravity(0), kf_input.x_.gravity(1), kf_input.x_.gravity(2)); // Bias_a
+        fprintf(fp, "%lf %lf %lf ", kf_input.x_.pos(0), kf_input.x_.pos(1), kf_input.x_.pos(2)); // Pos  
+        fprintf(fp, "%lf %lf %lf ", 0.0, 0.0, 0.0);                                        // omega  
+        fprintf(fp, "%lf %lf %lf ", kf_input.x_.vel(0), kf_input.x_.vel(1), kf_input.x_.vel(2)); // Vel  
+        fprintf(fp, "%lf %lf %lf ", 0.0, 0.0, 0.0);                                        // Acc  
+        fprintf(fp, "%lf %lf %lf ", kf_input.x_.bg(0), kf_input.x_.bg(1), kf_input.x_.bg(2));    // Bias_g  
+        fprintf(fp, "%lf %lf %lf ", kf_input.x_.ba(0), kf_input.x_.ba(1), kf_input.x_.ba(2));    // Bias_a  
+        fprintf(fp, "%lf %lf %lf ", kf_input.x_.gravity(0), kf_input.x_.gravity(1), kf_input.x_.gravity(2)); // Bias_a  
     } else {
-        fprintf(fp, "%lf %lf %lf ", kf_output.x_.pos(0), kf_output.x_.pos(1), kf_output.x_.pos(2)); // Pos
-        fprintf(fp, "%lf %lf %lf ", 0.0, 0.0, 0.0);                                        // omega
-        fprintf(fp, "%lf %lf %lf ", kf_output.x_.vel(0), kf_output.x_.vel(1), kf_output.x_.vel(2)); // Vel
-        fprintf(fp, "%lf %lf %lf ", 0.0, 0.0, 0.0);                                        // Acc
-        fprintf(fp, "%lf %lf %lf ", kf_output.x_.bg(0), kf_output.x_.bg(1), kf_output.x_.bg(2));    // Bias_g
-        fprintf(fp, "%lf %lf %lf ", kf_output.x_.ba(0), kf_output.x_.ba(1), kf_output.x_.ba(2));    // Bias_a
+        fprintf(fp, "%lf %lf %lf ", kf_output.x_.pos(0), kf_output.x_.pos(1), kf_output.x_.pos(2)); // Pos  
+        fprintf(fp, "%lf %lf %lf ", 0.0, 0.0, 0.0);                                        // omega  
+        fprintf(fp, "%lf %lf %lf ", kf_output.x_.vel(0), kf_output.x_.vel(1), kf_output.x_.vel(2)); // Vel  
+        fprintf(fp, "%lf %lf %lf ", 0.0, 0.0, 0.0);                                        // Acc  
+        fprintf(fp, "%lf %lf %lf ", kf_output.x_.bg(0), kf_output.x_.bg(1), kf_output.x_.bg(2));    // Bias_g  
+        fprintf(fp, "%lf %lf %lf ", kf_output.x_.ba(0), kf_output.x_.ba(1), kf_output.x_.ba(2));    // Bias_a  
         fprintf(fp, "%lf %lf %lf ", kf_output.x_.gravity(0), kf_output.x_.gravity(1),
                 kf_output.x_.gravity(2)); // Bias_a
     }
@@ -505,7 +505,7 @@ void publish_init_kdtree(const rclcpp::Publisher<sensor_msgs::msg::PointCloud2>:
     pcl::toROSMsg(*laserCloudInit, laserCloudmsg);
 
     laserCloudmsg.header.stamp = get_ros_time(lidar_end_time);
-    laserCloudmsg.header.frame_id = "livox_odom";
+    laserCloudmsg.header.frame_id = "camera_init";
     pubLaserCloudFullRes->publish(laserCloudmsg);
 }
 
@@ -525,14 +525,14 @@ void publish_frame_world(const rclcpp::Publisher<sensor_msgs::msg::PointCloud2>:
             laserCloudWorld->points[i].x = feats_down_world->points[i].x;
             laserCloudWorld->points[i].y = feats_down_world->points[i].y;
             laserCloudWorld->points[i].z = feats_down_world->points[i].z;
-            laserCloudWorld->points[i].intensity = feats_down_world->points[i].intensity; // feats_down_world->points[i].y; //
+            laserCloudWorld->points[i].intensity = feats_down_world->points[i].intensity; // feats_down_world->points[i].y; // 
             // }
         }
         sensor_msgs::msg::PointCloud2 laserCloudmsg;
         pcl::toROSMsg(*laserCloudWorld, laserCloudmsg);
 
         laserCloudmsg.header.stamp = get_ros_time(lidar_end_time);
-        laserCloudmsg.header.frame_id = "livox_odom";
+        laserCloudmsg.header.frame_id = "camera_init";
         pubLaserCloudFullRes->publish(laserCloudmsg);
         publish_count -= PUBFRAME_PERIOD;
     }
@@ -579,7 +579,7 @@ void publish_frame_body(const rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::
     sensor_msgs::msg::PointCloud2 laserCloudmsg;
     pcl::toROSMsg(*laserCloudIMUBody, laserCloudmsg);
     laserCloudmsg.header.stamp = get_ros_time(lidar_end_time);
-    laserCloudmsg.header.frame_id = "livox_frame";
+    laserCloudmsg.header.frame_id = "body";
     pubLaserCloudFull_body->publish(laserCloudmsg);
     publish_count -= PUBFRAME_PERIOD;
 }
@@ -607,8 +607,8 @@ void set_posestamp(T &out) {
 
 void publish_odometry(const rclcpp::Publisher<nav_msgs::msg::Odometry>::SharedPtr &pubOdomAftMapped,
                       std::shared_ptr<tf2_ros::TransformBroadcaster> &tf_br) {
-    odomAftMapped.header.frame_id = "livox_odom";
-    odomAftMapped.child_frame_id = "livox_frame";
+    odomAftMapped.header.frame_id = "camera_init";
+    odomAftMapped.child_frame_id = "aft_mapped";
     if (publish_odometry_without_downsample) {
         odomAftMapped.header.stamp = get_ros_time(time_current);
     } else {
@@ -620,8 +620,8 @@ void publish_odometry(const rclcpp::Publisher<nav_msgs::msg::Odometry>::SharedPt
 
     //static tf2_ros::TransformBroadcaster br = std::make_shared<tf2_ros::TransformBroadcaster>(*this);
     geometry_msgs::msg::TransformStamped transform;
-    transform.header.frame_id = "livox_odom";
-    transform.child_frame_id = "livox_frame";
+    transform.header.frame_id = "camera_init";
+    transform.child_frame_id = "aft_mapped";
     transform.transform.translation.x = odomAftMapped.pose.pose.position.x;
     transform.transform.translation.y = odomAftMapped.pose.pose.position.y;
     transform.transform.translation.z = odomAftMapped.pose.pose.position.z;
@@ -637,7 +637,7 @@ void publish_path(const rclcpp::Publisher<nav_msgs::msg::Path>::SharedPtr &pubPa
     set_posestamp(msg_body_pose.pose);
     // msg_body_pose.header.stamp = ros::Time::now();
     msg_body_pose.header.stamp = get_ros_time(lidar_end_time);
-    msg_body_pose.header.frame_id = "livox_odom";
+    msg_body_pose.header.frame_id = "camera_init";
     static int jjj = 0;
     jjj++;
     // if (jjj % 2 == 0) // if path is too large, the rvis will crash
@@ -654,7 +654,7 @@ int main(int argc, char **argv) {
     cout << "lidar_type: " << lidar_type << endl;
 
     path.header.stamp = get_ros_time(lidar_end_time);
-    path.header.frame_id = "livox_odom";
+    path.header.frame_id = "camera_init";
 
     /*** variables definition for counting ***/
     int frame_num = 0;
@@ -1081,7 +1081,7 @@ int main(int argc, char **argv) {
                         double dt = get_time_sec(imu_last.header.stamp) - t_last;
 
                         // if(!prop_at_freq_of_imu)
-                        // {
+                        // {       
                         double dt_cov = get_time_sec(imu_last.header.stamp) - time_update_last;
                         if (dt_cov > 0.0) {
                             kf_input.predict(dt_cov, Q_input, input_in, false, true);
@@ -1132,10 +1132,10 @@ int main(int argc, char **argv) {
                     // if(prop_at_freq_of_imu)
                     // {
                     //     double dt_cov = time_current - time_update_last;
-                    //     if ((imu_prop_cov && dt_cov > 0.0) || (dt_cov >= imu_time_inte * 1.2))
+                    //     if ((imu_prop_cov && dt_cov > 0.0) || (dt_cov >= imu_time_inte * 1.2)) 
                     //     {
                     //         double propag_cov_start = omp_get_wtime();
-                    //         kf_input.predict(dt_cov, Q_input, input_in, false, true);
+                    //         kf_input.predict(dt_cov, Q_input, input_in, false, true); 
                     //         propag_time += omp_get_wtime() - propag_cov_start;
                     //         time_update_last = time_current;
                     //         imu_prop_cov = false;
