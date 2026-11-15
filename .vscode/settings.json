@@ -14,6 +14,7 @@
         "--background-index",
         "--clang-tidy",
         "--header-insertion=never"
-    ]
+    ],
+    "cmake.sourceDirectory": "/home/nico/DT46_RM_Sentry/src/rm_description"
 }
 

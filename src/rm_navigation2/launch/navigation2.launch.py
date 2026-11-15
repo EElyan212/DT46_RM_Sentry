@@ -15,9 +15,9 @@ def generate_launch_description():
 
     # 创建 Launch 配置
     use_sim_time = launch.substitutions.LaunchConfiguration(
-        'use_sim_time', default='true')
+        'use_sim_time', default='false')
     map_yaml_path = launch.substitutions.LaunchConfiguration(
-        'map', default=os.path.join(rm_navigation2_dir, 'maps', 'room.yaml'))
+        'map', default=os.path.join(rm_navigation2_dir, 'maps', 'room_19floor.yaml'))
     nav2_param_path = launch.substitutions.LaunchConfiguration(
         'params_file', default=os.path.join(rm_navigation2_dir, 'config', 'nav2_params.yaml'))
 
@@ -45,5 +45,12 @@ def generate_launch_description():
             name='rviz2',
             arguments=['-d', rviz_config_dir],
             parameters=[{'use_sim_time': use_sim_time}],
-            output='screen'),
+            output='log'),
+
+        launch_ros.actions.Node(
+            package='rm_navigation2',
+            executable='map_clear',
+            name='map_clear_node',
+            parameters=[{'use_sim_time': use_sim_time}],
+            output='log'),
     ])
