@@ -275,7 +275,7 @@ local_costmap:
         z_voxels: 30                   # 0.05 × 30 = 1.5m，与 max_obstacle_height 匹配
         max_obstacle_height: 1.5       # 与体素空间一致，避免截断
         mark_threshold: 0
-        observation_sources: scan
+        observation_sources: scan scan2
         footprint_clearing_enabled: True
         scan:
           topic: /scan
@@ -289,6 +289,17 @@ local_costmap:
           obstacle_max_range: 5.0
           obstacle_min_range: 0.0
 
+        scan2:
+          topic: /scan2
+          max_obstacle_height: 1.5     # 与层级别一致
+          clearing: True
+          marking: True
+          data_type: "LaserScan"
+          reliability: "best_effort"   # ★ 必须与激光驱动实际 QoS 一致，否则收不到数据
+          raytrace_max_range: 5.0
+          raytrace_min_range: 0.0
+          obstacle_max_range: 5.0
+          obstacle_min_range: 0.0
 
       # # VoxelLayer插件，用于根据扫描数据创建体素地图
       # voxel_layer:

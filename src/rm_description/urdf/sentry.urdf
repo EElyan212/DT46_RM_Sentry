@@ -15,6 +15,22 @@
   <!-- 虚拟的 base_footprint，代表机器人在地面的投影 -->
   <link name="base_footprint"/>
 
+  <!-- 新增: laser_frame 作为雷达的子坐标系 -->
+  <link name="laser_frame">
+    <inertial>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <mass value="1e-9"/>
+      <inertia ixx="0" ixy="0" ixz="0" iyy="0" iyz="0" izz="0"/>
+    </inertial>
+  </link>
+
+  <!-- 新增: base_footprint -> laser_frame 的固定变换，高度已与 livox_frame 对齐 -->
+  <joint name="laser_frame_joint" type="fixed">
+    <origin xyz="0 -0.168 0.356755" rpy="3.14 0 3.14"/>
+    <parent link="base_footprint"/>
+    <child link="laser_frame"/>
+  </joint>
+
   <!-- livox_frame -> base_footprint（保留原雷达安装外参与底盘关系） -->
   <joint name="livox_frame_joint" type="fixed">
     <origin xyz="0 0.356755 -0.150917" rpy="1.5708 0 0"/>
