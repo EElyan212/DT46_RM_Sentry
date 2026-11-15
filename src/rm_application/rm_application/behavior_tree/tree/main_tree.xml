@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<root BTCPP_format="4"
+      main_tree_to_execute="SentryMain">
+  <include path="navigation_tree.xml" file="navigation_tree.xml"/>
+
+  <include path="stance_tree.xml" file="stance_tree.xml"/>
+
+  <BehaviorTree ID="SentryMain">
+    <ContinuousParallel name="哨兵主树">
+      <SubTree ID="NavigationTaskSelection"
+               name="导航控制"
+               _autoremap="true"/>
+      <SubTree ID="StanceControl"
+               name="姿态控制"
+               _autoremap="true"/>
+    </ContinuousParallel>
+  </BehaviorTree>
+
+  <!-- Description of Node Models (used by Groot) -->
+  <TreeNodesModel>
+    <Control ID="ContinuousParallel"/>
+  </TreeNodesModel>
+
+</root>
