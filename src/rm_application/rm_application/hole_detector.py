@@ -35,7 +35,7 @@ class HoleDetector(Node):
         self.declare_parameter("hole_y_max", 0.0)
         self.declare_parameter("pre_stop_distance", 0.8)   # 到洞口多少距离停下
         self.declare_parameter("path_timeout", 2.0)        # 在洞口停下的时间
-        self.declare_parameter("inside_debounce_time", 0.5)  # 进出洞判定去抖时间
+        self.declare_parameter("inside_debounce_time", 0.5)  # 判定为进出洞状态需要持续满足条件的时间
         self.declare_parameter("publish_rate", 10.0)
         self.declare_parameter("map_frame", "map")
         self.declare_parameter("robot_frame", "base_footprint")
@@ -87,7 +87,6 @@ class HoleDetector(Node):
         self.was_inside = False
         self.exit_distance = None
         self.last_state = None
-        # 进出洞去抖：洞口边界处定位抖动会导致状态反复跳变
         self.inside_state = False
         self.inside_candidate = None
         self.inside_candidate_since = None
@@ -251,8 +250,7 @@ class HoleDetector(Node):
             self.get_logger().warn(
                 f"全局路径未与洞矩形 "
                 f"({self.x_min:.2f},{self.x_max:.2f},"
-                f"{self.y_min:.2f},{self.y_max:.2f}) 相交，"
-                f"请检查矩形或路径坐标系",
+                f"{self.y_min:.2f},{self.y_max:.2f}) 相交，",
                 throttle_duration_sec=2.0,
             )
         elif not status.inside and robot_progress is not None:
@@ -291,7 +289,7 @@ class HoleDetector(Node):
         self.status_publisher.publish(status)
 
     def update_inside(self, raw_inside):
-        # 只有新增状态持续超过去抖时间才真正切换，避免边界抖动反复进出洞
+        # 只有进出洞状态持续时间满足条件才会更新状态，避免洞口边界处定位抖动导致状态反复跳变。
         if raw_inside == self.inside_state:
             self.inside_candidate = None
             self.inside_candidate_since = None
