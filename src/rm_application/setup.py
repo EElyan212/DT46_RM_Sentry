@@ -50,6 +50,7 @@ setup(
             "behavior_tree_node = rm_application.behavior_tree_node:main",
             "test_chase = rm_application.test_chase:main",
             "mock_rm_tf_broadcaster = rm_application.mock_rm_tf_broadcaster:main",
+            "axis_align = rm_application.axis_align.axis_align_node:main",
 
         ],
     },

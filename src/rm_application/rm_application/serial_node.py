@@ -55,6 +55,25 @@ class SerialNode(Node):
         self.sub_gimbal_mode = self.create_subscription(Int32, "/gimbal_mode", self.gimbal_mode_callback, 1)
         #创建洞口门控接收者
         self.sub_hole_block = self.create_subscription(Bool, self.hole_block_topic, self.hole_block_callback, 10)
+        # axis_align 速度与接管状态
+        self.sub_axis_cmd = self.create_subscription(
+            Twist,
+            self.axis_align_cmd_topic,
+            self.axis_align_cmd_callback,
+            10,
+        )
+        active_qos = QoSProfile(
+            reliability=ReliabilityPolicy.RELIABLE,
+            history=HistoryPolicy.KEEP_LAST,
+            depth=1,
+            durability=DurabilityPolicy.TRANSIENT_LOCAL,
+        )
+        self.sub_axis_active = self.create_subscription(
+            Bool,
+            self.axis_align_active_topic,
+            self.axis_align_active_callback,
+            active_qos,
+        )
         # 创建发布者 2: IMU 数据
         self.pub_uart_receive_imu = self.create_publisher(Vector3Stamped, '/imu/rpy', qos)
         #创建发布者 3: odo 数据
@@ -116,6 +135,9 @@ class SerialNode(Node):
                 ('hole_gate_enabled', True),
                 ('hole_block_topic', '/hole/block'),
                 ('hole_block_timeout', 1.0),  # /hole/block 超时后自动恢复输出
+                ('axis_align_cmd_topic', '/axis_align/cmd_vel'),
+                ('axis_align_active_topic', '/axis_align/active'),
+                ('axis_align_cmd_timeout', 0.5),
                 ('decision_input_mode', 'mock')
             ]
         )
@@ -137,8 +159,21 @@ class SerialNode(Node):
         self.hole_block_timeout = float(
             self.get_parameter("hole_block_timeout").value
         )
+        self.axis_align_cmd_topic = self.get_parameter(
+            "axis_align_cmd_topic"
+        ).value
+        self.axis_align_active_topic = self.get_parameter(
+            "axis_align_active_topic"
+        ).value
+        self.axis_align_cmd_timeout = float(
+            self.get_parameter("axis_align_cmd_timeout").value
+        )
         self.hole_blocked = False
         self.last_hole_block_time = None
+        self.nav_cmd = (0.0, 0.0)
+        self.axis_cmd = (0.0, 0.0)
+        self.last_axis_cmd_time = None
+        self.axis_align_active = False
         self.decision_input_mode = (str(self.get_parameter("decision_input_mode").value).strip().lower())
         valid_decision_input_modes = {"serial", "mock"}
         if self.decision_input_mode not in valid_decision_input_modes:
@@ -166,10 +201,15 @@ class SerialNode(Node):
         self.get_logger().info("-" * 30)
 
     def cmd_vel_callback(self,msg):
-        with self.lock:
-            self.send_datas.linear_velocity_x = msg.linear.x
-            self.send_datas.linear_velocity_y = msg.linear.y
-            self.send_datas.angular_velocity_z = msg.angular.z
+        self.nav_cmd = (float(msg.linear.x), float(msg.linear.y))
+    def axis_align_cmd_callback(self,msg):
+        self.axis_cmd = (float(msg.linear.x), float(msg.linear.y))
+        self.last_axis_cmd_time = time.monotonic()
+    def axis_align_active_callback(self,msg):
+        self.axis_align_active = bool(msg.data)
+        if not self.axis_align_active:
+            self.axis_cmd = (0.0, 0.0)
+            self.last_axis_cmd_time = None
     def gimbal_mode_callback(self,msg):
         with self.lock:
             self.send_datas.gimbal_mode = msg.data
@@ -377,8 +417,6 @@ class SerialNode(Node):
 
         try:
             with self.lock:
-                linear_velocity_x = self.send_datas.linear_velocity_x
-                linear_velocity_y = self.send_datas.linear_velocity_y
                 # gimbal_mode = self.self.send_datas.gimbal_mode
                 yaw = self.send_datas.yaw
                 pitch = self.send_datas.pitch
@@ -408,6 +446,20 @@ class SerialNode(Node):
                     )
                     hole_blocked = False
                     self.hole_blocked = False
+
+            axis_fresh = (
+                self.last_axis_cmd_time is not None
+                and time.monotonic() - self.last_axis_cmd_time
+                <= self.axis_align_cmd_timeout
+            )
+            if self.axis_align_active and axis_fresh:
+                linear_velocity_x, linear_velocity_y = self.axis_cmd
+            elif self.axis_align_active:
+                # 已接管但暂无新指令：安全停等，避免 nav2 抢速
+                linear_velocity_x = 0.0
+                linear_velocity_y = 0.0
+            else:
+                linear_velocity_x, linear_velocity_y = self.nav_cmd
 
             if self.hole_gate_enabled and hole_blocked:
                 linear_velocity_x = 0.0

@@ -3,8 +3,12 @@ axis_align_node:
     map_frame: map
     base_frame: base_footprint
     control_rate: 20.0
-    cmd_vel_topic: /cmd_vel
+    cmd_vel_topic: /axis_align/cmd_vel
     aligned_topic: /axis_align/aligned
+    enable_topic: /axis_align/enable
+    active_topic: /axis_align/active
+    hole_status_topic: /hole/status
+    start_enabled: false
 
     centerline_point: [-0.08, 1.847]
     centerline_yaw: -1.5708

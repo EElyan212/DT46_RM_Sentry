@@ -11,6 +11,7 @@ from rclpy.qos import (
     ReliabilityPolicy,
 )
 from rclpy.time import Duration, Time
+from rm_interfaces.msg import HoleStatus
 from std_msgs.msg import Bool
 from tf2_ros import Buffer, TransformListener
 
@@ -32,6 +33,10 @@ class AxisAlignNode(Node):
         self.declare_parameter("control_rate", 20.0)
         self.declare_parameter("cmd_vel_topic", "/cmd_vel")
         self.declare_parameter("aligned_topic", "/axis_align/aligned")
+        self.declare_parameter("enable_topic", "/axis_align/enable")
+        self.declare_parameter("start_enabled", False)
+        self.declare_parameter("active_topic", "/axis_align/active")
+        self.declare_parameter("hole_status_topic", "/hole/status")
 
         self.declare_parameter("centerline_point", [0.0, 0.0])
         self.declare_parameter("centerline_yaw", 0.0)
@@ -59,6 +64,17 @@ class AxisAlignNode(Node):
         )
         self.cmd_vel_topic = self.get_parameter("cmd_vel_topic").value
         self.aligned_topic = self.get_parameter("aligned_topic").value
+        self.enable_topic = self.get_parameter("enable_topic").value
+        self.active_topic = self.get_parameter("active_topic").value
+        self.hole_status_topic = self.get_parameter(
+            "hole_status_topic"
+        ).value
+        self.start_enabled = bool(
+            self.get_parameter("start_enabled").value
+        )
+        self.enabled = False
+        self.entry_y_sign = 0
+        self.pass_sign = 0
 
         point = list(self.get_parameter("centerline_point").value)
         if len(point) != 2:
@@ -114,14 +130,15 @@ class AxisAlignNode(Node):
         if self.pass_use_centerline_yaw:
             self.pass_yaw = self.centerline_yaw
         else:
-            self.pass_yaw = self.pass_y_direction * math.pi * 0.5
+            self.pass_yaw = None
         self.pass_hold_lateral = bool(
             self.get_parameter("pass_hold_lateral").value
         )
 
         self.pass_direction = (
-            math.cos(self.pass_yaw),
-            math.sin(self.pass_yaw),
+            (math.cos(self.pass_yaw), math.sin(self.pass_yaw))
+            if self.pass_yaw is not None
+            else None
         )
 
         self.tf_buffer = Buffer()
@@ -142,6 +159,21 @@ class AxisAlignNode(Node):
         )
         self.aligned_publisher.publish(Bool(data=False))
 
+        self.active_publisher = self.create_publisher(
+            Bool, self.active_topic, aligned_qos
+        )
+        self.active_publisher.publish(Bool(data=False))
+
+        self.create_subscription(
+            Bool, self.enable_topic, self.enable_callback, 10
+        )
+        self.create_subscription(
+            HoleStatus,
+            self.hole_status_topic,
+            self.hole_status_callback,
+            10,
+        )
+
         self.last_control_time = time.monotonic()
         self.last_vx = 0.0
         self.last_vy = 0.0
@@ -155,6 +187,9 @@ class AxisAlignNode(Node):
             1.0 / self.control_rate, self.control_loop
         )
 
+        if self.start_enabled:
+            self.start_align()
+
         self.get_logger().info(
             "axis_align_node started: "
             f"point=({self.centerline_point[0]:.3f}, "
@@ -163,8 +198,7 @@ class AxisAlignNode(Node):
             f"pass_enable={self.pass_enable}, "
             f"pass_speed={self.pass_speed:.3f} m/s, "
             f"pass_distance={self.pass_distance:.3f} m, "
-            f"pass_yaw={self.pass_yaw:.3f} rad, "
-            f"pass_y_direction={self.pass_y_direction}, "
+            f"pass_use_centerline_yaw={self.pass_use_centerline_yaw}, "
             f"pass_hold_lateral={self.pass_hold_lateral}"
         )
 
@@ -172,6 +206,9 @@ class AxisAlignNode(Node):
         now = time.monotonic()
         dt = max(now - self.last_control_time, 1e-3)
         self.last_control_time = now
+
+        if not self.enabled:
+            return
 
         robot_pose = self.get_robot_pose()
         if robot_pose is None:
@@ -252,8 +289,18 @@ class AxisAlignNode(Node):
     def start_pass(self, robot_x, robot_y):
         self.mode = "PASS"
         self.pass_start = (robot_x, robot_y)
+        if self.pass_use_centerline_yaw:
+            self.pass_yaw = self.centerline_yaw
+        else:
+            self.pass_yaw = self.pass_sign * math.pi * 0.5
+        self.pass_direction = (
+            math.cos(self.pass_yaw),
+            math.sin(self.pass_yaw),
+        )
         self.get_logger().info(
             "centerline pass started: "
+            f"sign={self.pass_sign}, "
+            f"yaw={self.pass_yaw:.3f} rad, "
             f"speed={self.pass_speed:.3f} m/s, "
             f"distance={self.pass_distance:.3f} m"
         )
@@ -359,6 +406,60 @@ class AxisAlignNode(Node):
         self.last_vx = vx
         self.last_vy = vy
 
+    def enable_callback(self, msg):
+        if msg.data:
+            self.start_align()
+        else:
+            self.stop_align()
+
+    def hole_status_callback(self, msg):
+        self.entry_y_sign = int(msg.entry_y_sign)
+
+    def publish_active(self, active):
+        self.active_publisher.publish(Bool(data=bool(active)))
+
+    def start_align(self):
+        if self.enabled:
+            return
+
+        if (
+            not self.pass_use_centerline_yaw
+            and self.entry_y_sign not in (-1, 1)
+        ):
+            self.get_logger().error(
+                "拒绝启动 axis_align：入洞方向未知 "
+                f"(entry_y_sign={self.entry_y_sign})",
+                throttle_duration_sec=2.0,
+            )
+            self.publish_active(False)
+            return
+
+        self.enabled = True
+        self.pass_sign = self.entry_y_sign
+        self.mode = "ALIGN"
+        self.inside_deadband_since = None
+        self.pass_start = None
+        self.last_vx = 0.0
+        self.last_vy = 0.0
+        self.last_control_time = time.monotonic()
+        self.set_aligned(False)
+        self.publish_active(True)
+        self.get_logger().info(
+            f"axis_align enabled, pass_sign={self.pass_sign}"
+        )
+
+    def stop_align(self):
+        if not self.enabled:
+            return
+        self.enabled = False
+        self.mode = "ALIGN"
+        self.inside_deadband_since = None
+        self.pass_start = None
+        self.stop()
+        self.set_aligned(False)
+        self.publish_active(False)
+        self.get_logger().info("axis_align disabled")
+
     def set_aligned(self, aligned):
         if self.aligned == aligned:
             return
@@ -388,6 +489,6 @@ def main(args=None):
     except KeyboardInterrupt:
         pass
     finally:
-        node.stop()
+        node.stop_align()
         node.destroy_node()
         rclpy.shutdown()

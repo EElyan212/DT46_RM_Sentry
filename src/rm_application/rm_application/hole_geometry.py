@@ -180,3 +180,26 @@ def first_entry_arc_length(points, cumulative, rect):
         return cumulative[i] + t_enter * segment_length
 
     return None
+
+
+def first_entry_y_sign(points, cumulative, rect):
+    """返回路径第一次进入洞矩形时的 +y/-y 方向符号。
+
+    +1 表示路径沿 +y 方向进洞，-1 表示沿 -y，0 表示无法判断。
+    """
+    if not points or len(points) < 2:
+        return 0
+
+    for i in range(len(points) - 1):
+        interval = segment_rect_interval(points[i], points[i + 1], rect)
+        if interval is None:
+            continue
+
+        dy = points[i + 1][1] - points[i][1]
+        if dy > _EPS:
+            return 1
+        if dy < -_EPS:
+            return -1
+        return 0
+
+    return 0

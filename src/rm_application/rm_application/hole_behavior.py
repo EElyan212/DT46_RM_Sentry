@@ -1,5 +1,7 @@
 
 
+import time
+
 import rclpy
 from rclpy.node import Node
 from rm_interfaces.msg import HoleStatus
@@ -29,10 +31,18 @@ class HoleBehavior(Node):
             "gimbal_exit_complete_topic",
             "/gimbal/exit_action_complete",
         )
+        self.declare_parameter(
+            "axis_align_enable_topic",
+            "/axis_align/enable",
+        )
         self.declare_parameter("post_exit_distance", 0.5)
         self.declare_parameter("status_timeout", 1.0)
         self.declare_parameter("block_on_missing_status", True)
         self.declare_parameter("publish_rate", 10.0)
+        # 调试用：无需手动发布云台完成话题，等待一段时间后自动放行
+        self.declare_parameter("auto_gimbal_complete", False)
+        self.declare_parameter("auto_exit_gimbal_complete", False)
+        self.declare_parameter("gimbal_auto_delay", 1.0)
 
         self.hole_status_topic = self.get_parameter(
             "hole_status_topic"
@@ -46,6 +56,9 @@ class HoleBehavior(Node):
         self.gimbal_exit_complete_topic = self.get_parameter(
             "gimbal_exit_complete_topic"
         ).value
+        self.axis_align_enable_topic = self.get_parameter(
+            "axis_align_enable_topic"
+        ).value
         self.post_exit_distance = float(
             self.get_parameter("post_exit_distance").value
         )
@@ -58,6 +71,15 @@ class HoleBehavior(Node):
         self.publish_rate = float(
             self.get_parameter("publish_rate").value
         )
+        self.auto_gimbal_complete = bool(
+            self.get_parameter("auto_gimbal_complete").value
+        )
+        self.auto_exit_gimbal_complete = bool(
+            self.get_parameter("auto_exit_gimbal_complete").value
+        )
+        self.gimbal_auto_delay = max(
+            float(self.get_parameter("gimbal_auto_delay").value), 0.0
+        )
 
         self.state = self.STATE_IDLE
         self.block = False
@@ -65,6 +87,9 @@ class HoleBehavior(Node):
         self.latest_status_time = None
         self.gimbal_complete_event = False
         self.gimbal_exit_complete_event = False
+        self.gimbal_wait_since = None
+        self.exit_gimbal_wait_since = None
+        self.axis_align_request = False
 
         self.status_subscription = self.create_subscription(
             HoleStatus,
@@ -87,6 +112,11 @@ class HoleBehavior(Node):
         self.block_publisher = self.create_publisher(
             Bool,
             self.hole_block_topic,
+            10,
+        )
+        self.axis_align_enable_publisher = self.create_publisher(
+            Bool,
+            self.axis_align_enable_topic,
             10,
         )
 
@@ -178,6 +208,9 @@ class HoleBehavior(Node):
 
         self.set_block(blocked)
         self.publish_block()
+        self.axis_align_enable_publisher.publish(
+            Bool(data=self.axis_align_request)
+        )
     # 处理 /hole/status 超时或尚未收到状态的情况
     def _handle_stale_status(self):
         return (
@@ -190,6 +223,7 @@ class HoleBehavior(Node):
     # 处理 status.enabled=false，即过洞检测功能关闭或矩形参数非
     def _handle_disabled(self):
         self.state = self.STATE_IDLE
+        self.axis_align_request = False
         return False
     # 待机状态，判断是否开始入洞流程，
     def _handle_idle(self, status):
@@ -203,6 +237,7 @@ class HoleBehavior(Node):
         if status.approaching:
             self.state = self.STATE_WAIT_GIMBAL
             self.gimbal_complete_event = False
+            self.gimbal_wait_since = time.monotonic()
             self.get_logger().info(
                 "接近洞口，等待云台动作完成"
             )
@@ -219,8 +254,21 @@ class HoleBehavior(Node):
             self.get_logger().info("已进入洞口")
             return False
 
+        if (
+            self.auto_gimbal_complete
+            and not self.gimbal_complete_event
+            and self.gimbal_wait_since is not None
+            and time.monotonic() - self.gimbal_wait_since
+            >= self.gimbal_auto_delay
+        ):
+            self.gimbal_complete_event = True
+            self.get_logger().info(
+                "调试模式：自动完成入洞云台动作"
+            )
+
         if self.gimbal_complete_event:
             self.state = self.STATE_ENTERING
+            self.axis_align_request = True
             self.get_logger().info(
                 "云台动作完成，允许进入洞口"
             )
@@ -251,6 +299,7 @@ class HoleBehavior(Node):
             and not status.approaching
         ):
             self.state = self.STATE_IDLE
+            self.axis_align_request = False
 
         return False
 
@@ -258,6 +307,7 @@ class HoleBehavior(Node):
     def _handle_inside(self, status):
         if not status.inside:
             self.state = self.STATE_EXIT_TRAVEL
+            self.axis_align_request = False
             self.get_logger().info("已出洞")
 
         return False
@@ -270,6 +320,7 @@ class HoleBehavior(Node):
         if status.distance_since_exit >= self.post_exit_distance:
             self.state = self.STATE_WAIT_EXIT_GIMBAL
             self.gimbal_exit_complete_event = False
+            self.exit_gimbal_wait_since = time.monotonic()
             self.get_logger().info(
                 f"已离开洞口 {status.distance_since_exit:.2f}m，"
                 f"等待云台出洞动作完成"
@@ -279,6 +330,18 @@ class HoleBehavior(Node):
         return False
     # 出洞后等待专用云台完成信号
     def _handle_wait_exit_gimbal(self, status):
+        if (
+            self.auto_exit_gimbal_complete
+            and not self.gimbal_exit_complete_event
+            and self.exit_gimbal_wait_since is not None
+            and time.monotonic() - self.exit_gimbal_wait_since
+            >= self.gimbal_auto_delay
+        ):
+            self.gimbal_exit_complete_event = True
+            self.get_logger().info(
+                "调试模式：自动完成出洞云台动作"
+            )
+
         if self.gimbal_exit_complete_event:
             self.state = self.STATE_DONE
             self.get_logger().info(
@@ -310,6 +373,9 @@ def main(args=None):
             if rclpy.ok():
                 node.set_block(False)
                 node.publish_block()
+                node.axis_align_enable_publisher.publish(
+                    Bool(data=False)
+                )
         except Exception:
             pass
         node.destroy_node()

@@ -19,6 +19,7 @@ from tf2_ros import Buffer, TransformListener, TransformException
 from rm_application.hole_geometry import (
     cumulative_lengths,
     first_entry_arc_length,
+    first_entry_y_sign,
     point_in_rect,
     project_robot_on_path,
 )
@@ -82,6 +83,7 @@ class HoleDetector(Node):
         self.latest_path = None
         self.cumulative = []
         self.entry_arc_length = None
+        self.entry_y_sign = 0
         self.latest_path_time = None
         self.last_progress_index = 0
         self.was_inside = False
@@ -144,12 +146,18 @@ class HoleDetector(Node):
             self.latest_path = None
             self.cumulative = []
             self.entry_arc_length = None
+            self.entry_y_sign = 0
             self.latest_path_time = None
             return
 
         self.latest_path = points
         self.cumulative = cumulative_lengths(points)
         self.entry_arc_length = first_entry_arc_length(
+            points,
+            self.cumulative,
+            self.rect,
+        )
+        self.entry_y_sign = first_entry_y_sign(
             points,
             self.cumulative,
             self.rect,
@@ -168,6 +176,7 @@ class HoleDetector(Node):
         status.inside = False
         status.distance_to_entry = -1.0
         status.distance_since_exit = -1.0
+        status.entry_y_sign = self.entry_y_sign
 
         if not self.enabled:
             self.status_publisher.publish(status)

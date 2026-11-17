@@ -15,6 +15,9 @@ serial_node:
         hole_gate_enabled: true
         hole_block_topic: "/hole/block"
         hole_block_timeout: 1.0   # /hole/block 超时后自动恢复底盘输出
+        axis_align_cmd_topic: "/axis_align/cmd_vel"
+        axis_align_active_topic: "/axis_align/active"
+        axis_align_cmd_timeout: 0.5
         # mock：使用 RQT 或模拟节点发布 /nav/decision
         # serial：使用串口发布 /nav/decision
         decision_input_mode: "mock"

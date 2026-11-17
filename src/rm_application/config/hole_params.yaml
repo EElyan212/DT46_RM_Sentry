@@ -22,7 +22,12 @@ hole_behavior:
     hole_block_topic: /hole/block
     gimbal_complete_topic: /gimbal/action_complete
     gimbal_exit_complete_topic: /gimbal/exit_action_complete
+    axis_align_enable_topic: /axis_align/enable
     post_exit_distance: 1.0    # 离开出口多少距离停下
     status_timeout: 1.0
     block_on_missing_status: true
     publish_rate: 10.0
+    # 调试用：true 时无需手动发布云台完成话题，等待 gimbal_auto_delay 后自动放行
+    auto_gimbal_complete: True
+    auto_exit_gimbal_complete: True
+    gimbal_auto_delay: 0.0
