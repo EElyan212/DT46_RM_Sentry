@@ -24,7 +24,8 @@ behavior_tree_node:
     # 从最近一次有效跟踪计时，超过此时间就退出追击任务
     # 宽限期间不沿用旧目标运动，视觉超时由共用vision_timeout配置
     target_lost_grace_time: 0.5
-    # 追击恢复耗尽后，暂停选择追击的时间，单位：秒
+    # 追击和允许的重试都失败后，暂停追击多久，单位：秒
+    # 这段时间由行为树选择回控制区或巡逻；时间到后重新判断能否追击
     chase_failure_cooldown_seconds: 1.0
 
     # 回补给血量阈值
@@ -49,23 +50,56 @@ behavior_tree_node:
     # 随机目标与机器人当前位置至少相距多少米
     patrol_min_goal_distance: 0.5
 
-    # 补给区内经过验证、能够回血的有效范围，单位：米
-    # 实车确认前保持全零，表示暂时不能生成补给备用点
+    # 以后回血换点时允许选点的矩形范围，使用 map 坐标，单位：米
     resupply_x_min: 0.3
     resupply_x_max: 1.0
     resupply_y_min: -0.1
     resupply_y_max: 0.4
 
-    # 备用目标与刚刚失败的目标至少相距多少米
-    # 占点、回血和巡逻恢复共同使用
-    recovery_min_goal_distance: 0.5
-    # 在有效区域内最多随机采样多少次
-    recovery_sample_attempts: 20
-    # 导航失败后，重新导航前等待多久，单位：秒
-    recovery_wait_seconds: 0.5
-    # 初次导航之外最多额外尝试多少次
-    # 2 表示初次导航加两次恢复，共最多尝试三次
-    recovery_max_retries: 2
+    # 占点：去控制区失败后换一个点继续走，连续换点失败达到次数后才等待
+    # 换的新点至少要离刚刚失败的那个目标多远，单位：米
+    occupy_recovery_min_goal_distance: 0.5
+    # 为选出一个备用点，最多随机生成并检查多少个候选坐标
+    # 找到距离合适的坐标就停止选点；这些检查不会发送导航目标
+    # 全部不合适时不发导航，下次继续选，也不计入下面的导航重试次数
+    occupy_recovery_sample_attempts: 20
+    # 默认目标失败后，最多依次导航到多少个备用点；不包含默认目标
+    # 这些备用点全部导航失败后才等待；等完再尝试同样数量的新备用点
+    # 成功到达会清零连续失败次数
+    occupy_recovery_max_retries: 5
+    # 达到上面的失败次数后等多久，再继续换点导航，单位：秒
+    # 单个备用点失败后不固定等待；旧导航结束后即可换下一个点
+    occupy_recovery_wait_seconds: 0.5
+
+    # 巡逻：每次导航失败都先等待，再在当前巡逻范围内换点
+    # 换的新点至少要离刚刚失败的那个目标多远，单位：米
+    patrol_recovery_min_goal_distance: 0.5
+    # 为选出一个备用点，最多随机生成并检查多少个候选坐标
+    # 找到距离合适的坐标就停止选点；全不合适时不发导航，后续再选
+    patrol_recovery_sample_attempts: 20
+    # 每轮第一次导航失败后，还能换点导航多少次；不包含第一次导航
+    # 这些尝试全部失败后结束本轮；仍需巡逻时，等待并选点开始下一轮
+    patrol_recovery_max_retries: 5
+    # 每次巡逻导航失败后，等多久再换点导航，单位：秒
+    patrol_recovery_wait_seconds: 0.5
+
+    # 回血：在补给区内换点，连续换点失败达到次数后才等待
+    # 新点离刚失败目标的最小距离，单位：米
+    resupply_recovery_min_goal_distance: 0.2
+    # 选一个备用点时，最多检查多少个候选坐标
+    resupply_recovery_sample_attempts: 20
+    # 默认目标失败后，还能换点导航多少次；不包含默认目标
+    # 这些备用点全部失败后才等待；等完再尝试同样数量的新备用点
+    resupply_recovery_max_retries: 15
+    # 连续换点失败达到次数后，等多久再换点导航，单位：秒
+    resupply_recovery_wait_seconds: 0.5
+
+    # 追击：已有失败后重新追击的功能，目标由追击服务计算，不随机选点
+    # 第一次追击失败后，还能重新启动追击多少次；不包含第一次
+    # 重试也全部失败后，按 chase_failure_cooldown_seconds 暂停追击
+    chase_recovery_max_retries: 1
+    # 追击失败后，等多久再进行下一次允许的重试，单位：秒
+    chase_recovery_wait_seconds: 0.5
 
     # 战术模式来源：manual 为 RQT 手动选择，auto 为自动评分
     tactical_mode_source: "manual"

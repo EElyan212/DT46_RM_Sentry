@@ -20,6 +20,8 @@ from rcl_interfaces.msg import Log
 from rm_interfaces.msg import Decision, SerialDebug
 
 from rm_application.behavior_tree.actions import (
+    OccupyZone,
+    GoResupply,
     PatrolZone,
     ApplyTacticalMode,
     WaitBeforeRetry,
@@ -33,6 +35,7 @@ from rm_application.behavior_tree.nav_zone import (
     TacticalMode,
 )
 from rm_application.behavior_tree.ros_interface import RosInterface
+from rm_application.behavior_tree.recovery import RecoveryNode
 from rm_application.behavior_tree.xml_loader import load_behavior_tree
 from rm_application.behavior_tree_node import BehaviorTreeNode
 from rm_application.chase_client import ChaseClient
@@ -253,10 +256,20 @@ def test_chase_selection_respects_cooldown():
         tactical_confirm_seconds=2.0,
         tactical_min_hold_seconds=0.0,
         patrol_min_goal_distance=0.5,
-        recovery_wait_seconds=0.5,
-        recovery_max_retries=2,
-        recovery_min_goal_distance=0.5,
-        recovery_sample_attempts=20,
+        patrol_recovery_wait_seconds=0.5,
+        resupply_recovery_wait_seconds=0.5,
+        chase_recovery_wait_seconds=0.5,
+        patrol_recovery_max_retries=2,
+        resupply_recovery_min_goal_distance=0.2,
+        resupply_recovery_sample_attempts=20,
+        resupply_recovery_max_retries=2,
+        chase_recovery_max_retries=1,
+        occupy_recovery_min_goal_distance=0.5,
+        occupy_recovery_max_retries=3,
+        occupy_recovery_wait_seconds=0.5,
+        patrol_recovery_min_goal_distance=0.5,
+        patrol_recovery_sample_attempts=20,
+        occupy_recovery_sample_attempts=20,
     )
     node.get_tactical_mode.side_effect = lambda: blackboard.tactical_mode
     node.get_tactical_mode_since.side_effect = lambda: blackboard.tactical_mode_since
@@ -376,10 +389,20 @@ def test_xml_patrol_recovery_uses_alternative_goal():
         tactical_confirm_seconds=2.0,
         tactical_min_hold_seconds=0.0,
         patrol_min_goal_distance=0.5,
-        recovery_wait_seconds=0.0,
-        recovery_max_retries=2,
-        recovery_min_goal_distance=2.0,
-        recovery_sample_attempts=3,
+        patrol_recovery_wait_seconds=0.0,
+        resupply_recovery_wait_seconds=0.0,
+        chase_recovery_wait_seconds=0.0,
+        patrol_recovery_max_retries=2,
+        resupply_recovery_min_goal_distance=0.2,
+        resupply_recovery_sample_attempts=20,
+        resupply_recovery_max_retries=2,
+        chase_recovery_max_retries=1,
+        occupy_recovery_min_goal_distance=0.5,
+        occupy_recovery_max_retries=3,
+        occupy_recovery_wait_seconds=0.5,
+        patrol_recovery_min_goal_distance=2.0,
+        patrol_recovery_sample_attempts=3,
+        occupy_recovery_sample_attempts=3,
     )
     node.get_match_progress.side_effect = lambda: blackboard.match_progress
     node.get_hp.side_effect = lambda: blackboard.self_hp
@@ -445,10 +468,323 @@ def test_xml_patrol_recovery_uses_alternative_goal():
     ) as sample:
         root.tick_once()
         assert root.status == py_trees.common.Status.FAILURE
-        assert sample.call_count == 2 * node.recovery_sample_attempts
+        assert sample.call_count == 2 * node.patrol_recovery_sample_attempts
         assert node.start_patrol.call_count == 2
     root.stop(py_trees.common.Status.INVALID)
     print("XML 巡逻失败后使用备用点、采样耗尽不发送目标的测试通过\n")
+
+
+def test_xml_occupy_recovery_uses_alternative_goals():
+    # 使用实际 XML、占点通信接口和模拟时间检查分组换点。
+    xml_path = Path(__file__).resolve().parent / "tree" / "navigation_tree.xml"
+    for max_retries in (3, 15):
+        blackboard = Blackboard(
+            match_progress=4, self_hp=300,
+            tactical_mode=TacticalMode.DEFENSE,
+        )
+        clock = SimpleNamespace(now=0.0)
+        interface = RosInterface.__new__(RosInterface)
+        interface.navigator = Mock()
+        interface.navigator.goToPose.return_value = True
+        interface.navigator.isTaskComplete.return_value = True
+        interface.navigator.getResult.return_value = TaskResult.FAILED
+        interface.center_position = (2.0, 2.0)
+        interface.navigation_owner = None
+        interface.navigation_cancel_pending = False
+        interface.last_navigation_targets = {"occupy": None}
+        interface.create_navigation_pose = lambda target: tuple(target)
+
+        node = Mock(
+            hp_limit=100, hp_up=200,
+            tactical_mode_source="manual",
+            tactical_score_config=_tactical_score_config(),
+            tactical_confirm_seconds=2.0,
+            tactical_min_hold_seconds=0.0,
+            patrol_recovery_wait_seconds=0.5,
+            resupply_recovery_wait_seconds=0.5,
+            chase_recovery_wait_seconds=0.5,
+            patrol_recovery_max_retries=2,
+            resupply_recovery_min_goal_distance=0.2,
+            resupply_recovery_sample_attempts=20,
+            resupply_recovery_max_retries=2,
+            chase_recovery_max_retries=1,
+            patrol_recovery_min_goal_distance=0.5,
+            patrol_recovery_sample_attempts=3,
+            occupy_recovery_sample_attempts=3,
+            patrol_min_goal_distance=0.5,
+            occupy_recovery_min_goal_distance=0.5,
+            occupy_recovery_max_retries=max_retries,
+            occupy_recovery_wait_seconds=0.5,
+        )
+        node.get_match_progress.side_effect = lambda: blackboard.match_progress
+        node.get_hp.side_effect = lambda: blackboard.self_hp
+        node.get_tactical_mode.side_effect = lambda: blackboard.tactical_mode
+        node.get_tactical_mode_since.side_effect = lambda: blackboard.tactical_mode_since
+        node.get_tactical_candidate.side_effect = lambda: blackboard.pending_tactical_mode
+        node.set_tactical_candidate.side_effect = lambda value: setattr(
+            blackboard, "pending_tactical_mode", value
+        )
+        node.get_navigation_task.side_effect = lambda: blackboard.navigation_task
+        node.set_navigation_task.side_effect = lambda value: setattr(
+            blackboard, "navigation_task", value
+        )
+        node.get_control_zone.return_value = dict(
+            enabled=True, x_min=0.0, x_max=4.0,
+            y_min=0.0, y_max=4.0,
+        )
+        node.get_robot_position.return_value = (-1.0, 0.0)
+        node.is_navigation_stopped.side_effect = interface.is_navigation_stopped
+        node.get_last_navigation_target.side_effect = interface.get_last_navigation_target
+        node.start_occupy.side_effect = interface.start_occupy
+        node.get_occupy_result.side_effect = interface.get_occupy_result
+        node.stop_occupy.side_effect = interface.stop_occupy
+        node.start_resupply.return_value = True
+        node.get_resupply_result.return_value = NavigationResult.RUNNING
+        root = load_behavior_tree(node, xml_path)
+        recovery = next(
+            item for item in root.iterate()
+            if isinstance(item, RecoveryNode)
+            and isinstance(item.action, OccupyZone)
+        )
+        recovery.now_fn = lambda: clock.now
+
+        # 默认目标先失败；采样不到备用点时，不发送目标、不计次数。
+        root.tick_once()
+        with patch(
+            "rm_application.behavior_tree.actions.random.uniform",
+            return_value=2.0,
+        ) as sample:
+            root.tick_once()
+            assert sample.call_count == 2 * node.occupy_recovery_sample_attempts
+            assert interface.navigator.goToPose.call_count == 1
+            assert recovery.retry_count == 0
+
+        # 每次先采到失败点，再采到足够远的新点。
+        # 第一组包含目标拒绝，后续各组都必须恰好尝试配置数量。
+        for group in range(2):
+            for index in range(max_retries):
+                previous = interface.last_navigation_targets["occupy"]
+                target = (0.0, 0.0) if previous != (0.0, 0.0) else (4.0, 4.0)
+                interface.navigator.goToPose.return_value = not (
+                    group == 0 and index == 0
+                )
+                with patch(
+                    "rm_application.behavior_tree.actions.random.uniform",
+                    side_effect=[*previous, *target],
+                ):
+                    root.tick_once()
+                assert interface.navigator.goToPose.call_args.args == (target,)
+                assert interface.last_navigation_targets["occupy"] == target
+                assert recovery.retry_count == index + 1
+
+            assert recovery.status == py_trees.common.Status.FAILURE
+            assert interface.navigator.goToPose.call_count == (
+                1 + (group + 1) * max_retries
+            )
+            # 整组失败后才等待；组内多个 tick 不需要推进时间。
+            root.tick_once()
+            clock.now += 0.49
+            root.tick_once()
+            assert interface.navigator.goToPose.call_count == (
+                1 + (group + 1) * max_retries
+            )
+            clock.now += 0.01
+
+        # 等待期间允许低血抢占，停止后再次进入会重新计时。
+        blackboard.self_hp = 50
+        root.tick_once()
+        node.start_resupply.assert_called_once()
+        blackboard.self_hp = 300
+        clock.now = 10.0
+        count = interface.navigator.goToPose.call_count
+        root.tick_once()
+        assert recovery.restart_round
+        assert interface.navigator.goToPose.call_count == count
+
+        # 导航成功后持续守点，并清零连续失败次数。
+        clock.now = 10.5
+        interface.navigator.goToPose.return_value = True
+        interface.navigator.getResult.return_value = TaskResult.SUCCEEDED
+        previous = interface.last_navigation_targets["occupy"]
+        target = (0.0, 0.0) if previous != (0.0, 0.0) else (4.0, 4.0)
+        with patch(
+            "rm_application.behavior_tree.actions.random.uniform",
+            side_effect=target,
+        ):
+            root.tick_once()
+        assert recovery.action.arrived
+        assert recovery.retry_count == 0
+        assert interface.navigator.goToPose.call_count == count + 1
+        root.tick_once()
+        assert interface.navigator.goToPose.call_count == count + 1
+        root.stop(py_trees.common.Status.INVALID)
+    print("控制区备用点距离、拒绝、分组等待、低血抢占和到达保持测试通过\n")
+
+
+def test_xml_resupply_recovery_uses_alternative_goals():
+    # 使用实际 XML、补给通信接口和模拟时间检查分组换点。
+    xml_path = Path(__file__).resolve().parent / "tree" / "navigation_tree.xml"
+    for max_retries in (3, 15):
+        blackboard = Blackboard(
+            match_progress=4, self_hp=50,
+            tactical_mode=TacticalMode.DEFENSE,
+        )
+        clock = SimpleNamespace(now=0.0)
+        interface = RosInterface.__new__(RosInterface)
+        interface.navigator = Mock()
+        interface.navigator.goToPose.return_value = True
+        interface.navigator.isTaskComplete.return_value = True
+        interface.navigator.getResult.return_value = TaskResult.FAILED
+        interface.home_position = (0.65, 0.15)
+        interface.resupply_x_min = 0.3
+        interface.resupply_x_max = 1.0
+        interface.resupply_y_min = -0.1
+        interface.resupply_y_max = 0.4
+        interface.navigation_owner = None
+        interface.navigation_cancel_pending = False
+        interface.last_navigation_targets = {"resupply": None}
+        interface.create_navigation_pose = lambda target: tuple(target)
+
+        node = Mock(
+            hp_limit=100, hp_up=200,
+            tactical_mode_source="manual",
+            tactical_score_config=_tactical_score_config(),
+            tactical_confirm_seconds=2.0,
+            tactical_min_hold_seconds=0.0,
+            patrol_min_goal_distance=0.5,
+            patrol_recovery_min_goal_distance=0.5,
+            patrol_recovery_sample_attempts=3,
+            patrol_recovery_max_retries=2,
+            patrol_recovery_wait_seconds=0.5,
+            occupy_recovery_min_goal_distance=0.5,
+            occupy_recovery_sample_attempts=3,
+            occupy_recovery_max_retries=3,
+            occupy_recovery_wait_seconds=0.5,
+            resupply_recovery_min_goal_distance=0.2,
+            resupply_recovery_sample_attempts=3,
+            resupply_recovery_max_retries=max_retries,
+            resupply_recovery_wait_seconds=0.5,
+            chase_recovery_max_retries=1,
+            chase_recovery_wait_seconds=0.5,
+        )
+        node.get_match_progress.side_effect = lambda: blackboard.match_progress
+        node.get_hp.side_effect = lambda: blackboard.self_hp
+        node.get_tactical_mode.side_effect = lambda: blackboard.tactical_mode
+        node.get_tactical_mode_since.side_effect = lambda: blackboard.tactical_mode_since
+        node.get_tactical_candidate.side_effect = lambda: blackboard.pending_tactical_mode
+        node.set_tactical_candidate.side_effect = lambda value: setattr(
+            blackboard, "pending_tactical_mode", value
+        )
+        node.get_navigation_task.side_effect = lambda: blackboard.navigation_task
+        node.set_navigation_task.side_effect = lambda value: setattr(
+            blackboard, "navigation_task", value
+        )
+        node.get_control_zone.return_value = {"enabled": False}
+        node.is_navigation_stopped.side_effect = interface.is_navigation_stopped
+        node.get_last_navigation_target.side_effect = interface.get_last_navigation_target
+        node.get_resupply_area.side_effect = interface.get_resupply_area
+        node.start_resupply.side_effect = interface.start_resupply
+        node.get_resupply_result.side_effect = interface.get_resupply_result
+        node.stop_resupply.side_effect = interface.stop_resupply
+        node.start_occupy.return_value = True
+        node.get_occupy_result.return_value = NavigationResult.RUNNING
+        root = load_behavior_tree(node, xml_path)
+        recovery = next(
+            item for item in root.iterate()
+            if isinstance(item, RecoveryNode)
+            and isinstance(item.action, GoResupply)
+        )
+        recovery.now_fn = lambda: clock.now
+
+        # 默认目标先失败；没有合格坐标时，不发送导航、不计次数。
+        root.tick_once()
+        assert interface.navigator.goToPose.call_args.args == (interface.home_position,)
+        assert blackboard.navigation_task == NavigationTask.RESUPPLY
+        with patch(
+            "rm_application.behavior_tree.actions.random.uniform",
+            side_effect=lambda lower, upper: (lower + upper) / 2.0,
+        ) as sample:
+            root.tick_once()
+            assert sample.call_count == 2 * node.resupply_recovery_sample_attempts
+            assert interface.navigator.goToPose.call_count == 1
+            assert recovery.retry_count == 0
+
+        # 无效补给区也不发送目标，不消耗导航次数。
+        interface.resupply_x_min = 1.1
+        root.tick_once()
+        assert interface.navigator.goToPose.call_count == 1
+        assert recovery.retry_count == 0
+        interface.resupply_x_min = 0.3
+
+        # 每次先检查失败点，再使用区内足够远的新点。
+        # 同时验证目标拒绝与 Nav2 明确失败，两组都应按配置计数。
+        for group in range(2):
+            for index in range(max_retries):
+                previous = interface.last_navigation_targets["resupply"]
+                target = (0.3, -0.1) if previous != (0.3, -0.1) else (1.0, 0.4)
+                interface.navigator.goToPose.return_value = not (
+                    group == 0 and index == 0
+                )
+                with patch(
+                    "rm_application.behavior_tree.actions.random.uniform",
+                    side_effect=[*previous, *target],
+                ) as sample:
+                    root.tick_once()
+                    assert sample.call_count == 4
+                assert interface.navigator.goToPose.call_args.args == (target,)
+                assert interface.last_navigation_targets["resupply"] == target
+                assert recovery.retry_count == index + 1
+                assert blackboard.navigation_task == NavigationTask.RESUPPLY
+
+            assert recovery.status == py_trees.common.Status.FAILURE
+            count = 1 + (group + 1) * max_retries
+            assert interface.navigator.goToPose.call_count == count
+            # 组内换点不推进时间，只有整组耗尽才等待 0.5 秒。
+            root.tick_once()
+            clock.now += 0.49
+            root.tick_once()
+            assert interface.navigator.goToPose.call_count == count
+            clock.now += 0.01
+
+        # 比赛停止可以打断分组等待，重新进入时重新计时。
+        blackboard.match_progress = 0
+        root.tick_once()
+        assert blackboard.navigation_task == NavigationTask.STOP
+        assert interface.navigator.goToPose.call_count == count
+        blackboard.match_progress = 4
+        clock.now = 10.0
+        root.tick_once()
+        assert interface.navigator.goToPose.call_count == count
+
+        # 备用点到达后清零次数，不再发点，血量未满时保持回血。
+        clock.now = 10.5
+        interface.navigator.goToPose.return_value = True
+        interface.navigator.getResult.return_value = TaskResult.SUCCEEDED
+        previous = interface.last_navigation_targets["resupply"]
+        target = (0.3, -0.1) if previous != (0.3, -0.1) else (1.0, 0.4)
+        with patch(
+            "rm_application.behavior_tree.actions.random.uniform",
+            side_effect=target,
+        ):
+            root.tick_once()
+        assert recovery.action.arrived
+        assert recovery.retry_count == 0
+        assert recovery.action.recovery_target is None
+        assert interface.navigator.goToPose.call_count == count + 1
+        blackboard.self_hp = 150
+        root.tick_once()
+        assert blackboard.navigation_task == NavigationTask.RESUPPLY
+        assert interface.navigator.goToPose.call_count == count + 1
+
+        # 达到回血退出阈值后交回正常任务，并清理未使用的备用点。
+        recovery.action.save_recovery_target((0.65, 0.15))
+        blackboard.self_hp = 200
+        root.tick_once()
+        assert blackboard.navigation_task != NavigationTask.RESUPPLY
+        assert recovery.action.recovery_target is None
+        assert not recovery.action.running
+        root.stop(py_trees.common.Status.INVALID)
+    print("回血备用点距离、拒绝、分组等待、停止抢占和回血完成退出测试通过\n")
 
 
 def test_retry_wait_restarts_after_interrupt():
@@ -502,10 +838,20 @@ def test_xml_navigation_arrival_refreshes_retry_budget():
             tactical_score_config=_tactical_score_config(),
             tactical_confirm_seconds=2.0,
             tactical_min_hold_seconds=0.0,
-            recovery_wait_seconds=0.0,
-            recovery_max_retries=1,
-            recovery_min_goal_distance=0.5,
-            recovery_sample_attempts=20,
+            patrol_recovery_wait_seconds=0.0,
+            resupply_recovery_wait_seconds=0.0,
+            chase_recovery_wait_seconds=0.0,
+            patrol_recovery_max_retries=1,
+            resupply_recovery_min_goal_distance=0.2,
+            resupply_recovery_sample_attempts=20,
+            resupply_recovery_max_retries=1,
+            chase_recovery_max_retries=1,
+            occupy_recovery_min_goal_distance=0.5,
+            occupy_recovery_max_retries=3,
+            occupy_recovery_wait_seconds=0.5,
+            patrol_recovery_min_goal_distance=0.5,
+            patrol_recovery_sample_attempts=20,
+            occupy_recovery_sample_attempts=20,
             patrol_min_goal_distance=0.5,
         )
         node.get_match_progress.side_effect = lambda: blackboard.match_progress
@@ -517,6 +863,18 @@ def test_xml_navigation_arrival_refreshes_retry_budget():
             blackboard, "pending_tactical_mode", candidate
         )
         node.get_control_zone.return_value = {"enabled": False}
+        node.get_resupply_area.return_value = [1.0, 2.0, 1.0, 2.0]
+        node.get_last_navigation_target.return_value = (0.0, 0.0)
+        if owner == "occupy":
+            # 本用例只测试一次重试及到达预算，换点另行验证。
+            node.occupy_recovery_max_retries = 1
+            node.occupy_recovery_wait_seconds = 0.0
+            node.get_control_zone.return_value = dict(
+                enabled=True, x_min=1.0, x_max=2.0,
+                y_min=1.0, y_max=2.0,
+            )
+            node.get_robot_position.return_value = (0.0, 0.0)
+            node.get_last_navigation_target.return_value = (0.0, 0.0)
         node.get_navigation_task.side_effect = lambda: blackboard.navigation_task
         node.set_navigation_task.side_effect = lambda task: setattr(
             blackboard, "navigation_task", task
@@ -552,9 +910,9 @@ def test_xml_navigation_arrival_refreshes_retry_budget():
         assert root.status == py_trees.common.Status.FAILURE, owner
         assert start.call_count == 4, owner
 
-        # 本轮耗尽后仍可再次恢复重试，不永久停在 FAILURE。
+        # 本轮耗尽后仍可再次恢复重试，不永久停止发起导航。
         root.tick_once()
-        assert root.status == running, owner
+        assert root.status == py_trees.common.Status.FAILURE, owner
         assert start.call_count == 5, owner
         root.stop(py_trees.common.Status.INVALID)
     print("XML 占点/回血到达保持、重试预算恢复和耗尽后下一轮测试通过\n")
@@ -584,10 +942,20 @@ def test_xml_navigation_task_selection():
         tactical_score_config=_tactical_score_config(),
         tactical_confirm_seconds=2.0,
         tactical_min_hold_seconds=0.0,
-        recovery_wait_seconds=0.5,
-        recovery_max_retries=2,
-        recovery_min_goal_distance=0.5,
-        recovery_sample_attempts=20,
+        patrol_recovery_wait_seconds=0.5,
+        resupply_recovery_wait_seconds=0.5,
+        chase_recovery_wait_seconds=0.5,
+        patrol_recovery_max_retries=2,
+        resupply_recovery_min_goal_distance=0.2,
+        resupply_recovery_sample_attempts=20,
+        resupply_recovery_max_retries=2,
+        chase_recovery_max_retries=1,
+        occupy_recovery_min_goal_distance=0.5,
+        occupy_recovery_max_retries=3,
+        occupy_recovery_wait_seconds=0.5,
+        patrol_recovery_min_goal_distance=0.5,
+        patrol_recovery_sample_attempts=20,
+        occupy_recovery_sample_attempts=20,
         patrol_min_goal_distance=0.5,
     )
     node.get_match_progress.side_effect = lambda: blackboard.match_progress
@@ -727,10 +1095,20 @@ def _create_tactical_test_tree(
         tactical_confirm_seconds=2.0,
         tactical_min_hold_seconds=min_hold_seconds,
         patrol_min_goal_distance=0.5,
-        recovery_wait_seconds=0.5,
-        recovery_max_retries=2,
-        recovery_min_goal_distance=0.5,
-        recovery_sample_attempts=20,
+        patrol_recovery_wait_seconds=0.5,
+        resupply_recovery_wait_seconds=0.5,
+        chase_recovery_wait_seconds=0.5,
+        patrol_recovery_max_retries=2,
+        resupply_recovery_min_goal_distance=0.2,
+        resupply_recovery_sample_attempts=20,
+        resupply_recovery_max_retries=2,
+        chase_recovery_max_retries=1,
+        occupy_recovery_min_goal_distance=0.5,
+        occupy_recovery_max_retries=3,
+        occupy_recovery_wait_seconds=0.5,
+        patrol_recovery_min_goal_distance=0.5,
+        patrol_recovery_sample_attempts=20,
+        occupy_recovery_sample_attempts=20,
     )
     node.blackboard = blackboard
     node.ros_interface.get_hp_samples.return_value = ()
@@ -2667,6 +3045,8 @@ if __name__ == "__main__":
         test_patrol_switch_waits_for_cancel()
         test_patrol_region_switch_waits_for_cancel()
         test_xml_patrol_recovery_uses_alternative_goal()
+        test_xml_occupy_recovery_uses_alternative_goals()
+        test_xml_resupply_recovery_uses_alternative_goals()
         test_retry_wait_restarts_after_interrupt()
         test_xml_navigation_arrival_refreshes_retry_budget()
         test_xml_navigation_task_selection()
@@ -2715,4 +3095,4 @@ if __name__ == "__main__":
                 review_failures.append((check.__name__, str(error)))
                 print(f"[链路回归失败] {check.__name__}: {error}")
         assert not review_failures, f"链路回归还有{len(review_failures)}项未通过"
-        print("当前导航、XML 主树、战术评分、追击链路、目标日志、巡逻开关与 RQT 编辑的 48 项测试全部通过")
+        print("当前导航、XML 主树、战术评分、追击链路、目标日志、巡逻开关与 RQT 编辑的 50 项测试全部通过")

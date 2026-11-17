@@ -34,30 +34,30 @@
                 name="执行当前导航任务"
                 cases="RESUPPLY,CHASE,OCCUPY_CENTER,PATROL">
 
-                <!-- 回血导航失败后等待，再重试补给目标 -->
-                <NavigationRecovery name="回血恢复控制">
+                <!-- 回血失败后直接换点，每组达到配置次数后等待 -->
+                <ResupplyRecovery name="回血恢复控制">
                     <GoResupply name="执行前往补给区" />
-                    <WaitBeforeRetry name="回血失败后等待" />
-                </NavigationRecovery>
-                <!-- 追击失败后等待，额外重试一次 -->
+                    <SelectResupplyAlternativeGoal name="准备回血备用点" />
+                </ResupplyRecovery>
+                <!-- 追击失败后按配置等待重试 -->
                 <ChaseRecovery name="追击恢复控制">
                     <ChaseEnemy name="执行追击" />
-                    <WaitBeforeRetry name="追击失败后等待" />
+                    <WaitBeforeChaseRetry name="追击失败后等待" />
                 </ChaseRecovery>
-                <!-- 第一个子节点是正常动作，第二个是恢复步骤 -->
-                <NavigationRecovery name="占点恢复控制">
+                <!-- 占点失败后直接换点，每组达到配置次数后等待 -->
+                <OccupyRecovery name="占点恢复控制">
                     <OccupyZone name="执行中央占点" />
-                    <WaitBeforeRetry name="占点失败后等待" />
-                </NavigationRecovery>
+                    <SelectOccupyAlternativeGoal name="准备占点备用点" />
+                </OccupyRecovery>
                 <!-- 巡逻失败后等待，再准备远离失败坐标的备用点 -->
-                <NavigationRecovery name="巡逻恢复控制">
+                <PatrolRecovery name="巡逻恢复控制">
                     <PatrolZone name="执行区域巡逻" />
 
                     <ReactiveSequence name="巡逻恢复步骤">
-                        <WaitBeforeRetry name="巡逻失败后等待" />
+                        <WaitBeforePatrolRetry name="巡逻失败后等待" />
                         <SelectAlternativeGoal name="准备巡逻备用点" />
                     </ReactiveSequence>
-                </NavigationRecovery>
+                </PatrolRecovery>
 
             </NavigationSwitch>
         </ReactiveSequence>
@@ -82,9 +82,14 @@
         <Action ID="GoResupply" />
         <Control ID="ChaseRecovery" />
         <Action ID="ChaseEnemy" />
-        <Control ID="NavigationRecovery" />
+        <Control ID="ResupplyRecovery" />
+        <Control ID="PatrolRecovery" />
+        <Control ID="OccupyRecovery" />
         <Action ID="OccupyZone" />
-        <Action ID="WaitBeforeRetry" />
+        <Action ID="SelectOccupyAlternativeGoal" />
+        <Action ID="SelectResupplyAlternativeGoal" />
+        <Action ID="WaitBeforePatrolRetry" />
+        <Action ID="WaitBeforeChaseRetry" />
         <Action ID="PatrolZone" />
         <Action ID="SelectAlternativeGoal" />
     </TreeNodesModel>

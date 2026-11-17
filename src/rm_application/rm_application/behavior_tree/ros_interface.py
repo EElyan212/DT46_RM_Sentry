@@ -72,11 +72,27 @@ class RosInterface:
         self.node.declare_parameter("resupply_y_min", 0.0)
         self.node.declare_parameter("resupply_y_max", 0.0)
 
-        # 声明占点、回血和巡逻共用的恢复参数
-        self.node.declare_parameter("recovery_min_goal_distance", 0.5)
-        self.node.declare_parameter("recovery_sample_attempts", 20)
-        self.node.declare_parameter("recovery_wait_seconds", 0.5)
-        self.node.declare_parameter("recovery_max_retries", 2)
+        # 声明占点恢复参数
+        self.node.declare_parameter("occupy_recovery_min_goal_distance", 0.5)
+        self.node.declare_parameter("occupy_recovery_sample_attempts", 20)
+        self.node.declare_parameter("occupy_recovery_max_retries", 3)
+        self.node.declare_parameter("occupy_recovery_wait_seconds", 0.5)
+
+        # 声明巡逻恢复参数
+        self.node.declare_parameter("patrol_recovery_min_goal_distance", 0.5)
+        self.node.declare_parameter("patrol_recovery_sample_attempts", 20)
+        self.node.declare_parameter("patrol_recovery_max_retries", 2)
+        self.node.declare_parameter("patrol_recovery_wait_seconds", 0.5)
+
+        # 声明回血恢复参数
+        self.node.declare_parameter("resupply_recovery_min_goal_distance", 0.2)
+        self.node.declare_parameter("resupply_recovery_sample_attempts", 20)
+        self.node.declare_parameter("resupply_recovery_max_retries", 2)
+        self.node.declare_parameter("resupply_recovery_wait_seconds", 0.5)
+
+        # 声明追击恢复参数
+        self.node.declare_parameter("chase_recovery_max_retries", 1)
+        self.node.declare_parameter("chase_recovery_wait_seconds", 0.5)
 
         # 保存占点和补给点坐标
         self.center_position = self.node.get_parameter(
@@ -114,18 +130,54 @@ class RosInterface:
             "resupply_y_max"
         ).value
 
-        # 读取恢复选点和重试参数
-        self.recovery_min_goal_distance = self.node.get_parameter(
-            "recovery_min_goal_distance"
+        # 读取占点恢复参数
+        self.occupy_recovery_min_goal_distance = self.node.get_parameter(
+            "occupy_recovery_min_goal_distance"
         ).value
-        self.recovery_sample_attempts = self.node.get_parameter(
-            "recovery_sample_attempts"
+        self.occupy_recovery_sample_attempts = self.node.get_parameter(
+            "occupy_recovery_sample_attempts"
         ).value
-        self.recovery_wait_seconds = self.node.get_parameter(
-            "recovery_wait_seconds"
+        self.occupy_recovery_max_retries = self.node.get_parameter(
+            "occupy_recovery_max_retries"
         ).value
-        self.recovery_max_retries = self.node.get_parameter(
-            "recovery_max_retries"
+        self.occupy_recovery_wait_seconds = self.node.get_parameter(
+            "occupy_recovery_wait_seconds"
+        ).value
+
+        # 读取巡逻恢复参数
+        self.patrol_recovery_min_goal_distance = self.node.get_parameter(
+            "patrol_recovery_min_goal_distance"
+        ).value
+        self.patrol_recovery_sample_attempts = self.node.get_parameter(
+            "patrol_recovery_sample_attempts"
+        ).value
+        self.patrol_recovery_max_retries = self.node.get_parameter(
+            "patrol_recovery_max_retries"
+        ).value
+        self.patrol_recovery_wait_seconds = self.node.get_parameter(
+            "patrol_recovery_wait_seconds"
+        ).value
+
+        # 读取回血恢复参数
+        self.resupply_recovery_min_goal_distance = self.node.get_parameter(
+            "resupply_recovery_min_goal_distance"
+        ).value
+        self.resupply_recovery_sample_attempts = self.node.get_parameter(
+            "resupply_recovery_sample_attempts"
+        ).value
+        self.resupply_recovery_max_retries = self.node.get_parameter(
+            "resupply_recovery_max_retries"
+        ).value
+        self.resupply_recovery_wait_seconds = self.node.get_parameter(
+            "resupply_recovery_wait_seconds"
+        ).value
+
+        # 读取追击恢复参数
+        self.chase_recovery_max_retries = self.node.get_parameter(
+            "chase_recovery_max_retries"
+        ).value
+        self.chase_recovery_wait_seconds = self.node.get_parameter(
+            "chase_recovery_wait_seconds"
         ).value
 
         # 建立巡逻区域名称与矩形边界的对应关系
@@ -324,6 +376,13 @@ class RosInterface:
         # 返回当前巡逻子区域的矩形范围
         return self.patrol_areas.get(patrol_region)
 
+    def get_resupply_area(self):
+        # 返回回血备用点允许使用的矩形范围
+        return [
+            self.resupply_x_min, self.resupply_x_max,
+            self.resupply_y_min, self.resupply_y_max,
+        ]
+
     def get_robot_position(self):
         # 获取底盘在地图中的位置
         try:
@@ -354,10 +413,13 @@ class RosInterface:
 
         return pose
 
-    def start_occupy(self):
-        # 保存本次尝试的占点目标
-        # 转成元组，避免后续坐标列表变化影响记录
-        target_position = tuple(self.center_position)
+    def start_occupy(self, target_position=None):
+        # 未提供备用点时，使用原来的默认占点目标
+        if target_position is None:
+            target_position = self.center_position
+
+        # 保存本次实际尝试的目标，恢复时避开这个位置
+        target_position = tuple(target_position)
         self.last_navigation_targets["occupy"] = target_position
 
         # 把占点坐标包装成 Nav2 目标消息
@@ -374,9 +436,13 @@ class RosInterface:
         self.navigation_owner = "occupy"
         return True
 
-    def start_resupply(self):
-        # 保存本次尝试的补给目标
-        target_position = tuple(self.home_position)
+    def start_resupply(self, target_position=None):
+        # 未提供备用点时，使用原来的默认补给目标
+        if target_position is None:
+            target_position = self.home_position
+
+        # 保存本次实际尝试的目标，恢复时避开这个位置
+        target_position = tuple(target_position)
         self.last_navigation_targets["resupply"] = target_position
 
         # 把补给坐标包装成 Nav2 目标消息
@@ -385,6 +451,7 @@ class RosInterface:
         )
 
         # 向 Nav2 发送补给目标
+        # 即使目标被拒绝，也保留刚刚尝试的坐标
         if not self.navigator.goToPose(target_pose):
             return False
 
