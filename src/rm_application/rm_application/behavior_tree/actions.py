@@ -82,6 +82,7 @@ class OccupyZone(BehaviourWithPorts):
         start_occupy,
         get_occupy_result,
         stop_occupy,
+        on_created=None,
         **kwargs,
     ):
         super().__init__(name=name, **kwargs)
@@ -100,10 +101,29 @@ class OccupyZone(BehaviourWithPorts):
         # 到达计数供恢复控制判断是否取得进展
         self.goal_reached_count = 0
 
+        # 保存恢复步骤选好的备用点，只使用一次
+        self.recovery_target = None
+
+        # 注册表需要保存当前树实际创建的占点实例
+        if on_created is not None:
+            on_created(self)
+
+    def save_recovery_target(self, target_position):
+        # 这里只保存坐标，由原占点动作发送导航
+        self.recovery_target = tuple(target_position)
+
     def update(self):
-        # 第一次进入时发送一次占点导航目标
+        # 尚未运行时，优先使用恢复步骤准备的备用点
         if not self.running:
-            if not self.start_occupy():
+            target_position = self.recovery_target
+            self.recovery_target = None
+
+            if target_position is None:
+                started = self.start_occupy()
+            else:
+                started = self.start_occupy(target_position)
+
+            if not started:
                 return py_trees.common.Status.FAILURE
 
             self.running = True
@@ -140,6 +160,9 @@ class OccupyZone(BehaviourWithPorts):
 
         self.running = False
         self.arrived = False
+
+        # 退出占点动作后，不保留尚未使用的备用点
+        self.recovery_target = None
 
 # 在指定区域内持续巡逻
 class PatrolZone(BehaviourWithPorts):
@@ -343,6 +366,7 @@ class GoResupply(BehaviourWithPorts):
         start_resupply,
         get_resupply_result,
         stop_resupply,
+        on_created=None,
         **kwargs,
     ):
         super().__init__(name=name, **kwargs)
@@ -361,10 +385,29 @@ class GoResupply(BehaviourWithPorts):
         # 到达计数供恢复控制判断是否取得进展
         self.goal_reached_count = 0
 
+        # 保存恢复步骤选好的备用点，只使用一次
+        self.recovery_target = None
+
+        # 注册表需要保存当前树实际创建的回血实例
+        if on_created is not None:
+            on_created(self)
+
+    def save_recovery_target(self, target_position):
+        # 这里只保存坐标，由原回血动作发送导航
+        self.recovery_target = tuple(target_position)
+
     def update(self):
-        # 第一次进入时发送一次补给区导航目标
+        # 尚未运行时，优先使用恢复步骤准备的备用点
         if not self.running:
-            if not self.start_resupply():
+            target_position = self.recovery_target
+            self.recovery_target = None
+
+            if target_position is None:
+                started = self.start_resupply()
+            else:
+                started = self.start_resupply(target_position)
+
+            if not started:
                 return py_trees.common.Status.FAILURE
 
             self.running = True
@@ -401,6 +444,9 @@ class GoResupply(BehaviourWithPorts):
 
         self.running = False
         self.arrived = False
+
+        # 退出回血动作后，不保留尚未使用的备用点
+        self.recovery_target = None
 
 # 执行追击，调用已有追击接口
 class ChaseEnemy(BehaviourWithPorts):

@@ -160,18 +160,54 @@ class BehaviorTreeNode(Node):
             ).value
 
 
-        # 提供恢复参数，供节点注册表创建恢复节点
-        self.recovery_wait_seconds = (
-            self.ros_interface.recovery_wait_seconds
+        # 提供占点恢复参数，供节点注册表使用
+        self.occupy_recovery_min_goal_distance = (
+            self.ros_interface.occupy_recovery_min_goal_distance
         )
-        self.recovery_max_retries = (
-            self.ros_interface.recovery_max_retries
+        self.occupy_recovery_sample_attempts = (
+            self.ros_interface.occupy_recovery_sample_attempts
         )
-        self.recovery_min_goal_distance = (
-            self.ros_interface.recovery_min_goal_distance
+        self.occupy_recovery_max_retries = (
+            self.ros_interface.occupy_recovery_max_retries
         )
-        self.recovery_sample_attempts = (
-            self.ros_interface.recovery_sample_attempts
+        self.occupy_recovery_wait_seconds = (
+            self.ros_interface.occupy_recovery_wait_seconds
+        )
+
+        # 提供巡逻恢复参数，供节点注册表使用
+        self.patrol_recovery_min_goal_distance = (
+            self.ros_interface.patrol_recovery_min_goal_distance
+        )
+        self.patrol_recovery_sample_attempts = (
+            self.ros_interface.patrol_recovery_sample_attempts
+        )
+        self.patrol_recovery_max_retries = (
+            self.ros_interface.patrol_recovery_max_retries
+        )
+        self.patrol_recovery_wait_seconds = (
+            self.ros_interface.patrol_recovery_wait_seconds
+        )
+
+        # 提供回血恢复参数，供节点注册表使用
+        self.resupply_recovery_min_goal_distance = (
+            self.ros_interface.resupply_recovery_min_goal_distance
+        )
+        self.resupply_recovery_sample_attempts = (
+            self.ros_interface.resupply_recovery_sample_attempts
+        )
+        self.resupply_recovery_max_retries = (
+            self.ros_interface.resupply_recovery_max_retries
+        )
+        self.resupply_recovery_wait_seconds = (
+            self.ros_interface.resupply_recovery_wait_seconds
+        )
+
+        # 提供追击恢复参数，供节点注册表使用
+        self.chase_recovery_max_retries = (
+            self.ros_interface.chase_recovery_max_retries
+        )
+        self.chase_recovery_wait_seconds = (
+            self.ros_interface.chase_recovery_wait_seconds
         )
         # 从 ROS 包安装目录加载主树，子树由 XML 内部引用
         tree_path = (
@@ -274,15 +310,13 @@ class BehaviorTreeNode(Node):
         # 巡逻行为从共享黑板读取当前巡逻区域
         return self.blackboard.patrol_region
 
-    def start_occupy(self):
-        # 占点行为不直接操作 Nav2
-        # 把开始占点的请求交给统一通信接口
-        return self.ros_interface.start_occupy()
+    def start_occupy(self, target_position=None):
+        # 把默认目标或选好的备用点交给统一通信接口
+        return self.ros_interface.start_occupy(target_position)
 
-    def start_resupply(self):
-        # 回血行为不直接操作 Nav2
-        # 把开始回补给的请求交给统一通信接口
-        return self.ros_interface.start_resupply()
+    def start_resupply(self, target_position=None):
+        # 把默认目标或选好的备用点交给统一通信接口
+        return self.ros_interface.start_resupply(target_position)
 
     def get_occupy_result(self):
         # 从统一通信接口读取占点导航结果
@@ -305,6 +339,10 @@ class BehaviorTreeNode(Node):
         return self.ros_interface.get_patrol_area(
             patrol_region
         )
+
+    def get_resupply_area(self):
+        # 读取 YAML 配置的补给区矩形范围
+        return self.ros_interface.get_resupply_area()
 
     def start_patrol(self, target_position):
         # 只转发选好的坐标

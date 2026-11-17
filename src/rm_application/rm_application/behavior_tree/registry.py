@@ -194,6 +194,21 @@ class ContinuousParallel(PortsMixin, py_trees.composites.Composite):
 def create_node_registry(node):
     # 保存本棵树实际创建的巡逻实例，备用点回调使用同一实例
     patrol_action = {}
+    # 保存本棵树实际创建的占点实例
+    occupy_action = {}
+    # 保存本棵树实际创建的回血实例
+    resupply_action = {}
+
+    def get_occupy_area():
+        # 占点备用点复用中央控制区边界
+        zone = node.get_control_zone()
+        if not zone["enabled"]:
+            return None
+
+        return [
+            zone["x_min"], zone["x_max"],
+            zone["y_min"], zone["y_max"],
+        ]
 
     return {
         # 条件只确认候选，不直接修改正式战术模式
@@ -225,12 +240,13 @@ def create_node_registry(node):
             start_resupply=node.start_resupply,
             get_resupply_result=node.get_resupply_result,
             stop_resupply=node.stop_resupply,
+            on_created=lambda action: resupply_action.update(node=action),
         ),
 
-        # 追击恢复控制：额外重试一次，耗尽后通知上层进入冷却
+        # 追击失败后按配置重试，耗尽后进入冷却
         "ChaseRecovery": partial(
             RecoveryNode,
-            max_retries=1,
+            max_retries=node.chase_recovery_max_retries,
             on_exhausted=node.report_chase_exhausted,
         ),
 
@@ -242,11 +258,26 @@ def create_node_registry(node):
             stop_chase=node.stop_chase,
         ),
 
-        # 占点、回血、巡逻共用的恢复控制
-        "NavigationRecovery": partial(
+        # 回血分组恢复：组内直接换点，达到配置次数后等待
+        "ResupplyRecovery": partial(
             RecoveryNode,
-            max_retries=node.recovery_max_retries,
-            # 三个动作都已迁移，直接读取动作自己的到达计数
+            max_retries=node.resupply_recovery_max_retries,
+            round_wait_seconds=node.resupply_recovery_wait_seconds,
+            read_progress=lambda action: action.goal_reached_count,
+        ),
+
+        # 巡逻恢复使用独立的重试次数
+        "PatrolRecovery": partial(
+            RecoveryNode,
+            max_retries=node.patrol_recovery_max_retries,
+            read_progress=lambda action: action.goal_reached_count,
+        ),
+
+        # 占点分组恢复：组内直接换点，达到配置次数后等待
+        "OccupyRecovery": partial(
+            RecoveryNode,
+            max_retries=node.occupy_recovery_max_retries,
+            round_wait_seconds=node.occupy_recovery_wait_seconds,
             read_progress=lambda action: action.goal_reached_count,
         ),
 
@@ -256,12 +287,45 @@ def create_node_registry(node):
             start_occupy=node.start_occupy,
             get_occupy_result=node.get_occupy_result,
             stop_occupy=node.stop_occupy,
+            on_created=lambda action: occupy_action.update(node=action),
         ),
 
-        # 导航失败后的等待动作，等待时间沿用配置
-        "WaitBeforeRetry": partial(
+        # 在中央控制区内准备远离失败目标的备用点
+        "SelectOccupyAlternativeGoal": partial(
+            SelectAlternativeGoal,
+            get_area=get_occupy_area,
+            get_failed_position=lambda: (
+                node.get_last_navigation_target("occupy")
+            ),
+            save_target=lambda target: (
+                occupy_action["node"].save_recovery_target(target)
+            ),
+            recovery_min_goal_distance=node.occupy_recovery_min_goal_distance,
+            recovery_sample_attempts=node.occupy_recovery_sample_attempts,
+        ),
+
+        # 在补给区内准备远离失败目标的备用点
+        "SelectResupplyAlternativeGoal": partial(
+            SelectAlternativeGoal,
+            get_area=node.get_resupply_area,
+            get_failed_position=lambda: (
+                node.get_last_navigation_target("resupply")
+            ),
+            save_target=lambda target: (
+                resupply_action["node"].save_recovery_target(target)
+            ),
+            recovery_min_goal_distance=node.resupply_recovery_min_goal_distance,
+            recovery_sample_attempts=node.resupply_recovery_sample_attempts,
+        ),
+
+        # 巡逻和追击分别读取各自的等待时间
+        "WaitBeforePatrolRetry": partial(
             WaitBeforeRetry,
-            wait_seconds=node.recovery_wait_seconds,
+            wait_seconds=node.patrol_recovery_wait_seconds,
+        ),
+        "WaitBeforeChaseRetry": partial(
+            WaitBeforeRetry,
+            wait_seconds=node.chase_recovery_wait_seconds,
         ),
 
         # 创建巡逻节点，并记录实际运行的实例
@@ -290,8 +354,8 @@ def create_node_registry(node):
             save_target=lambda target: (
                 patrol_action["node"].save_recovery_target(target)
             ),
-            recovery_min_goal_distance=node.recovery_min_goal_distance,
-            recovery_sample_attempts=node.recovery_sample_attempts,
+            recovery_min_goal_distance=node.patrol_recovery_min_goal_distance,
+            recovery_sample_attempts=node.patrol_recovery_sample_attempts,
         ),
 
         # Groot 控制节点名称与公共库实现的对应关系
