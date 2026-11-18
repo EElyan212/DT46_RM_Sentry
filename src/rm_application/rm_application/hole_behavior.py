@@ -39,10 +39,9 @@ class HoleBehavior(Node):
         self.declare_parameter("status_timeout", 1.0)
         self.declare_parameter("block_on_missing_status", True)
         self.declare_parameter("publish_rate", 10.0)
-        # 调试用：无需手动发布云台完成话题，等待一段时间后自动放行
-        self.declare_parameter("auto_gimbal_complete", False)
-        self.declare_parameter("auto_exit_gimbal_complete", False)
-        self.declare_parameter("gimbal_auto_delay", 1.0)
+        self.declare_parameter("auto_gimbal_complete", False)      # 进洞时，是否在超时后自动触发云台完成信号，调试模式下可用
+        self.declare_parameter("auto_exit_gimbal_complete", False) # 出洞时，是否在超时后自动触发云台完成信号，调试模式下可用
+        self.declare_parameter("gimbal_auto_delay", 1.0)           # 进洞/出洞时，自动触发云台完成信号的延迟时间，单位秒，调试模式下可用
 
         self.hole_status_topic = self.get_parameter(
             "hole_status_topic"
