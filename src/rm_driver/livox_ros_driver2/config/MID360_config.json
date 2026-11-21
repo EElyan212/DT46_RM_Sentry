@@ -30,9 +30,9 @@
       "pattern_mode": 0,
       "x_timestamp_type": 1,
       "extrinsic_parameter": {
-        "roll": -55.0,
+        "roll": 20.01,
         "pitch": 0.0,
-        "yaw": 0.0,
+        "yaw": -150.0,
         "x": 0,
         "y": 0,
         "z": 0
