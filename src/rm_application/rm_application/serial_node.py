@@ -28,7 +28,7 @@ class SerialNode(Node):
         self.get_logger().info("启动Serial node !!!")
 
         self.send_datas = Senddata()
-        self.send_datas.cliss_mode = 0
+        self.send_datas.cliss_mode = 1
         self.send_datas.gimbal_speed = 120
         self.lock = threading.Lock()
         # 新增：串口重连专用的锁和标志位
@@ -222,6 +222,7 @@ class SerialNode(Node):
             self.send_datas.yaw = msg.yaw
             self.send_datas.can_fire = msg.can_fire
             self.send_datas.yaw_rate = msg.yaw_rate
+            self.send_datas.yaw_accel = msg.yaw_accel
             self.last_gimbal_time = time.monotonic()
 
     def receive_data(self):
@@ -423,6 +424,7 @@ class SerialNode(Node):
                 can_fire = self.send_datas.can_fire
                 gimbal_mode = self.send_datas.gimbal_mode
                 yaw_rate = self.send_datas.yaw_rate
+                yaw_accel = self.send_datas.yaw_accel
                 hole_blocked = self.hole_blocked
                 cliss_mode = self.send_datas.cliss_mode
                 gimbal_speed = self.send_datas.gimbal_speed
@@ -471,13 +473,14 @@ class SerialNode(Node):
 
             if time.monotonic() - self.last_gimbal_time > 0.15:
                 yaw_rate = 0.0
+                yaw_accel = 0.0
                 can_fire = 0
 
             header = self.serial_send_header
 
-            #帧头，x线速度，y线速度，小陀螺模式， 云台yaw，云台pitc，开火，前馈角速度，帧尾
+            #帧头，x线速度，y线速度，小陀螺模式， 云台yaw，云台pitc，开火，前馈角速度，前馈角加速度，帧尾
             data_payload = struct.pack(
-                '<Bffiffifii',
+                '<Bffiffifiif',
                 header,
                 linear_velocity_x,
                 # 0.0,
@@ -488,7 +491,8 @@ class SerialNode(Node):
                 can_fire,
                 yaw_rate,
                 cliss_mode,
-                gimbal_speed
+                gimbal_speed,
+                yaw_accel
                 )
 
             checksum = get_crc16_check_sum(data_payload)

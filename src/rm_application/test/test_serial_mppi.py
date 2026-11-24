@@ -100,19 +100,26 @@ def test_send_new_fields_and_expire_stale_gimbal_data(last_gimbal_time, expected
             linear_velocity_x=0.5, linear_velocity_y=-0.25,
             gimbal_mode=2, yaw=3.0, pitch=4.0, can_fire=1,
             yaw_rate=1.25, cliss_mode=0, gimbal_speed=10,
+            yaw_accel=2.5,
         ),
         last_gimbal_time=last_gimbal_time, serial_send_header=0x5A,
         get_logger=Mock(return_value=Mock()),
+        hole_block_timeout=0.0, hole_blocked=False,
+        last_hole_block_time=None, hole_gate_enabled=False,
+        nav_cmd=(0.5, -0.25), axis_cmd=(0.0, 0.0),
+        last_axis_cmd_time=None, axis_align_active=False,
+        axis_align_cmd_timeout=0.5,
     )
     with patch('rm_application.serial_node.time.monotonic', return_value=100.0):
         SerialNode.Send(node)
     node.serial.write.assert_called_once()
     packet = node.serial.write.call_args.args[0]
-    assert len(packet) == 39  # 37-byte payload and two-byte CRC.
+    assert len(packet) == 43  # 41-byte payload and two-byte CRC.
     assert verify_crc16_check_sum(packet)
-    assert struct.unpack('<Bffiffifii', packet[:-2]) == (
+    assert struct.unpack('<Bffiffifiif', packet[:-2]) == (
         0x5A, 0.5, -0.25, 2, 3.0, 4.0,
         expected_fire, expected_rate, 0, 10,
+        0.0 if expected_fire == 0 else 2.5,
     )
     assert node.send_datas.can_fire == 1
     assert node.send_datas.yaw_rate == 1.25
@@ -121,10 +128,13 @@ def test_send_new_fields_and_expire_stale_gimbal_data(last_gimbal_time, expected
 def test_gimbal_callback_records_feedforward_and_freshness():
     """A fresh visual command supplies both feedforward and its receive time."""
     node = SimpleNamespace(lock=Lock(), send_datas=Senddata(), last_gimbal_time=0.0)
-    msg = GimbalControl(yaw=3.0, pitch=4.0, can_fire=1, yaw_rate=1.25)
+    msg = GimbalControl(
+        yaw=3.0, pitch=4.0, can_fire=1, yaw_rate=1.25, yaw_accel=2.5
+    )
     with patch('rm_application.serial_node.time.monotonic', return_value=100.0):
         SerialNode.gimbal_control_callback(node, msg)
     assert node.send_datas.yaw_rate == 1.25
+    assert node.send_datas.yaw_accel == 2.5
     assert node.send_datas.yaw == 3.0
     assert node.send_datas.pitch == 4.0
     assert node.send_datas.can_fire == 1

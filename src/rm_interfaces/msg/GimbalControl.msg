@@ -4,3 +4,4 @@ int32 can_fire
 float32 yaw
 float32 pitch
 float32 yaw_rate
+float32 yaw_accel
