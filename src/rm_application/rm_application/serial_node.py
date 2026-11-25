@@ -29,7 +29,8 @@ class SerialNode(Node):
 
         self.send_datas = Senddata()
         self.send_datas.cliss_mode = 1
-        self.send_datas.gimbal_speed = 120
+
+        self.send_datas.gimbal_speed = 100
         self.lock = threading.Lock()
         # 新增：串口重连专用的锁和标志位
         self.serial_lock = threading.Lock()
