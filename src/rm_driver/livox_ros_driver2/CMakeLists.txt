@@ -282,6 +282,11 @@ else(ROS_EDITION STREQUAL "ROS2")
   target_include_directories(${PROJECT_NAME} PRIVATE ${livox_sdk_INCLUDE_DIRS})
 
   # get include directories of custom msg headers
+  # 干净 build 目录下不会带 -DHUMBLE_ROS=humble，这里按发行版自动补默认值，
+  # 否则会落到下面的 else() 分支并因为拿不到 INTERFACE_INCLUDE_DIRECTORIES 而 configure 失败。
+  if(NOT DEFINED HUMBLE_ROS AND "$ENV{ROS_DISTRO}" STREQUAL "humble")
+    set(HUMBLE_ROS humble)
+  endif()
   if(HUMBLE_ROS STREQUAL "humble")
     rosidl_get_typesupport_target(cpp_typesupport_target
     ${LIVOX_INTERFACES} "rosidl_typesupport_cpp")
