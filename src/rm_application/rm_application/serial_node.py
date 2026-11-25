@@ -1,19 +1,33 @@
-import time
-import serial
-import threading
-import rclpy
-from rclpy.node import Node
-from geometry_msgs.msg import Twist
-from rm_interfaces.msg import Decision, Senddata, GimbalControl, OdoMsg, SerialDebug, ArmorHit
-from std_msgs.msg import Bool, Int32
 import struct
-from geometry_msgs.msg import Vector3Stamped, Twist
+import threading
+import time
+
+import rclpy
+import serial
+from geometry_msgs.msg import Twist, Vector3Stamped
+from rclpy.node import Node
+from rclpy.qos import (
+    DurabilityPolicy,
+    HistoryPolicy,
+    QoSProfile,
+    ReliabilityPolicy,
+    qos_profile_sensor_data,
+)
+from std_msgs.msg import Bool, Int32
+
+from rm_interfaces.msg import (
+    ArmorHit,
+    Decision,
+    GimbalControl,
+    OdoMsg,
+    Senddata,
+    SerialDebug,
+)
+
 from .modules.crc import *
-from rclpy.qos import QoSProfile, ReliabilityPolicy, HistoryPolicy, DurabilityPolicy
-from rclpy.qos import qos_profile_sensor_data
 
 
-class ColorPrint():
+class ColorPrint:
     def __init__(self):
         self.PINK = "\033[38;5;218m"
         self.CYAN = "\033[96m"
@@ -22,19 +36,21 @@ class ColorPrint():
         self.BLUE = "\033[34m"
         self.RESET = "\033[0m"
 
+
 class SerialNode(Node):
-    def __init__(self,name):
+    def __init__(self, name):
         super().__init__(name)
         self.get_logger().info("启动Serial node !!!")
 
         self.send_datas = Senddata()
         self.send_datas.cliss_mode = 1
-        self.send_datas.gimbal_speed = 120
+
+        self.send_datas.gimbal_speed = 100
         self.lock = threading.Lock()
         # 新增：串口重连专用的锁和标志位
         self.serial_lock = threading.Lock()
         self.is_reconnecting = False
-        #创建qos
+        # 创建qos
         qos = QoSProfile(
             reliability=ReliabilityPolicy.RELIABLE,
             history=HistoryPolicy.KEEP_LAST,
@@ -43,18 +59,31 @@ class SerialNode(Node):
         )
         # 你打印频率这么高找死是吧，写多个东西不行？
         self.sb_swj = 0
-        #获取参数
+        # 获取参数
         self.get_params()
-        #创建决策消息发布者
-        self.pub_uart_receive_decision = self.create_publisher(Decision, "/nav/decision", 10)
-        #串建导航（底盘）消息接收者
-        self.sub_uart_cmd = self.create_subscription(Twist, "/cmd_vel", self.cmd_vel_callback, 10)
-        #创建自瞄（云台）消息订阅者
-        self.sub_gimbal_control = self.create_subscription(GimbalControl, "tracker/gimbal_control", self.gimbal_control_callback, qos_profile_sensor_data)
-        #创建小陀螺模式接收者
-        self.sub_gimbal_mode = self.create_subscription(Int32, "/gimbal_mode", self.gimbal_mode_callback, 1)
-        #创建洞口门控接收者
-        self.sub_hole_block = self.create_subscription(Bool, self.hole_block_topic, self.hole_block_callback, 10)
+        # 创建决策消息发布者
+        self.pub_uart_receive_decision = self.create_publisher(
+            Decision, "/nav/decision", 10
+        )
+        # 串建导航（底盘）消息接收者
+        self.sub_uart_cmd = self.create_subscription(
+            Twist, "/cmd_vel", self.cmd_vel_callback, 10
+        )
+        # 创建自瞄（云台）消息订阅者
+        self.sub_gimbal_control = self.create_subscription(
+            GimbalControl,
+            "tracker/gimbal_control",
+            self.gimbal_control_callback,
+            qos_profile_sensor_data,
+        )
+        # 创建小陀螺模式接收者
+        self.sub_gimbal_mode = self.create_subscription(
+            Int32, "/gimbal_mode", self.gimbal_mode_callback, 1
+        )
+        # 创建洞口门控接收者
+        self.sub_hole_block = self.create_subscription(
+            Bool, self.hole_block_topic, self.hole_block_callback, 10
+        )
         # axis_align 速度与接管状态
         self.sub_axis_cmd = self.create_subscription(
             Twist,
@@ -75,41 +104,44 @@ class SerialNode(Node):
             active_qos,
         )
         # 创建发布者 2: IMU 数据
-        self.pub_uart_receive_imu = self.create_publisher(Vector3Stamped, '/imu/rpy', qos)
-        #创建发布者 3: odo 数据
-        self.pub_uart_receive_odo = self.create_publisher(OdoMsg, '/nav/odo', 10)
+        self.pub_uart_receive_imu = self.create_publisher(
+            Vector3Stamped, "/imu/rpy", qos
+        )
+        # 创建发布者 3: odo 数据
+        self.pub_uart_receive_odo = self.create_publisher(OdoMsg, "/nav/odo", 10)
 
         # 每次新受击发布一条事件消息
-        self.pub_armor_hit = self.create_publisher(ArmorHit, '/armor/hit', 10)
+        self.pub_armor_hit = self.create_publisher(ArmorHit, "/armor/hit", 10)
         # 可选的整帧解包调试消息
         self.pub_serial_debug_publisher = self.create_publisher(
             SerialDebug,
-            '/serial/debug',
+            "/serial/debug",
             10,
         )
-
 
         self.color = ColorPrint()
 
         self.serial_receive_header = 0xA5
         self.serial_send_header = 0x5A
 
-        #初始化串口
+        # 初始化串口
         try:
             self.serial = serial.Serial(
-                port = self.port_name,
-                baudrate = self.baudrate,
-                timeout = self.timeout,
-                write_timeout = self.write_timeout,
-                )
+                port=self.port_name,
+                baudrate=self.baudrate,
+                timeout=self.timeout,
+                write_timeout=self.write_timeout,
+            )
             if self.serial.is_open:
                 self.get_logger().info(f"串口已打开: {self.port_name}")
-                self.receive_thread = threading.Thread(target=self.receive_data,daemon=True)
+                self.receive_thread = threading.Thread(
+                    target=self.receive_data, daemon=True
+                )
                 # self.serial.setDaemon(True)
                 self.receive_thread.start()
                 self.timer = self.create_timer(0.01, self.Send)
         except serial.SerialException as e:
-            self.get_logger().error(f"创建串口时出错: {self.port_name} - {str(e)}")
+            self.get_logger().error(f"创建串口时出错: {self.port_name} - {e!s}")
             raise e
 
     def get_params(self):
@@ -119,27 +151,27 @@ class SerialNode(Node):
         # 1. 批量声明参数及其默认值
         # 这里的默认值仅在 YAML 文件未指定或命令行未提供参数时生效
         self.declare_parameters(
-            namespace='',
+            namespace="",
             parameters=[
-                ('port_name', '/dev/ttyPortMCU'),
-                ('baudrate', 115200),
-                ('timeout', 1.0),            # 对应 YAML 中的 timeout
-                ('write_timeout', 1.0),      # 对应 YAML 中的 write_timeout
-                ('flow_control', 'none'),
-                ('parity', 'none'),
-                ('stop_bits', '1'),
-                ('serial_receive_header', 0xA5),
-                ('serial_send_header', 0x5A),
-                ('pub_rpy', False),
-                ('pub_serial_debug', False),
-                ('hole_gate_enabled', True),
-                ('hole_block_topic', '/hole/block'),
-                ('hole_block_timeout', 1.0),  # /hole/block 超时后自动恢复输出
-                ('axis_align_cmd_topic', '/axis_align/cmd_vel'),
-                ('axis_align_active_topic', '/axis_align/active'),
-                ('axis_align_cmd_timeout', 0.5),
-                ('decision_input_mode', 'mock')
-            ]
+                ("port_name", "/dev/ttyPortMCU"),
+                ("baudrate", 115200),
+                ("timeout", 1.0),  # 对应 YAML 中的 timeout
+                ("write_timeout", 1.0),  # 对应 YAML 中的 write_timeout
+                ("flow_control", "none"),
+                ("parity", "none"),
+                ("stop_bits", "1"),
+                ("serial_receive_header", 0xA5),
+                ("serial_send_header", 0x5A),
+                ("pub_rpy", False),
+                ("pub_serial_debug", False),
+                ("hole_gate_enabled", True),
+                ("hole_block_topic", "/hole/block"),
+                ("hole_block_timeout", 1.0),  # /hole/block 超时后自动恢复输出
+                ("axis_align_cmd_topic", "/axis_align/cmd_vel"),
+                ("axis_align_active_topic", "/axis_align/active"),
+                ("axis_align_cmd_timeout", 0.5),
+                ("decision_input_mode", "mock"),
+            ],
         )
 
         # 2. 获取参数值并赋值给实例变量
@@ -156,12 +188,8 @@ class SerialNode(Node):
         self.pub_serial_debug = self.get_parameter("pub_serial_debug").value
         self.hole_gate_enabled = self.get_parameter("hole_gate_enabled").value
         self.hole_block_topic = self.get_parameter("hole_block_topic").value
-        self.hole_block_timeout = float(
-            self.get_parameter("hole_block_timeout").value
-        )
-        self.axis_align_cmd_topic = self.get_parameter(
-            "axis_align_cmd_topic"
-        ).value
+        self.hole_block_timeout = float(self.get_parameter("hole_block_timeout").value)
+        self.axis_align_cmd_topic = self.get_parameter("axis_align_cmd_topic").value
         self.axis_align_active_topic = self.get_parameter(
             "axis_align_active_topic"
         ).value
@@ -174,7 +202,9 @@ class SerialNode(Node):
         self.axis_cmd = (0.0, 0.0)
         self.last_axis_cmd_time = None
         self.axis_align_active = False
-        self.decision_input_mode = (str(self.get_parameter("decision_input_mode").value).strip().lower())
+        self.decision_input_mode = (
+            str(self.get_parameter("decision_input_mode").value).strip().lower()
+        )
         valid_decision_input_modes = {"serial", "mock"}
         if self.decision_input_mode not in valid_decision_input_modes:
             raise ValueError(
@@ -188,35 +218,42 @@ class SerialNode(Node):
         self.get_logger().info("串口参数配置已加载:")
         self.get_logger().info(f"  端口号: {self.port_name}")
         self.get_logger().info(f"  波特率: {self.baudrate}")
-        self.get_logger().info(f"  超时设置: Read={self.timeout}s, Write={self.write_timeout}s")
-        self.get_logger().info(f"  校验/流控: Parity={self.parity}, Flow={self.flow_control}")
+        self.get_logger().info(
+            f"  超时设置: Read={self.timeout}s, Write={self.write_timeout}s"
+        )
+        self.get_logger().info(
+            f"  校验/流控: Parity={self.parity}, Flow={self.flow_control}"
+        )
         if self.decision_input_mode == "serial":
-            self.get_logger().info(
-                "决策输入模式: serial，串口将发布 /nav/decision"
-            )
+            self.get_logger().info("决策输入模式: serial，串口将发布 /nav/decision")
         else:
             self.get_logger().info(
                 "决策输入模式: mock，/nav/decision 由 RQT 或模拟节点发布"
             )
         self.get_logger().info("-" * 30)
 
-    def cmd_vel_callback(self,msg):
+    def cmd_vel_callback(self, msg):
         self.nav_cmd = (float(msg.linear.x), float(msg.linear.y))
-    def axis_align_cmd_callback(self,msg):
+
+    def axis_align_cmd_callback(self, msg):
         self.axis_cmd = (float(msg.linear.x), float(msg.linear.y))
         self.last_axis_cmd_time = time.monotonic()
-    def axis_align_active_callback(self,msg):
+
+    def axis_align_active_callback(self, msg):
         self.axis_align_active = bool(msg.data)
         if not self.axis_align_active:
             self.axis_cmd = (0.0, 0.0)
             self.last_axis_cmd_time = None
-    def gimbal_mode_callback(self,msg):
+
+    def gimbal_mode_callback(self, msg):
         with self.lock:
             self.send_datas.gimbal_mode = msg.data
-    def hole_block_callback(self,msg):
+
+    def hole_block_callback(self, msg):
         self.hole_blocked = bool(msg.data)
         self.last_hole_block_time = time.monotonic()
-    def gimbal_control_callback(self,msg):
+
+    def gimbal_control_callback(self, msg):
         with self.lock:
             self.send_datas.pitch = msg.pitch
             self.send_datas.yaw = msg.yaw
@@ -232,19 +269,16 @@ class SerialNode(Node):
 
         serial_debug_msg = SerialDebug()
         last_armor_hit_seq = None
-        serial_decision_msg.header.frame_id = 'serial_receive_frame'
+        serial_decision_msg.header.frame_id = "serial_receive_frame"
         serial_decision_msg.color = 10
-
 
         # 53 字节固定长帧，小端，float 为 IEEE-754 单精度：
         # 0 sof, 1 detect_color, 2 reserved, 3..22 IMU/速度，
-         # 23..38 裁判数据（34 为位域：bit0-1 中心增益点占领状态，bit2 RFID），
+        # 23..38 裁判数据（34 为位域：bit0-1 中心增益点占领状态，bit2 RFID），
         # 39..50 受击数据，51..52 CRC16。
         packet_length = 53
 
-        self.get_logger().info(
-            "接收数据线程已启动 (53B 帧, CRC-16/MODBUS)"
-        )
+        self.get_logger().info("接收数据线程已启动 (53B 帧, CRC-16/MODBUS)")
 
         self.serial.reset_input_buffer()
         rx_idle = 0
@@ -279,7 +313,7 @@ class SerialNode(Node):
                 data_payload = full_packet[:-2]
                 checksum_bytes = full_packet[-2:]
 
-                received_crc = struct.unpack('<H', checksum_bytes)[0]
+                received_crc = struct.unpack("<H", checksum_bytes)[0]
                 calculated_crc = crc16_modbus(data_payload)
                 if calculated_crc != received_crc:
                     continue
@@ -318,7 +352,7 @@ class SerialNode(Node):
                 if self.pub_rpy:
                     rpy_msg = Vector3Stamped()
                     rpy_msg.header.stamp = self.get_clock().now().to_msg()
-                    rpy_msg.header.frame_id = 'imu_link'
+                    rpy_msg.header.frame_id = "imu_link"
                     rpy_msg.vector.x = float(roll)
                     rpy_msg.vector.y = float(pitch)
                     rpy_msg.vector.z = float(yaw)
@@ -358,10 +392,8 @@ class SerialNode(Node):
                     last_armor_hit_seq = armor_hit_seq
                 elif armor_hit_seq != last_armor_hit_seq:
                     last_armor_hit_seq = armor_hit_seq
-                    serial_hit_msg.header.stamp = (
-                        self.get_clock().now().to_msg()
-                    )
-                    serial_hit_msg.header.frame_id = 'serial_receive_frame'
+                    serial_hit_msg.header.stamp = self.get_clock().now().to_msg()
+                    serial_hit_msg.header.frame_id = "serial_receive_frame"
                     serial_hit_msg.armor_id = armor_id
                     serial_hit_msg.armor_reason = armor_reason
                     serial_hit_msg.armor_hit_cnt = armor_hit_cnt
@@ -372,9 +404,7 @@ class SerialNode(Node):
 
                 # 6.5 测试时可选发布完整解包结果
                 if self.pub_serial_debug:
-                    serial_debug_msg.header.stamp = (
-                        self.get_clock().now().to_msg()
-                    )
+                    serial_debug_msg.header.stamp = self.get_clock().now().to_msg()
                     serial_debug_msg.sof = sof
                     serial_debug_msg.detect_color = detect_color
                     serial_debug_msg.reserved = reserved
@@ -397,20 +427,15 @@ class SerialNode(Node):
                     serial_debug_msg.armor_reason = armor_reason
                     serial_debug_msg.armor_hit_cnt = armor_hit_cnt
                     serial_debug_msg.armor_hit_seq = armor_hit_seq
-                    serial_debug_msg.armor_angle_chassis = (
-                        armor_angle_chassis
-                    )
+                    serial_debug_msg.armor_angle_chassis = armor_angle_chassis
                     serial_debug_msg.armor_angle_world = armor_angle_world
                     serial_debug_msg.crc_received = received_crc
                     serial_debug_msg.crc_calculated = calculated_crc
                     serial_debug_msg.crc_ok = True
-                    self.pub_serial_debug_publisher.publish(
-                        serial_debug_msg
-                    )
+                    self.pub_serial_debug_publisher.publish(serial_debug_msg)
             except (serial.SerialException, struct.error, ValueError) as e:
-                self.get_logger().error(f"接收数据异常: {str(e)}")
+                self.get_logger().error(f"接收数据异常: {e!s}")
                 self.reopen_port()
-
 
     def Send(self):
         if self.is_reconnecting:
@@ -467,7 +492,7 @@ class SerialNode(Node):
                 linear_velocity_x = 0.0
                 linear_velocity_y = 0.0
             # 数据打包
-            #帧头，帧尾赋值
+            # 帧头，帧尾赋值
             # self.send_datas.header = b'\xA5'
             # self.send_datas.ender  = b'\x2b'
 
@@ -478,9 +503,9 @@ class SerialNode(Node):
 
             header = self.serial_send_header
 
-            #帧头，x线速度，y线速度，小陀螺模式， 云台yaw，云台pitc，开火，前馈角速度，前馈角加速度，帧尾
+            # 帧头，x线速度，y线速度，小陀螺模式， 云台yaw，云台pitc，开火，前馈角速度，前馈角加速度，帧尾
             data_payload = struct.pack(
-                '<Bffiffifiif',
+                "<Bffiffifiif",
                 header,
                 linear_velocity_x,
                 # 0.0,
@@ -492,8 +517,8 @@ class SerialNode(Node):
                 yaw_rate,
                 cliss_mode,
                 gimbal_speed,
-                yaw_accel
-                )
+                yaw_accel,
+            )
 
             checksum = get_crc16_check_sum(data_payload)
 
@@ -501,9 +526,9 @@ class SerialNode(Node):
 
             self.serial.write(packet)
             # print(linear_velocity_x,linear_velocity_y)
-            print(linear_velocity_x, linear_velocity_y )
+            print(linear_velocity_x, linear_velocity_y)
         except Exception as e:
-            self.get_logger().error(f"发送数据时出错: {str(e)}")
+            self.get_logger().error(f"发送数据时出错: {e!s}")
 
     def reopen_port(self):
         # 使用锁保护状态标志的修改
@@ -530,12 +555,13 @@ class SerialNode(Node):
                 break  # 重连成功，跳出循环
 
             except serial.SerialException as e:
-                self.get_logger().error(f"串口重连失败，1秒后重试: {str(e)}")
+                self.get_logger().error(f"串口重连失败，1秒后重试: {e!s}")
                 time.sleep(1)
 
         # 重连完成后，恢复标志位
         with self.serial_lock:
             self.is_reconnecting = False
+
 
 # def main(args=None):
 #     rclpy.init(args=args)
@@ -549,7 +575,7 @@ class SerialNode(Node):
 #         rclpy.shutdown()
 def main(args=None):
     rclpy.init(args=args)
-    node = SerialNode("serial_node") # 假设您的类名
+    node = SerialNode("serial_node")  # 假设您的类名
     try:
         rclpy.spin(node)
     except KeyboardInterrupt:
@@ -562,5 +588,7 @@ def main(args=None):
         # 检查是否已经 shutdown，避免重复调用
         if rclpy.ok():
             rclpy.shutdown()
+
+
 if __name__ == "__main__":
     main()
