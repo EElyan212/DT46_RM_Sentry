@@ -1,243 +1,195 @@
-<?xml version="1.0" ?>
-<!-- Generated using onshape-to-robot -->
-<!-- Onshape https://cad.onshape.com/documents/be6f6668384a7c322284fa37/w/70a8de88a5fe65e3dfa6f16d/e/c49365e92846c43250251d29 -->
-<robot name="sentry">
-  <!-- Frame livox_frame (dummy link) 作为整棵 TF 树的基坐标系 -->
-  <link name="livox_frame">
-    <origin xyz="0 0 0" rpy="0 -0 0"/>
-    <inertial>
-      <origin xyz="0 0 0" rpy="0 0 0"/>
-      <mass value="1e-9"/>
-      <inertia ixx="0" ixy="0" ixz="0" iyy="0" iyz="0" izz="0"/>
-    </inertial>
-  </link>
-
-  <!-- 虚拟的 base_footprint，代表机器人在地面的投影 -->
+<?xml version='1.0' encoding='utf-8'?>
+<robot name="generated_robot">
+  <!-- 根坐标系：地面投影，位于世界原点 (0,0,0) -->
   <link name="base_footprint"/>
 
-  <!-- livox_frame -> base_footprint
-       安装位置（livox_frame 原点在 base_footprint 中的平移，ROS/REP-103：x 前、y 左、z 上）：
-         x = +0.0845   前方 84.5 mm
-         y = -0.12702  右侧 127.02 mm（右侧为 -y）
-         z = +0.22515  高度 225.15 mm
-       安装姿态（以与 base_footprint 朝向一致为 (yaw, pitch, roll) = (0, 0, 0)）：
-         1) 以前向为观测方向，绕 roll(x) 轴顺时针 20.01°  -> roll = +0.349240
-         2) 俯视视角，绕 yaw(z) 轴顺时针 150°              -> yaw  = -2.617994
-         即 (yaw, pitch, roll) = (-2.617994, 0, +0.349240)
-         R_base<-livox = Rz(-150°) * Rx(+20.01°)
-       本关节以 livox_frame 为父、base_footprint 为子，origin 只写上面的逆变换：
-         R_livox<-base = Rx(-20.01°) * Rz(+150°)
-         其 ZYX 欧拉角（URDF rpy 顺序为 roll pitch yaw）= (0.305506, 0.171938, 2.644529)
-         平移 t = -R_livox<-base * p = (0.009669, -0.220104, -0.159460) -->
-  <joint name="livox_frame_joint" type="fixed">
-    <origin xyz="0.009669 -0.220104 -0.159460" rpy="0.305506 0.171938 2.644529"/>
-    <parent link="livox_frame"/>
-    <child link="base_footprint"/>
-    <axis xyz="0 0 0"/>
+  <!-- 把整台车（除 base_footprint 外的所有 link）整体抬高 0.1189683 m，
+       使 livox_frame_joint 的原点最终落在世界 z=225.15 mm -->
+  <joint name="base_footprint_joint" type="fixed">
+    <origin xyz="0 0 0.1189683" rpy="0 0 0" />
+    <parent link="base_footprint" />
+    <child link="base_link" />
   </joint>
 
-  <!-- base_footprint 作为父节点，连接到底盘 classis（classis 原点离地 5cm） -->
-  <joint name="base_footprint_joint" type="fixed">
-    <parent link="base_footprint"/>
-    <child link="classis"/>
-    <origin xyz="0 0 0.05" rpy="0 0 0"/>
+  <!-- base_link 已与原来的 link_002 合并：
+       - 惯性参数按平行轴定理合成（原 5.7059867 kg + 0.64720217 kg）
+       - 原 link_002 的网格 part_002_YAW.stl 作为第二个 visual/collision 保留，
+         origin 就是原 link_002_joint 的 origin，所以显示位置不变
+       - 原 link_002 上挂的 Yaw 已直接改挂到 base_link（见 Yaw_joint） -->
+  <link name="base_link">
+    <inertial>
+      <origin xyz="0.003427905 0.000914623 -0.037843523" rpy="0 0 0" />
+      <mass value="6.35318887" />
+      <inertia ixx="0.17294797" iyy="0.22362654" izz="0.38337604" ixy="0.00045773" ixz="-0.00475886" iyz="0.00044901" />
+    </inertial>
+    <visual>
+      <origin xyz="-0.000107193 -0.15888525 0.10131126" rpy="0 0 0" />
+      <geometry>
+        <mesh filename="meshes/part_001_part.stl" scale="0.001 0.001 0.001" />
+      </geometry>
+    </visual>
+    <collision>
+      <origin xyz="-0.000107193 -0.15888525 0.10131126" rpy="0 0 0" />
+      <geometry>
+        <mesh filename="meshes/part_001_part.stl" scale="0.001 0.001 0.001" />
+      </geometry>
+    </collision>
+    <!-- 原 link_002 的网格，位置与合并前一致 -->
+    <visual>
+      <origin xyz="-0.000107193 -0.15888525 0.10131126" rpy="0 0 0" />
+      <geometry>
+        <mesh filename="meshes/part_002_YAW.stl" scale="0.001 0.001 0.001" />
+      </geometry>
+    </visual>
+    <collision>
+      <origin xyz="-0.000107193 -0.15888525 0.10131126" rpy="0 0 0" />
+      <geometry>
+        <mesh filename="meshes/part_002_YAW.stl" scale="0.001 0.001 0.001" />
+      </geometry>
+    </collision>
+  </link>
+  <link name="Yaw">
+    <inertial>
+      <origin xyz="-0.053741871 -0.016388439 0.06338214" rpy="0 0 0" />
+      <mass value="3.9973522" />
+      <inertia ixx="0.057309668" iyy="0.035992946" izz="0.082093244" ixy="0.0022694651" ixz="0.0050822622" iyz="-0.00066452565" />
+    </inertial>
+    <visual>
+      <origin xyz="-0.000107193 -0.15888525 0.12299244" rpy="0 0 0" />
+      <geometry>
+        <mesh filename="meshes/part_014_YAWROLL.stl" scale="0.001 0.001 0.001" />
+      </geometry>
+    </visual>
+    <collision>
+      <origin xyz="-0.000107193 -0.15888525 0.12299244" rpy="0 0 0" />
+      <geometry>
+        <mesh filename="meshes/part_014_YAWROLL.stl" scale="0.001 0.001 0.001" />
+      </geometry>
+    </collision>
+  </link>
+  <link name="roll">
+    <inertial>
+      <origin xyz="0.047045279 -0.0038354785 0.035446948" rpy="0 0 0" />
+      <mass value="0.50211921" />
+      <inertia ixx="0.00061307998" iyy="0.00072909054" izz="0.00040882616" ixy="6.4879278e-06" ixz="-1.2393384e-05" iyz="1.0867103e-05" />
+    </inertial>
+    <visual>
+      <origin xyz="-0.041240979 -0.15655036 0.059992439" rpy="0 0 0" />
+      <geometry>
+        <mesh filename="meshes/part_012_YAW__YAW.stl" scale="0.001 0.001 0.001" />
+      </geometry>
+    </visual>
+    <collision>
+      <origin xyz="-0.041240979 -0.15655036 0.059992439" rpy="0 0 0" />
+      <geometry>
+        <mesh filename="meshes/part_012_YAW__YAW.stl" scale="0.001 0.001 0.001" />
+      </geometry>
+    </collision>
+  </link>
+  <link name="yaw">
+    <inertial>
+      <origin xyz="-0.0081334327 0.012687608 0.072810653" rpy="0 0 0" />
+      <mass value="0.46551719" />
+      <inertia ixx="0.0010624195" iyy="0.0007002029" izz="0.00059582406" ixy="7.8258996e-05" ixz="1.3005627e-05" iyz="1.7118354e-05" />
+    </inertial>
+    <visual>
+      <origin xyz="-0.089048564 -0.15179936 -0.0085773993" rpy="0 0 0" />
+      <geometry>
+        <mesh filename="meshes/part_013_YAW__PITCH.stl" scale="0.001 0.001 0.001" />
+      </geometry>
+    </visual>
+    <collision>
+      <origin xyz="-0.089048564 -0.15179936 -0.0085773993" rpy="0 0 0" />
+      <geometry>
+        <mesh filename="meshes/part_013_YAW__PITCH.stl" scale="0.001 0.001 0.001" />
+      </geometry>
+    </collision>
+  </link>
+  <link name="pitch">
+    <inertial>
+      <origin xyz="0.089840336 -0.040316468 -0.01628142" rpy="0 0 0" />
+      <mass value="0.58373552" />
+      <inertia ixx="0.0010698306" iyy="0.0027077097" izz="0.0021080991" ixy="-0.00015600872" ixz="0.00060078514" iyz="0.0001604578" />
+    </inertial>
+    <visual>
+      <origin xyz="-0.08170958 -0.1981096 -0.15089855" rpy="0 0 0" />
+      <geometry>
+        <mesh filename="meshes/part_003_part.stl" scale="0.001 0.001 0.001" />
+      </geometry>
+    </visual>
+    <collision>
+      <origin xyz="-0.08170958 -0.1981096 -0.15089855" rpy="0 0 0" />
+      <geometry>
+        <mesh filename="meshes/part_003_part.stl" scale="0.001 0.001 0.001" />
+      </geometry>
+    </collision>
+  </link>
+  <link name="livox_frame">
+    <inertial>
+      <origin xyz="0.0013140896 0.00026518276 -0.038459641" rpy="0 0 0" />
+      <mass value="0.16865994" />
+      <inertia ixx="7.8629719e-05" iyy="8.4036747e-05" izz="8.654813e-05" ixy="-3.6819711e-06" ixz="4.1438604e-07" iyz="2.4906134e-07" />
+    </inertial>
+    <visual>
+      <origin xyz="-0.077020813 -0.02312746 0.0032355211" rpy="-0.3491 0 0" />
+      <geometry>
+        <mesh filename="meshes/part_015_mid360_FOV_V1.0_20261119.stl" scale="0.001 0.001 0.001" />
+      </geometry>
+    </visual>
+    <collision>
+      <origin xyz="-0.077020813 -0.02312746 0.0032355211" rpy="-0.3491 0 0" />
+      <geometry>
+        <mesh filename="meshes/part_015_mid360_FOV_V1.0_20261119.stl" scale="0.001 0.001 0.001" />
+      </geometry>
+    </collision>
+  </link>
+  <!-- 原 link_002_joint（fixed, 0 0 0 之外的平移）已并入 base_link，
+       Yaw 直接挂在 base_link 上；origin = 原 link_002_joint ∘ 原 Yaw_joint，
+       所以 Yaw 及其下游的世界坐标保持不变 -->
+  <joint name="Yaw_joint" type="revolute">
+    <origin xyz="0 0 -0.02168118" rpy="0 0 0" />
+    <parent link="base_link" />
+    <child link="Yaw" />
+    <axis xyz="0 0 1" />
+    <dynamics damping="0" friction="0" />
+    <limit lower="-3.1415927" upper="3.1415927" effort="10" velocity="5" />
   </joint>
-  <!-- Link classis -->
-  <link name="classis">
-    <inertial>
-      <origin xyz="-0.0638692 0.011237 0.0503085" rpy="0 0 0"/>
-      <mass value="55.5534"/>
-      <inertia ixx="0.680996" ixy="0.00610949" ixz="0.00207458" iyy="0.680996" iyz="-0.00207458" izz="1.2496"/>
-    </inertial>
-    <!-- Part wheel1 -->
-    <visual>
-      <origin xyz="-0.21032 -0.139739 0.011815" rpy="0 0 -0.785398"/>
-      <geometry>
-        <mesh filename="package://assets/wheel1.stl"/>
-      </geometry>
-      <material name="wheel1_material">
-        <color rgba="0.901961 0.901961 0.901961 1"/>
-      </material>
-    </visual>
-    <collision>
-      <origin xyz="-0.21032 -0.139739 0.011815" rpy="0 0 -0.785398"/>
-      <geometry>
-        <mesh filename="package://assets/wheel1.stl"/>
-      </geometry>
-    </collision>
-    <!-- Part wheel1_2 -->
-    <visual>
-      <origin xyz="0.0871063 0.157688 0.011815" rpy="-3.14159 -0 -0.785398"/>
-      <geometry>
-        <mesh filename="package://assets/wheel1.stl"/>
-      </geometry>
-      <material name="wheel1_2_material">
-        <color rgba="0.901961 0.901961 0.901961 1"/>
-      </material>
-    </visual>
-    <collision>
-      <origin xyz="0.0871063 0.157688 0.011815" rpy="-3.14159 -0 -0.785398"/>
-      <geometry>
-        <mesh filename="package://assets/wheel1.stl"/>
-      </geometry>
-    </collision>
-    <!-- Part wheel1_3 -->
-    <visual>
-      <origin xyz="0.0871063 -0.139739 0.011815" rpy="-0 0 0.785398"/>
-      <geometry>
-        <mesh filename="package://assets/wheel1.stl"/>
-      </geometry>
-      <material name="wheel1_3_material">
-        <color rgba="0.901961 0.901961 0.901961 1"/>
-      </material>
-    </visual>
-    <collision>
-      <origin xyz="0.0871063 -0.139739 0.011815" rpy="-0 0 0.785398"/>
-      <geometry>
-        <mesh filename="package://assets/wheel1.stl"/>
-      </geometry>
-    </collision>
-    <!-- Part classis -->
-    <visual>
-      <origin xyz="-0.0616068 0.0239746 -0.013185" rpy="0 -0 0"/>
-      <geometry>
-        <mesh filename="package://assets/classis.stl"/>
-      </geometry>
-      <material name="classis_material">
-        <color rgba="0.243137 0.231373 0.2 1"/>
-      </material>
-    </visual>
-    <collision>
-      <origin xyz="-0.0616068 0.0239746 -0.013185" rpy="0 -0 0"/>
-      <geometry>
-        <mesh filename="package://assets/classis.stl"/>
-      </geometry>
-    </collision>
-    <!-- Part wheel1_4 -->
-    <visual>
-      <origin xyz="-0.21032 0.157688 0.011815" rpy="3.14159 0 0.785398"/>
-      <geometry>
-        <mesh filename="package://assets/wheel1.stl"/>
-      </geometry>
-      <material name="wheel1_4_material">
-        <color rgba="0.901961 0.901961 0.901961 1"/>
-      </material>
-    </visual>
-    <collision>
-      <origin xyz="-0.21032 0.157688 0.011815" rpy="3.14159 0 0.785398"/>
-      <geometry>
-        <mesh filename="package://assets/wheel1.stl"/>
-      </geometry>
-    </collision>
-  </link>
-  <!-- Link gimbal -->
-  <link name="gimbal">
-    <inertial>
-      <origin xyz="0 -0.0053915 -0.0375237" rpy="0 0 0"/>
-      <mass value="2.78333"/>
-      <inertia ixx="0.0231339" ixy="-0" ixz="0" iyy="0.0135069" iyz="-0.00206301" izz="0.0180887"/>
-    </inertial>
-    <!-- Part gimbal -->
-    <visual>
-      <origin xyz="-0.08 0.095 0.005" rpy="3.14159 -0 -0"/>
-      <geometry>
-        <mesh filename="package://assets/gimbal.stl"/>
-      </geometry>
-      <material name="gimbal_material">
-        <color rgba="0.439216 0.47451 0.501961 1"/>
-      </material>
-    </visual>
-    <collision>
-      <origin xyz="-0.08 0.095 0.005" rpy="3.14159 -0 -0"/>
-      <geometry>
-        <mesh filename="package://assets/gimbal.stl"/>
-      </geometry>
-    </collision>
-  </link>
-  <!-- Link muzzle -->
-  <link name="muzzle">
-    <inertial>
-      <origin xyz="0.0331814 0.0274197 -0.105" rpy="0 0 0"/>
-      <mass value="4.68591"/>
-      <inertia ixx="0.0129234" ixy="8.071e-05" ixz="-5.23e-10" iyy="0.019742" iyz="2.1e-10" izz="0.0130363"/>
-    </inertial>
-    <!-- Part muzzle -->
-    <visual>
-      <origin xyz="-0.105 -0.0387176 -0.13" rpy="-1.5708 0 0"/>
-      <geometry>
-        <mesh filename="package://assets/muzzle.stl"/>
-      </geometry>
-      <material name="muzzle_material">
-        <color rgba="0.384314 0.356863 0.262745 1"/>
-      </material>
-    </visual>
-    <collision>
-      <origin xyz="-0.105 -0.0387176 -0.13" rpy="-1.5708 0 0"/>
-      <geometry>
-        <mesh filename="package://assets/muzzle.stl"/>
-      </geometry>
-    </collision>
-  </link>
-  <!-- Link camera -->
-  <link name="camera">
-    <inertial>
-      <origin xyz="0 0 0" rpy="0 0 0"/>
-      <mass value="1e-09"/>
-      <inertia ixx="1e-09" ixy="0" ixz="0" iyy="1e-09" iyz="0" izz="1e-09"/>
-    </inertial>
-    <!-- Part camera -->
-    <visual>
-      <origin xyz="-0 -0 -0.025" rpy="-0 0 -0"/>
-      <geometry>
-        <mesh filename="package://assets/camera.stl"/>
-      </geometry>
-      <material name="camera_material">
-        <color rgba="0.615686 0.811765 0.929412 1"/>
-      </material>
-    </visual>
-    <collision>
-      <origin xyz="-0 -0 -0.025" rpy="-0 0 -0"/>
-      <geometry>
-        <mesh filename="package://assets/camera.stl"/>
-      </geometry>
-    </collision>
-  </link>
-  <!-- Frame imu_up (dummy link + fixed joint) -->
-  <link name="imu_up">
-    <origin xyz="0 0 0" rpy="0 -0 0"/>
-    <inertial>
-      <origin xyz="0 0 0" rpy="0 0 0"/>
-      <mass value="1e-9"/>
-      <inertia ixx="0" ixy="0" ixz="0" iyy="0" iyz="0" izz="0"/>
-    </inertial>
-  </link>
-  <!-- classis -> imu_up（与 gimbal、muzzle、camera 并列） -->
-  <joint name="imu_up_joint" type="fixed">
-    <origin xyz="0.0326601 0 0.3242652" rpy="0 0.00152726 0"/>
-    <parent link="classis"/>
-    <child link="imu_up"/>
-    <axis xyz="0 0 0"/>
+  <joint name="roll_joint" type="revolute">
+    <origin xyz="0.041133786 -0.0023348825 0.063" rpy="0 0 0" />
+    <parent link="Yaw" />
+    <child link="roll" />
+    <axis xyz="-0.99839286 0.0566719 0" />
+    <dynamics damping="0" friction="0" />
+    <limit lower="0" upper="1.57" effort="10" velocity="5" />
   </joint>
-  <!-- classis -> camera（与 gimbal、muzzle、imu_up 并列） -->
-  <joint name="camera_joint" type="fixed">
-    <origin xyz="0.0326601 0 0.3767652" rpy="0 0.00152726 0"/>
-    <parent link="classis"/>
-    <child link="camera"/>
-    <axis xyz="0 0 0"/>
+  <joint name="yaw_joint" type="revolute">
+    <origin xyz="0.047807585 -0.0047510013 0.068569839" rpy="0 0 0" />
+    <parent link="roll" />
+    <child link="yaw" />
+    <axis xyz="-0.00168035 -0.02960277 0.99956033" />
+    <dynamics damping="0" friction="0" />
+    <limit lower="-1.57" upper="1.57" effort="10" velocity="5" />
   </joint>
-  <!-- classis -> muzzle（与 gimbal、camera、imu_up 并列） -->
-  <joint name="muzzle_joint" type="fixed">
-    <origin xyz="0 -0.105 0.306815" rpy="0 0.00152726 0"/>
-    <parent link="classis"/>
-    <child link="muzzle"/>
-    <axis xyz="0 0 0"/>
+  <joint name="pitch_joint" type="revolute">
+    <origin xyz="-0.0073389843 0.046310242 0.14232115" rpy="0 0 0" />
+    <parent link="yaw" />
+    <child link="pitch" />
+    <axis xyz="-0.13925929 0.98982886 0.02908046" />
+    <dynamics damping="0" friction="0" />
+    <limit lower="-0.52359878" upper="0.52359878" effort="10" velocity="5" />
   </joint>
-  <!-- Joint from classis to gimbal（classis 作为其余坐标系的父坐标系，各子坐标系并列） -->
-  <joint name="gimbal_yaw" type="revolute">
-    <origin xyz="0 0 0.131815" rpy="0 0 0"/>
-    <parent link="classis"/>
-    <child link="gimbal"/>
-    <axis xyz="0 0 1"/>
-    <limit effort="10" velocity="10" lower="-3.141592653589793" upper="3.141592653589793"/>
+  <!-- 雷达是刚性安装：joint 用 fixed，不再依赖 joint_states，
+       这样 robot_state_publisher 一定会发布 Yaw -> livox_frame -->
+  <joint name="livox_frame_joint" type="fixed">
+    <!-- 原 origin: xyz="0.07691362 -0.1360461 0.12786288" rpy="0.3491 0 0"
+         1) 先令 livox_frame 绕自己的 yaw 轴（原关节轴）自转 -150°：
+            新姿态 = Rx(0.3491) * Rot(axis, -150°)，原 axis = (-0.019382933, 0.00055066893, 0.99981198)
+            这一步不是“绕父系 z 轴转”，而是绕雷达自身的关节轴转，
+            再按 URDF 的固定轴约定（R = Rz(yaw)Ry(pitch)Rx(roll)）换算成 rpy。
+         2) 再单独平移，使 livox_frame 在世界(base_footprint)下落在
+            x=84.5 mm, y=-127.02 mm（车体右侧）, z=225.15 mm -->
+    <origin xyz="0.0845 -0.12702 0.12786288" rpy="-0.2966783979 0.2061807246 -2.6552507325" />
+    <parent link="Yaw" />
+    <child link="livox_frame" />
   </joint>
 </robot>

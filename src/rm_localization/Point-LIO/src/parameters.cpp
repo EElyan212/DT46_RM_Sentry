@@ -8,6 +8,7 @@ int pcd_index = 0;
 std::string lid_topic, imu_topic;
 bool prop_at_freq_of_imu, check_satu, con_frame, cut_frame;
 bool use_imu_as_input, space_down_sample, publish_odometry_without_downsample;
+bool publish_odom_tf = true;
 int init_map_size, con_frame_num;
 double match_s, satu_acc, satu_gyro, cut_frame_time_interval;
 float plane_thr;
@@ -80,6 +81,7 @@ void readParameters(shared_ptr<rclcpp::Node> &nh) {
     nh->declare_parameter<std::vector<double>>("mapping.extrinsic_T", {0, 0, 0});
     nh->declare_parameter<std::vector<double>>("mapping.extrinsic_R", {1, 0, 0, 0, 1, 0, 0, 0, 1});
     nh->declare_parameter<bool>("odometry.publish_odometry_without_downsample", false);
+    nh->declare_parameter<bool>("odometry.publish_tf", true);
     nh->declare_parameter<bool>("publish.path_en", true);
     nh->declare_parameter<bool>("publish.scan_publish_en", true);
     nh->declare_parameter<bool>("publish.scan_bodyframe_pub_en", true);
@@ -136,6 +138,7 @@ void readParameters(shared_ptr<rclcpp::Node> &nh) {
     nh->get_parameter("mapping.extrinsic_T", extrinT);
     nh->get_parameter("mapping.extrinsic_R", extrinR);
     nh->get_parameter("odometry.publish_odometry_without_downsample", publish_odometry_without_downsample);
+    nh->get_parameter("odometry.publish_tf", publish_odom_tf);
     nh->get_parameter("publish.path_en", path_en);
     nh->get_parameter("publish.scan_publish_en", scan_pub_en);
     nh->get_parameter("publish.scan_bodyframe_pub_en", scan_body_pub_en);

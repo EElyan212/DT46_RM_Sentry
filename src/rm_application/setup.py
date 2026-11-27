@@ -40,6 +40,7 @@ setup(
             "behavior_tree_node = rm_application.behavior_tree_node:main",
             "test_chase = rm_application.test_chase:main",
             "mock_rm_tf_broadcaster = rm_application.mock_rm_tf_broadcaster:main",
+            "lio_base_tf = rm_application.lio_base_tf:main",
 
         ],
     },
