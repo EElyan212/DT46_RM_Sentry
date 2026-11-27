@@ -12,22 +12,6 @@ def generate_launch_description():
                 description="Namespace for sample topics",
             ),
             Node(
-                package="tf2_ros",
-                executable="static_transform_publisher",
-                name="static_tf_odom_to_livox_odom",
-                arguments=[
-                    "0.0845",
-                    "-0.12702",
-                    "0.22515",
-                    "-2.61799",
-                    "0.0",
-                    "0.34924",
-                    "odom",
-                    "livox_odom",
-                ],
-                output="screen",
-            ),
-            Node(
                 package="pointcloud_to_laserscan",
                 executable="pointcloud_to_laserscan_node",
                 # remappings=[('cloud_in', [LaunchConfiguration(variable_name='livox'), '/lidar/pcd2']),

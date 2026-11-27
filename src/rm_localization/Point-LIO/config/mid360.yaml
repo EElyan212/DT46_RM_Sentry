@@ -47,6 +47,9 @@
 
         odometry:
             publish_odometry_without_downsample: false
+            # true : 由本节点广播 odom -> livox_frame（没有 URDF 的纯建图场景）
+            # false: URDF 里已经有 livox_frame 时用，改由 lio_base_tf 发布 odom -> base_footprint
+            publish_tf: true
 
         publish:
             path_en: true                 # false: close the path output
