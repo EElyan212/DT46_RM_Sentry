@@ -17,6 +17,10 @@ extern std::string lid_topic, imu_topic;
 extern bool prop_at_freq_of_imu, check_satu, con_frame, cut_frame;
 extern bool use_imu_as_input, space_down_sample;
 extern bool extrinsic_est_en, publish_odometry_without_downsample;
+// 是否由本节点广播 odom -> livox_frame 的 TF。
+// 机器人有 URDF（livox_frame 已挂在机器人树上）时必须为 false，
+// 改由 rm_application/lio_base_tf 发布 odom -> base_footprint，否则同一个 frame 会有两个父节点。
+extern bool publish_odom_tf;
 extern int init_map_size, con_frame_num;
 extern double match_s, satu_acc, satu_gyro, cut_frame_time_interval;
 extern float plane_thr;

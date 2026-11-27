@@ -51,6 +51,7 @@ setup(
             "test_chase = rm_application.test_chase:main",
             "mock_rm_tf_broadcaster = rm_application.mock_rm_tf_broadcaster:main",
             "axis_align = rm_application.axis_align.axis_align_node:main",
+            "lio_base_tf = rm_application.lio_base_tf:main",
 
         ],
     },

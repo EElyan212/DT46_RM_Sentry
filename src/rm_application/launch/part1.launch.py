@@ -38,7 +38,16 @@ def generate_launch_description():
         launch.actions.IncludeLaunchDescription(
                     PythonLaunchDescriptionSource(
                         [point_lio, '/launch', '/mapping_mid360.launch.py']),
+                    # livox_frame 已经挂在 URDF 上，Point-LIO 不再广播 TF
+                    launch_arguments={'publish_tf': 'false'}.items(),
                 ),
+        # 用 URDF 的雷达安装外参，把 Point-LIO 的雷达位姿换算成 odom -> base_footprint
+        launch_ros.actions.Node(
+            package='rm_application',
+            executable='lio_base_tf',
+            name='lio_base_tf',
+            output='screen',
+        ),
         launch.actions.IncludeLaunchDescription(
             AnyLaunchDescriptionSource(
                 [pcd2_to_scan, '/launch', '/pointcloud_to_laserscan_launch.py']),
